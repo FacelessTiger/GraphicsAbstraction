@@ -7,3 +7,6 @@
 [submodule "VulkanAbstractionPractice/vendor/imgui"]
 	path = VulkanAbstractionPractice/vendor/imgui
 	url = https://github.com/FacelessTiger/imgui
+[submodule "VulkanAbstractionPractice/vendor/VkBootstrap"]
+	path = VulkanAbstractionPractice/vendor/VkBootstrap
+	url = https://github.com/charles-lunarg/vk-bootstrap
