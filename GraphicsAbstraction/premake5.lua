@@ -1,4 +1,4 @@
-project "VulkanAbstractionPractice"
+project "GraphicsAbstraction"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++20"

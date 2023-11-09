@@ -1,9 +1,9 @@
 include "/vendor/premake/premake_customization/solution_items.lua"
 include "Dependencies.lua"
 
-workspace "VulkanAbstractionPractice"
+workspace "GraphicsAbstraction"
 	architecture "x86_64"
-	startproject "VulkanAbstractionPractice"
+	startproject "GraphicsAbstraction"
 	
 	configurations
 	{
@@ -21,10 +21,10 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
 	include "vendor/premake"
-	include "VulkanAbstractionPractice/vendor/GLFW"
-	include "VulkanAbstractionPractice/vendor/imgui"
+	include "GraphicsAbstraction/vendor/GLFW"
+	include "GraphicsAbstraction/vendor/imgui"
 group ""
 
 group "Core"
-	include "VulkanAbstractionPractice"
+	include "GraphicsAbstraction"
 group ""

@@ -1,12 +1,12 @@
 [submodule "VulkanAbstractionPractice/vendor/GLFW"]
-	path = VulkanAbstractionPractice/vendor/GLFW
+	path = GraphicsAbstraction/vendor/GLFW
 	url = https://github.com/FacelessTiger/GLFW
 [submodule "VulkanAbstractionPractice/vendor/glm"]
-	path = VulkanAbstractionPractice/vendor/glm
+	path = GraphicsAbstraction/vendor/glm
 	url = https://github.com/g-truc/glm.git
 [submodule "VulkanAbstractionPractice/vendor/imgui"]
-	path = VulkanAbstractionPractice/vendor/imgui
+	path = GraphicsAbstraction/vendor/imgui
 	url = https://github.com/FacelessTiger/imgui
 [submodule "VulkanAbstractionPractice/vendor/VkBootstrap"]
-	path = VulkanAbstractionPractice/vendor/VkBootstrap
+	path = GraphicsAbstraction/vendor/VkBootstrap
 	url = https://github.com/charles-lunarg/vk-bootstrap
