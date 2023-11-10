@@ -1,12 +1,19 @@
-#include "VulkanEngine.h"
+#include <GraphicsAbstraction/Core/Window.h>
+#include <GraphicsAbstraction/Renderer/GraphicsContext.h>
 
 int main()
 {
-	VAP::VulkanEngine engine;
+	using namespace GraphicsAbstraction;
 
-	engine.Init();
-	engine.Run();
-	engine.Cleanup();
+	std::shared_ptr<GraphicsContext> context = GraphicsContext::Create();
+	std::shared_ptr<Window> window = Window::Create();
+
+	std::shared_ptr<Swapchain> swapchain = Swapchain::Create(window, context);
+
+	while (!window->ShouldClose())
+	{
+		window->OnUpdate();
+	}
 
 	return 0;
 }

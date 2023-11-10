@@ -32,20 +32,22 @@ project "GraphicsAbstraction"
 		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.stb_image}",
-		"%{IncludeDir.VulkanSDK}"
+		"%{IncludeDir.VulkanSDK}",
+		"%{IncludeDir.VKBootstrap}"
 	}
 
 	links 
 	{ 
 		"GLFW",
-		"ImGui"
+		"ImGui",
+		"%{Library.Vulkan}"
 	}
 
 	filter "system:windows"
 		systemversion "latest"
 
 	filter "configurations:Debug"
-		defines "VA_DEBUG"
+		defines "GA_DEBUG"
 		runtime "Debug"
 		symbols "on"
 
@@ -57,7 +59,7 @@ project "GraphicsAbstraction"
 		}
 
 	filter "configurations:Release"
-		defines "VA_RELEASE"
+		defines "GA_RELEASE"
 		runtime "Release"
 		optimize "on"
 
@@ -69,7 +71,7 @@ project "GraphicsAbstraction"
 		}
 
 	filter "configurations:Dist"
-		defines "VA_DIST"
+		defines "GA_DIST"
 		runtime "Release"
 		optimize "on"
 
