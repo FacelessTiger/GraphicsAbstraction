@@ -3,12 +3,12 @@
 #include <GraphicsAbstraction/Renderer/GraphicsContext.h>
 #include <GraphicsAbstraction/Core/Window.h>
 
-#include <Platform/Vulkan/VulkanSwapchain.h>
-#include <Platform/Vulkan/VulkanDeletionQueue.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanSwapchain.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanDeletionQueue.h>
 
 #include <vulkan/vulkan.h>
 
-#include <vector>
+#include <map>
 #include <iostream>
 
 struct GLFWwindow;
@@ -39,19 +39,20 @@ namespace GraphicsAbstraction {
 		inline VkInstance GetInstance() const { return m_Instance; }
 		inline VkPhysicalDevice GetPhysicalDevice() const { return m_ChosenGPU; }
 		inline VkDevice GetLogicalDevice() const { return m_Device; }
+
+		inline VkQueue GetGraphicsQeue() const { return m_GraphicsQueue; }
+		inline uint32_t GetGraphicsQueueFamily() const { return m_GraphicsQueueFamily; }
 	private:
-#ifndef GA_DIST
-		static constexpr bool m_EnableValidation = true;
-#else
-		static constexpr bool m_EnableValidation = false;
-#endif
 		VkInstance m_Instance;
 		VkDebugUtilsMessengerEXT m_DebugMessenger;
 		VkPhysicalDevice m_ChosenGPU;
 		VkDevice m_Device;
 
-		std::vector<VkSurfaceKHR> m_Surfaces;
+		std::unordered_map<std::shared_ptr<Window>, VkSurfaceKHR> m_Surfaces;
 		VulkanDeletionQueue m_DeletionQueue;
+
+		VkQueue m_GraphicsQueue;
+		uint32_t m_GraphicsQueueFamily;
 	};
 
 }

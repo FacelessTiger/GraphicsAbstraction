@@ -9,14 +9,13 @@ project "GraphicsAbstraction"
 
 	files
 	{
-		"src/**.h",
-		"src/**.cpp",
+		"src/GraphicsAbstraction/**.h",
+		"src/GraphicsAbstraction/**.cpp",
+		"src/Main.cpp",
 		"vendor/stb_image/**.h",
 		"vendor/stb_image/**.cpp",
 		"vendor/glm/glm/**.hpp",
-		"vendor/glm/glm/**.inl",
-		"vendor/VkBootstrap/src/**.h",
-		"vendor/VkBootstrap/src/**.cpp"
+		"vendor/glm/glm/**.inl"
 	}
 
 	defines
@@ -32,25 +31,37 @@ project "GraphicsAbstraction"
 		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.stb_image}",
-		"%{IncludeDir.VulkanSDK}",
-		"%{IncludeDir.VKBootstrap}"
 	}
 
 	links 
-	{ 
+	{
 		"GLFW",
 		"ImGui",
-		"%{Library.Vulkan}"
 	}
 
-	filter "system:windows"
-		systemversion "latest"
+	filter "options:with-vulkan"
+		defines "GA_RENDERER_VULKAN"
 
-	filter "configurations:Debug"
-		defines "GA_DEBUG"
-		runtime "Debug"
-		symbols "on"
+		files
+		{
+			"src/Platform/GraphicsAPI/Vulkan/**.h",
+			"src/Platform/GraphicsAPI/Vulkan/**.cpp",
+			"vendor/VkBootstrap/src/**.h",
+			"vendor/VkBootstrap/src/**.cpp"
+		}
 
+		includedirs
+		{
+			"%{IncludeDir.VulkanSDK}",
+			"%{IncludeDir.VKBootstrap}"
+		}
+
+		links
+		{
+			"%{Library.Vulkan}"
+		}
+
+	filter { "options:with-vulkan", "configurations:Debug" }
 		links
 		{
 			"%{Library.ShaderC_Debug}",
@@ -58,26 +69,34 @@ project "GraphicsAbstraction"
 			"%{Library.SPIRV_Cross_GLSL_Debug}"
 		}
 
-	filter "configurations:Release"
-		defines "GA_RELEASE"
-		runtime "Release"
-		optimize "on"
-
+	filter { "options:with-vulkan", "configurations:Release or Dist" }
 		links
 		{
 			"%{Library.ShaderC_Release}",
 			"%{Library.SPIRV_Cross_Release}",
 			"%{Library.SPIRV_Cross_GLSL_Release}"
 		}
+
+	filter "system:windows"
+		systemversion "latest"
+
+		files
+		{
+			"src/Platform/OperatingSystem/Windows/**.h",
+			"src/Platform/OperatingSystem/Windows/**.cpp"
+		}
+
+	filter "configurations:Debug"
+		defines "GA_DEBUG"
+		runtime "Debug"
+		symbols "on"
+
+	filter "configurations:Release"
+		defines "GA_RELEASE"
 
 	filter "configurations:Dist"
 		defines "GA_DIST"
+
+	filter "configurations:Release or Dist"
 		runtime "Release"
 		optimize "on"
-
-		links
-		{
-			"%{Library.ShaderC_Release}",
-			"%{Library.SPIRV_Cross_Release}",
-			"%{Library.SPIRV_Cross_GLSL_Release}"
-		}

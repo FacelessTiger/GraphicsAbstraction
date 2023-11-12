@@ -1,12 +1,11 @@
 #include "WindowsWindow.h"
 
-#include <Platform/Vulkan/VulkanContext.h>
-
 #include <iostream>
 
 namespace GraphicsAbstraction {
 
 	static bool s_GLFWInitialized = false;
+	static unsigned int s_WindowCount = 0;
 
 	static void GLFWErrorCallback(int error, const char* description)
 	{
@@ -39,7 +38,8 @@ namespace GraphicsAbstraction {
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
-
+		s_WindowCount++;
+		
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 
 		// Set GLFW callbacks
@@ -60,7 +60,13 @@ namespace GraphicsAbstraction {
 	WindowsWindow::~WindowsWindow()
 	{
 		glfwDestroyWindow(m_Window);
-		glfwTerminate();
+		s_WindowCount--;
+
+		if (s_WindowCount == 0)
+		{
+			glfwTerminate();
+			s_GLFWInitialized = false;
+		}
 	}
 
 	void WindowsWindow::OnUpdate()

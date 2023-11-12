@@ -1,6 +1,11 @@
 include "/vendor/premake/premake_customization/solution_items.lua"
 include "Dependencies.lua"
 
+newoption {
+	trigger = "with-vulkan",
+	description = "Force the use of Vulkan for rendering, regardless of platform"
+}
+
 workspace "GraphicsAbstraction"
 	architecture "x86_64"
 	startproject "GraphicsAbstraction"
