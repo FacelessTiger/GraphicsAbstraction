@@ -13,3 +13,6 @@
 [submodule "GraphicsAbstraction/vendor/spdlog"]
 	path = GraphicsAbstraction/vendor/spdlog
 	url = https://github.com/gabime/spdlog
+[submodule "GraphicsAbstraction/vendor/tracy"]
+	path = GraphicsAbstraction/vendor/tracy
+	url = https://github.com/FacelessTiger/tracy
