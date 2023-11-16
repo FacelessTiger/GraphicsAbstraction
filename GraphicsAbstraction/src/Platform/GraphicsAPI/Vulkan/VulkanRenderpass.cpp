@@ -4,7 +4,7 @@
 #include <Platform/GraphicsAPI/Vulkan/VulkanSwapchain.h>
 #include <Platform/GraphicsAPI/Vulkan/VulkanCommandBuffer.h>
 
-#include <iostream>
+#include <GraphicsAbstraction/Core/Core.h>
 
 namespace GraphicsAbstraction {
 
@@ -18,7 +18,7 @@ namespace GraphicsAbstraction {
 				case Renderpass::LoadOperation::Clear:					return VK_ATTACHMENT_LOAD_OP_CLEAR;
 			}
 
-			std::cerr << "Unknown load operation for renderpass! Defaulting to None." << std::endl;
+			GA_CORE_ERROR("Unknown load operation for renderpass, {0}. Defaulting to none", (int)loadOperation);
 			return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		}
 
@@ -30,7 +30,7 @@ namespace GraphicsAbstraction {
 				case Renderpass::StoreOperation::Store:					return VK_ATTACHMENT_STORE_OP_STORE;
 			}
 
-			std::cerr << "Unknown store operation for renderpass! Defaulting to None." << std::endl;
+			GA_CORE_ERROR("Unknown store operation for renderpass, {0}. Defaulting to none", (int)storeOperation);
 			return VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		}
 
@@ -43,7 +43,7 @@ namespace GraphicsAbstraction {
 				case Renderpass::ImageLayout::PresentSource:			return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			}
 
-			std::cerr << "Unknown image layout for renderpass! Defaulting to None." << std::endl;
+			GA_CORE_ERROR("Unknown image layout for renderpass, {0}. Defaulting to none", (int)imageLayout);
 			return VK_IMAGE_LAYOUT_UNDEFINED;
 		}
 
@@ -54,7 +54,7 @@ namespace GraphicsAbstraction {
 				case Renderpass::PipelineBindpoint::Graphics:			return VK_PIPELINE_BIND_POINT_GRAPHICS;
 			}
 
-			std::cerr << "Unknown pipeline bindpoint for renderpass! Defaulting to Graphics." << std::endl;
+			GA_CORE_ERROR("Unknown pipeline bindpoint for renderpass, {0}. Defaulting to Graphics", (int)pipelineBindpoint);
 			return VK_PIPELINE_BIND_POINT_GRAPHICS;
 		}
 
@@ -62,11 +62,11 @@ namespace GraphicsAbstraction {
 
 	VulkanRenderpass::VulkanRenderpass(const Specification& spec, std::shared_ptr<GraphicsContext> context, std::shared_ptr<Swapchain> swapchain)
 	{
-		std::shared_ptr<VulkanContext> vulkanContext = std::dynamic_pointer_cast<VulkanContext>(context);
+		m_Context = std::dynamic_pointer_cast<VulkanContext>(context);
 		std::shared_ptr<VulkanSwapchain> vulkanSwapchain = std::dynamic_pointer_cast<VulkanSwapchain>(swapchain);
 
-		InitRenderpass(spec, vulkanContext, vulkanSwapchain);
-		InitFramebuffers(vulkanContext, vulkanSwapchain);
+		InitRenderpass(spec, vulkanSwapchain);
+		Recreate(swapchain);
 	}
 
 	void VulkanRenderpass::Begin(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<CommandBuffer> cmd, const Vector4& clearColor, uint32_t swapchainImageIndex) const
@@ -98,7 +98,12 @@ namespace GraphicsAbstraction {
 		vkCmdEndRenderPass(vulkanCommandBuffer->GetInternal());
 	}
 
-	void VulkanRenderpass::InitRenderpass(const Specification& spec, std::shared_ptr<VulkanContext> context, std::shared_ptr<VulkanSwapchain> swapchain)
+	void VulkanRenderpass::Recreate(std::shared_ptr<Swapchain> swapchain)
+	{
+		CreateFramebuffers(swapchain);
+	}
+
+	void VulkanRenderpass::InitRenderpass(const Specification& spec, std::shared_ptr<VulkanSwapchain> swapchain)
 	{
 		std::vector<VkAttachmentDescription> vulkanAttachments;
 		vulkanAttachments.reserve(spec.Attachments.size());
@@ -160,37 +165,37 @@ namespace GraphicsAbstraction {
 		renderpassInfo.subpassCount = (uint32_t)vulkanSubpasses.size();
 		renderpassInfo.pSubpasses = vulkanSubpasses.data();
 
-		VK_CHECK(vkCreateRenderPass(context->GetLogicalDevice(), &renderpassInfo, nullptr, &m_Renderpass));
+		VK_CHECK(vkCreateRenderPass(m_Context->GetLogicalDevice(), &renderpassInfo, nullptr, &m_Renderpass));
 
-		context->PushToDeletionQueue([=]() {
-			vkDestroyRenderPass(context->GetLogicalDevice(), m_Renderpass, nullptr);
+		m_Context->PushToDeletionQueue([renderpass = m_Renderpass](VulkanContext& context) {
+			vkDestroyRenderPass(context.GetLogicalDevice(), renderpass, nullptr);
 		});
 	}
 
-	void VulkanRenderpass::InitFramebuffers(std::shared_ptr<VulkanContext> context, std::shared_ptr<VulkanSwapchain> swapchain)
+	void VulkanRenderpass::CreateFramebuffers(std::shared_ptr<Swapchain> swapchain)
 	{
+		std::shared_ptr<VulkanSwapchain> vulkanSwapchain = std::dynamic_pointer_cast<VulkanSwapchain>(swapchain);
+
 		VkFramebufferCreateInfo fbInfo = {};
 		fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		fbInfo.pNext = nullptr;
 
 		fbInfo.renderPass = m_Renderpass;
 		fbInfo.attachmentCount = 1;
-		fbInfo.width = swapchain->GetWidth();
-		fbInfo.height = swapchain->GetHeight();
+		fbInfo.width = vulkanSwapchain->GetWidth();
+		fbInfo.height = vulkanSwapchain->GetHeight();
 		fbInfo.layers = 1;
 
-		m_Framebuffers.resize(swapchain->GetImageCount());
-		const auto& imageViews = swapchain->GetImageViews();
+		m_Framebuffers.resize(vulkanSwapchain->GetImageCount());
+		const auto& imageViews = vulkanSwapchain->GetImageViews();
 
-		for (uint32_t i = 0; i < swapchain->GetImageCount(); i++)
+		for (uint32_t i = 0; i < vulkanSwapchain->GetImageCount(); i++)
 		{
 			fbInfo.pAttachments = &imageViews[i];
-			VK_CHECK(vkCreateFramebuffer(context->GetLogicalDevice(), &fbInfo, nullptr, &m_Framebuffers[i]));
-
-			context->PushToDeletionQueue([=]() {
-				vkDestroyFramebuffer(context->GetLogicalDevice(), m_Framebuffers[i], nullptr);
-			});
+			VK_CHECK(vkCreateFramebuffer(m_Context->GetLogicalDevice(), &fbInfo, nullptr, &m_Framebuffers[i]));
 		}
+
+		m_Context->AddToFramebufferData(m_Renderpass, m_Framebuffers);
 	}
 
 }

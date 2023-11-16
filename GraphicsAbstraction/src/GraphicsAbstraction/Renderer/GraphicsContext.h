@@ -1,5 +1,6 @@
 #pragma once
 
+#include <GraphicsAbstraction/Core/Core.h>
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
 
 #include <memory>

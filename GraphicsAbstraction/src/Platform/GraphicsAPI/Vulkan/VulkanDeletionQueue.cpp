@@ -2,15 +2,15 @@
 
 namespace GraphicsAbstraction {
 
-	void VulkanDeletionQueue::PushFunction(std::function<void()>&& function)
+	void VulkanDeletionQueue::PushFunction(std::function<void(VulkanContext&)>&& function)
 	{
 		m_Deletors.push_back(function);
 	}
 
-	void VulkanDeletionQueue::Flush()
+	void VulkanDeletionQueue::Flush(VulkanContext& context)
 	{
 		for (auto it = m_Deletors.rbegin(); it != m_Deletors.rend(); it++)
-			(*it)();
+			(*it)(context);
 
 		m_Deletors.clear();
 	}

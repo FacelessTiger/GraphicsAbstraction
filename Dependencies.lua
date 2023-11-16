@@ -5,6 +5,7 @@ IncludeDir["stb_image"] = "%{wks.location}/GraphicsAbstraction/vendor/stb_image"
 IncludeDir["GLFW"] = "%{wks.location}/GraphicsAbstraction/vendor/GLFW/include"
 IncludeDir["ImGui"] = "%{wks.location}/GraphicsAbstraction/vendor/imgui"
 IncludeDir["glm"] = "%{wks.location}/GraphicsAbstraction/vendor/glm"
+IncludeDir["spdlog"] = "%{wks.location}/GraphicsAbstraction/vendor/spdlog/include"
 IncludeDir["VKBootstrap"] = "%{wks.location}/GraphicsAbstraction/vendor/VkBootstrap/src"
 IncludeDir["VulkanSDK"] = "%{VULKAN_SDK}/Include"
 

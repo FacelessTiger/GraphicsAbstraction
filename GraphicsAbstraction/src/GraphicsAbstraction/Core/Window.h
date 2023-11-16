@@ -1,7 +1,10 @@
 #pragma once
 
+#include <GraphicsAbstraction/Events/Event.h>
+
 #include <string>
 #include <memory>
+#include <functional>
 
 namespace GraphicsAbstraction {
 
@@ -21,14 +24,16 @@ namespace GraphicsAbstraction {
 	class Window
 	{
 	public:
+		using EventCallbackFn = std::function<void(Event&)>;
+
 		virtual ~Window() { }
 
 		virtual void OnUpdate() = 0;
 
-		virtual bool ShouldClose() const = 0; // In a proper engine, this would be handled through a WindowClose event instead, but I'm just focusing on graphics abstraction here
+		virtual inline uint32_t GetWidth() const = 0;
+		virtual inline uint32_t GetHeight() const = 0;
 
-		virtual uint32_t GetWidth() const = 0;
-		virtual uint32_t GetHeight() const = 0;
+		virtual inline void SetEventCallback(const EventCallbackFn& callback) = 0;
 
 		virtual void* GetNativeWindow() const = 0;
 

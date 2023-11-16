@@ -10,3 +10,6 @@
 [submodule "VulkanAbstractionPractice/vendor/VkBootstrap"]
 	path = GraphicsAbstraction/vendor/VkBootstrap
 	url = https://github.com/charles-lunarg/vk-bootstrap
+[submodule "GraphicsAbstraction/vendor/spdlog"]
+	path = GraphicsAbstraction/vendor/spdlog
+	url = https://github.com/gabime/spdlog

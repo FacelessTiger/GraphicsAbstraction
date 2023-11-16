@@ -12,10 +12,12 @@ namespace GraphicsAbstraction {
 	class VulkanCommandBuffer : public CommandBuffer
 	{
 	public:
-		VulkanCommandBuffer(VkCommandBuffer commandBuffer);
+		VulkanCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue);
 		virtual ~VulkanCommandBuffer() = default;
 
 		void Reset() const override;
+		void Submit(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<Fence> fence) const override;
+		void Present(std::shared_ptr<Swapchain> swapchain, uint32_t swapchainImageIndex) const override;
 
 		void Begin() const override;
 		void End() const override;
@@ -23,6 +25,7 @@ namespace GraphicsAbstraction {
 		inline VkCommandBuffer GetInternal() const { return m_CommandBuffer; }
 	private:
 		VkCommandBuffer m_CommandBuffer;
+		VkQueue m_Queue;
 	};
 
 }

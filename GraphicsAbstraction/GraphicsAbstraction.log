@@ -1,0 +1,10 @@
+[11:10:37] [error] GRAPHICS: Vulkan validation error: loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win32.json
+[11:10:37] [error] GRAPHICS: Vulkan validation error: loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win64.json
+[11:10:38] [trace] GRAPHICS: VulkanShader::Reflect - VK_SHADER_STAGE_VERTEX_BIT Assets/shaders/triangle.glsl
+[11:10:38] [trace] GRAPHICS:     0 uniform buffers
+[11:10:38] [trace] GRAPHICS:     0 resources
+[11:10:38] [trace] GRAPHICS: Uniform buffers:
+[11:10:38] [trace] GRAPHICS: VulkanShader::Reflect - VK_SHADER_STAGE_FRAGMENT_BIT Assets/shaders/triangle.glsl
+[11:10:38] [trace] GRAPHICS:     0 uniform buffers
+[11:10:38] [trace] GRAPHICS:     0 resources
+[11:10:38] [trace] GRAPHICS: Uniform buffers:

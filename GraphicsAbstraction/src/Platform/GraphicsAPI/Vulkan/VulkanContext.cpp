@@ -5,17 +5,28 @@
 
 namespace GraphicsAbstraction {
 
+	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+	{
+		if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+		{
+			switch (messageSeverity)
+			{
+				case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:	GA_CORE_WARN("Vulkan validation warn: {0}", pCallbackData->pMessage); return false;
+				case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:		GA_CORE_ERROR("Vulkan validation error: {0}", pCallbackData->pMessage); return false;
+			}
+		}
+	}
+
 	VulkanContext::VulkanContext()
 	{
 		vkb::InstanceBuilder builder;
 		auto instRet = builder.set_app_name("Graphics Abstraction")
-			.require_api_version(1, 1, 0)
+			.require_api_version(1, 2, 0)
 #ifndef GA_DIST
 			.request_validation_layers(true)
-			.use_default_debug_messenger()
+			.set_debug_callback(debugCallback)
 #endif
 			.build();
-
 
 		vkb::Instance vkbInstance = instRet.value();
 		m_Instance = vkbInstance.instance;
@@ -23,7 +34,7 @@ namespace GraphicsAbstraction {
 
 		vkb::PhysicalDeviceSelector selector(vkbInstance);
 		vkb::PhysicalDevice physicalDevice = selector
-			.set_minimum_version(1, 1)
+			.set_minimum_version(1, 2)
 			.defer_surface_initialization()
 			.select()
 			.value();
@@ -40,7 +51,21 @@ namespace GraphicsAbstraction {
 
 	VulkanContext::~VulkanContext()
 	{
-		m_DeletionQueue.Flush();
+		vkDeviceWaitIdle(m_Device);
+		m_DeletionQueue.Flush(*this);
+
+		for (auto [surface, data] : m_SwapchainData)
+		{
+			vkDestroySwapchainKHR(m_Device, data.Swapchain, nullptr);
+			for (VkImageView view : data.ImageViews)
+				vkDestroyImageView(m_Device, view, nullptr);
+		}
+
+		for (auto [Renderpass, data] : m_FramebufferData)
+		{
+			for (VkFramebuffer framebuffer : data)
+				vkDestroyFramebuffer(m_Device, framebuffer, nullptr);
+		}
 
 		vkDestroyDevice(m_Device, nullptr);
 
@@ -62,6 +87,35 @@ namespace GraphicsAbstraction {
 
 		m_Surfaces[window] = surface;
 		return surface;
+	}
+
+	void VulkanContext::AddToSwapchainData(VkSurfaceKHR surface, const SwapchainData& data)
+	{
+		if (m_SwapchainData.contains(surface))
+		{
+			auto& oldData = m_SwapchainData[surface];
+
+			vkDeviceWaitIdle(m_Device);
+			vkDestroySwapchainKHR(m_Device, oldData.Swapchain, nullptr);
+			for (VkImageView view : oldData.ImageViews)
+				vkDestroyImageView(m_Device, view, nullptr);
+		}
+
+		m_SwapchainData[surface] = data;
+	}
+
+	void VulkanContext::AddToFramebufferData(VkRenderPass renderpass, const std::vector<VkFramebuffer>& framebuffers)
+	{
+		if (m_FramebufferData.contains(renderpass))
+		{
+			auto& oldData = m_FramebufferData[renderpass];
+
+			vkDeviceWaitIdle(m_Device);
+			for (VkFramebuffer framebuffer : oldData)
+				vkDestroyFramebuffer(m_Device, framebuffer, nullptr);
+		}
+
+		m_FramebufferData[renderpass] = framebuffers;
 	}
 
 }

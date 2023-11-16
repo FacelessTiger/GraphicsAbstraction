@@ -1,5 +1,7 @@
 #pragma once
 
+#include <GraphicsAbstraction/Core/Core.h>
+
 #include <memory>
 
 namespace GraphicsAbstraction {

@@ -1,6 +1,6 @@
 #include "WindowsWindow.h"
 
-#include <iostream>
+#include <GraphicsAbstraction/Events/ApplicationEvent.h>
 
 namespace GraphicsAbstraction {
 
@@ -9,7 +9,7 @@ namespace GraphicsAbstraction {
 
 	static void GLFWErrorCallback(int error, const char* description)
 	{
-		std::cerr << "GLFW Error (" << error << "): " << description << std::endl;
+		GA_CORE_ERROR("GLFW Eror ({0}): {1}", error, description);
 	}
 
 	std::shared_ptr<Window> Window::Create(const WindowProps& props)
@@ -22,15 +22,11 @@ namespace GraphicsAbstraction {
 		m_Data.Title = props.Title;
 		m_Data.Width = props.Width;
 		m_Data.Height = props.Height;
-		m_Data.ShouldClose = false;
 
 		if (!s_GLFWInitialized)
 		{
 			if (glfwInit() != GLFW_TRUE)
-			{
-				std::cerr << "Could not initialize GLFW!" << std::endl;
-				abort();
-			}
+				GA_CORE_ASSERT(false, "Could not initialize GLFW!");
 
 			glfwSetErrorCallback(GLFWErrorCallback);
 			s_GLFWInitialized = true;
@@ -48,12 +44,17 @@ namespace GraphicsAbstraction {
 			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
 			data.Width = width;
 			data.Height = height;
+
+			WindowResizeEvent event(width, height);
+			data.EventCallback(event);
 		});
 
 		glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window)
 		{
 			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-			data.ShouldClose = true;
+
+			WindowCloseEvent event;
+			data.EventCallback(event);
 		});
 	}
 
