@@ -1,6 +1,7 @@
 #include "WindowsWindow.h"
 
 #include <GraphicsAbstraction/Events/ApplicationEvent.h>
+#include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {
 
@@ -19,6 +20,8 @@ namespace GraphicsAbstraction {
 
 	WindowsWindow::WindowsWindow(const WindowProps& props)
 	{
+		GA_PROFILE_SCOPE();
+
 		m_Data.Title = props.Title;
 		m_Data.Width = props.Width;
 		m_Data.Height = props.Height;
@@ -72,6 +75,7 @@ namespace GraphicsAbstraction {
 
 	void WindowsWindow::OnUpdate()
 	{
+		GA_PROFILE_SCOPE();
 		glfwPollEvents();
 	}
 

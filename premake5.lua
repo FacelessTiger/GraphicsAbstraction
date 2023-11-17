@@ -28,6 +28,7 @@ group "Dependencies"
 	include "vendor/premake"
 	include "GraphicsAbstraction/vendor/GLFW"
 	include "GraphicsAbstraction/vendor/imgui"
+	include "GraphicsAbstraction/vendor/tracy"
 group ""
 
 group "Core"

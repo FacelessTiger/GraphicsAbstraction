@@ -30,8 +30,8 @@ namespace GraphicsAbstraction {
 		inline VkSemaphore GetPresentSemaphore() const { return m_PresentSemaphore; }
 		inline VkSemaphore GetRenderSemaphore() const { return m_RenderSemaphore; }
 
-		inline uint32_t GetWidth() const { return m_Width; }
-		inline uint32_t GetHeight() const { return m_Height; }
+		inline uint32_t GetWidth() const override { return m_Width; }
+		inline uint32_t GetHeight() const override { return m_Height; }
 
 		inline uint32_t GetImageCount() const { return (uint32_t)m_SwapchainImages.size(); }
 		inline const std::vector<VkImageView>& GetImageViews() const { return m_SwapchainData.ImageViews; }

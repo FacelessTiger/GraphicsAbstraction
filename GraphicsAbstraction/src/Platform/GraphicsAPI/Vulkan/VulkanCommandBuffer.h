@@ -17,6 +17,7 @@ namespace GraphicsAbstraction {
 
 		void Reset() const override;
 		void Submit(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<Fence> fence) const override;
+		void Draw(uint32_t vertexCount, uint32_t instanceCount) const override;
 		void Present(std::shared_ptr<Swapchain> swapchain, uint32_t swapchainImageIndex) const override;
 
 		void Begin() const override;

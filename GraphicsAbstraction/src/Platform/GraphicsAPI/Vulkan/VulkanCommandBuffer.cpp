@@ -4,6 +4,8 @@
 #include <Platform/GraphicsAPI/Vulkan/VulkanFence.h>
 #include <Platform/GraphicsAPI/Vulkan/VulkanSwapchain.h>
 
+#include <GraphicsAbstraction/Debug/Instrumentor.h>
+
 namespace GraphicsAbstraction {
 
 	VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue)
@@ -17,6 +19,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanCommandBuffer::Submit(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<Fence> fence) const
 	{
+		GA_PROFILE_SCOPE();
+
 		std::shared_ptr<VulkanSwapchain> vulkanSwapchain = std::dynamic_pointer_cast<VulkanSwapchain>(swapchain);
 		std::shared_ptr<VulkanFence> vulkanFence = std::dynamic_pointer_cast<VulkanFence>(fence);
 
@@ -41,8 +45,15 @@ namespace GraphicsAbstraction {
 		VK_CHECK(vkQueueSubmit(m_Queue, 1, &submit, vulkanFence->GetInternal()));
 	}
 
+	void VulkanCommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount) const
+	{
+		vkCmdDraw(m_CommandBuffer, vertexCount, instanceCount, 0, 0);
+	}
+
 	void VulkanCommandBuffer::Present(std::shared_ptr<Swapchain> swapchain, uint32_t swapchainImageIndex) const
 	{
+		GA_PROFILE_SCOPE();
+
 		std::shared_ptr<VulkanSwapchain> vulkanSwapchain = std::dynamic_pointer_cast<VulkanSwapchain>(swapchain);
 
 		VkSwapchainKHR vkSwapchain = vulkanSwapchain->GetInternal();

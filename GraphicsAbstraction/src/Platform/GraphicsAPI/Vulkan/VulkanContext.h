@@ -50,6 +50,9 @@ namespace GraphicsAbstraction {
 
 		inline VkQueue GetGraphicsQeue() const { return m_GraphicsQueue; }
 		inline uint32_t GetGraphicsQueueFamily() const { return m_GraphicsQueueFamily; }
+
+		inline PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT GetPhysicalDeviceCalibrateableTimeDomainsEXT() { return m_GetPhysicalDeviceCalibrateableTimeDomainsEXT; }
+		inline PFN_vkGetCalibratedTimestampsEXT GetCalibratedTimestampsEXT() { return m_GetCalibratedTimestampsEXT; }
 	private:
 		VkInstance m_Instance;
 		VkDebugUtilsMessengerEXT m_DebugMessenger;
@@ -63,6 +66,9 @@ namespace GraphicsAbstraction {
 
 		VkQueue m_GraphicsQueue;
 		uint32_t m_GraphicsQueueFamily;
+
+		PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT m_GetPhysicalDeviceCalibrateableTimeDomainsEXT;
+		PFN_vkGetCalibratedTimestampsEXT m_GetCalibratedTimestampsEXT;
 	};
 
 }

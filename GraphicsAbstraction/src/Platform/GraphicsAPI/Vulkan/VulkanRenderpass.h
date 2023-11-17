@@ -20,6 +20,8 @@ namespace GraphicsAbstraction {
 		void End(std::shared_ptr<CommandBuffer> cmd) const override;
 
 		void Recreate(std::shared_ptr<Swapchain> swapchain) override;
+
+		inline VkRenderPass GetInternal() const { return m_Renderpass; }
 	private:
 		void InitRenderpass(const Specification& spec, std::shared_ptr<VulkanSwapchain> swapchain);
 		void CreateFramebuffers(std::shared_ptr<Swapchain> swapchain);

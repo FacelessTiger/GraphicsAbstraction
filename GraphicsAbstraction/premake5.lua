@@ -3,6 +3,7 @@ project "GraphicsAbstraction"
 	language "C++"
 	cppdialect "C++20"
 	staticruntime "off"
+	editandcontinue "Off"
 
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
@@ -81,6 +82,15 @@ project "GraphicsAbstraction"
 	filter "system:windows"
 		systemversion "latest"
 
+		links
+		{
+			"%{Library.WinSock}",
+			"%{Library.WinMM}",
+			"%{Library.WinVersion}",
+			"%{Library.BCrypt}",
+			"%{Library.dbghelp}"
+		}
+
 		files
 		{
 			"src/Platform/OperatingSystem/Windows/**.h",
@@ -94,6 +104,23 @@ project "GraphicsAbstraction"
 
 	filter "configurations:Release"
 		defines "GA_RELEASE"
+
+	filter "configurations:Debug or Release"
+		links
+		{
+			"tracy"
+		}
+
+		includedirs
+		{
+			"%{IncludeDir.tracy}"
+		}
+
+		defines
+		{
+			"TRACY_ENABLE",
+			"TRACY_ON_DEMAND"
+		}
 
 	filter "configurations:Dist"
 		defines "GA_DIST"

@@ -3,6 +3,8 @@
 #include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
 
+#include <GraphicsAbstraction/Debug/Instrumentor.h>
+
 namespace GraphicsAbstraction {
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
@@ -19,6 +21,8 @@ namespace GraphicsAbstraction {
 
 	VulkanContext::VulkanContext()
 	{
+		GA_PROFILE_SCOPE();
+
 		vkb::InstanceBuilder builder;
 		auto instRet = builder.set_app_name("Graphics Abstraction")
 			.require_api_version(1, 2, 0)
@@ -36,21 +40,31 @@ namespace GraphicsAbstraction {
 		vkb::PhysicalDevice physicalDevice = selector
 			.set_minimum_version(1, 2)
 			.defer_surface_initialization()
+#ifndef GA_DIST
+			.add_required_extension("VK_EXT_calibrated_timestamps")
+#endif
 			.select()
 			.value();
 
 		vkb::DeviceBuilder deviceBuilder(physicalDevice);
 		vkb::Device vkbDevice = deviceBuilder.build().value();
-
+		
 		m_ChosenGPU = physicalDevice.physical_device;
 		m_Device = vkbDevice.device;
 
 		m_GraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 		m_GraphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+#ifndef GA_DIST
+		m_GetPhysicalDeviceCalibrateableTimeDomainsEXT = (PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT)vkGetDeviceProcAddr(m_Device, "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT");
+		m_GetCalibratedTimestampsEXT = (PFN_vkGetCalibratedTimestampsEXT)vkGetDeviceProcAddr(m_Device, "vkGetCalibratedTimestampsEXT");
+#endif
 	}
 
 	VulkanContext::~VulkanContext()
 	{
+		GA_PROFILE_SCOPE();
+
 		vkDeviceWaitIdle(m_Device);
 		m_DeletionQueue.Flush(*this);
 
@@ -91,6 +105,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanContext::AddToSwapchainData(VkSurfaceKHR surface, const SwapchainData& data)
 	{
+		GA_PROFILE_SCOPE();
+
 		if (m_SwapchainData.contains(surface))
 		{
 			auto& oldData = m_SwapchainData[surface];
@@ -106,6 +122,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanContext::AddToFramebufferData(VkRenderPass renderpass, const std::vector<VkFramebuffer>& framebuffers)
 	{
+		GA_PROFILE_SCOPE();
+
 		if (m_FramebufferData.contains(renderpass))
 		{
 			auto& oldData = m_FramebufferData[renderpass];

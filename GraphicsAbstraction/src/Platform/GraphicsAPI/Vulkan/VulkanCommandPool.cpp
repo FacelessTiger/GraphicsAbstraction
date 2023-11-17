@@ -3,10 +3,14 @@
 #include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
 #include <Platform/GraphicsAPI/Vulkan/VulkanCommandBuffer.h>
 
+#include <GraphicsAbstraction/Debug/Instrumentor.h>
+
 namespace GraphicsAbstraction {
 
 	VulkanCommandPool::VulkanCommandPool(std::shared_ptr<GraphicsContext> context, QueueType type)
 	{
+		GA_PROFILE_SCOPE();
+
 		m_Context = std::dynamic_pointer_cast<VulkanContext>(context);
 		InitQueues(type);
 
@@ -24,6 +28,8 @@ namespace GraphicsAbstraction {
 
 	std::shared_ptr<CommandBuffer> VulkanCommandPool::CreateCommandBuffer() const
 	{
+		GA_PROFILE_SCOPE();
+
 		VkCommandBuffer buffer;
 		CreateVulkanCommandBuffers(1, &buffer);
 
@@ -32,6 +38,8 @@ namespace GraphicsAbstraction {
 
 	CommandPoolBuffers VulkanCommandPool::CreateCommandBuffers(uint32_t count) const
 	{
+		GA_PROFILE_SCOPE();
+
 		std::vector<VkCommandBuffer> vulkanBuffers(count);
 		CommandPoolBuffers buffers;
 		buffers.reserve(count);
@@ -58,6 +66,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanCommandPool::CreateVulkanCommandBuffers(uint32_t count, VkCommandBuffer* data) const
 	{
+		GA_PROFILE_SCOPE();
+
 		VkCommandBufferAllocateInfo cmdAllocInfo = {};
 		cmdAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		cmdAllocInfo.pNext = nullptr;

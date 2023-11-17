@@ -5,6 +5,7 @@
 #include <Platform/GraphicsAPI/Vulkan/VulkanCommandBuffer.h>
 
 #include <GraphicsAbstraction/Core/Core.h>
+#include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {
 
@@ -47,7 +48,7 @@ namespace GraphicsAbstraction {
 			return VK_IMAGE_LAYOUT_UNDEFINED;
 		}
 
-		VkPipelineBindPoint GAPipelineBindpointToVulkan(Renderpass::PipelineBindpoint pipelineBindpoint)
+		static VkPipelineBindPoint GAPipelineBindpointToVulkan(Renderpass::PipelineBindpoint pipelineBindpoint)
 		{
 			switch (pipelineBindpoint)
 			{
@@ -62,6 +63,8 @@ namespace GraphicsAbstraction {
 
 	VulkanRenderpass::VulkanRenderpass(const Specification& spec, std::shared_ptr<GraphicsContext> context, std::shared_ptr<Swapchain> swapchain)
 	{
+		GA_PROFILE_SCOPE();
+
 		m_Context = std::dynamic_pointer_cast<VulkanContext>(context);
 		std::shared_ptr<VulkanSwapchain> vulkanSwapchain = std::dynamic_pointer_cast<VulkanSwapchain>(swapchain);
 
@@ -71,6 +74,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanRenderpass::Begin(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<CommandBuffer> cmd, const Vector4& clearColor, uint32_t swapchainImageIndex) const
 	{
+		GA_PROFILE_SCOPE();
+
 		std::shared_ptr<VulkanSwapchain> vulkanSwapchain = std::dynamic_pointer_cast<VulkanSwapchain>(swapchain);
 		std::shared_ptr<VulkanCommandBuffer> vulkanCommandBuffer = std::dynamic_pointer_cast<VulkanCommandBuffer>(cmd);
 
@@ -94,6 +99,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanRenderpass::End(std::shared_ptr<CommandBuffer> cmd) const
 	{
+		GA_PROFILE_SCOPE();
+
 		std::shared_ptr<VulkanCommandBuffer> vulkanCommandBuffer = std::dynamic_pointer_cast<VulkanCommandBuffer>(cmd);
 		vkCmdEndRenderPass(vulkanCommandBuffer->GetInternal());
 	}
@@ -105,6 +112,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanRenderpass::InitRenderpass(const Specification& spec, std::shared_ptr<VulkanSwapchain> swapchain)
 	{
+		GA_PROFILE_SCOPE();
+
 		std::vector<VkAttachmentDescription> vulkanAttachments;
 		vulkanAttachments.reserve(spec.Attachments.size());
 
@@ -174,6 +183,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanRenderpass::CreateFramebuffers(std::shared_ptr<Swapchain> swapchain)
 	{
+		GA_PROFILE_SCOPE();
+
 		std::shared_ptr<VulkanSwapchain> vulkanSwapchain = std::dynamic_pointer_cast<VulkanSwapchain>(swapchain);
 
 		VkFramebufferCreateInfo fbInfo = {};

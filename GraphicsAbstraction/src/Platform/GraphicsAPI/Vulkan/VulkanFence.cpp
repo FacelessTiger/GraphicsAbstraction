@@ -2,10 +2,14 @@
 
 #include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
 
+#include <GraphicsAbstraction/Debug/Instrumentor.h>
+
 namespace GraphicsAbstraction {
 
 	VulkanFence::VulkanFence(std::shared_ptr<GraphicsContext> context)
 	{
+		GA_PROFILE_SCOPE();
+
 		m_Context = std::dynamic_pointer_cast<VulkanContext>(context);
 
 		VkFenceCreateInfo fenceCreateInfo = {};
@@ -21,6 +25,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanFence::Wait() const
 	{
+		GA_PROFILE_SCOPE();
+
 		VK_CHECK(vkWaitForFences(m_Context->GetLogicalDevice(), 1, &m_Fence, true, 1000000000));
 		VK_CHECK(vkResetFences(m_Context->GetLogicalDevice(), 1, &m_Fence));
 	}

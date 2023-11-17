@@ -1,6 +1,7 @@
 #include "VulkanShader.h"
 
 #include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 #include <fstream>
 #include <filesystem>
@@ -75,6 +76,7 @@ namespace GraphicsAbstraction {
 	VulkanShader::VulkanShader(std::shared_ptr<GraphicsContext> context, const std::string& filepath)
 		: m_FilePath(filepath), m_Context(std::dynamic_pointer_cast<VulkanContext>(context))
 	{
+		GA_PROFILE_SCOPE();
 		Utils::CreateCacheDirectoryIfNeeded();
 
 		std::string source = ReadFile(filepath);
@@ -86,6 +88,8 @@ namespace GraphicsAbstraction {
 
 	std::string VulkanShader::ReadFile(const std::string& filepath)
 	{
+		GA_PROFILE_SCOPE();
+
 		std::string result;
 		std::ifstream in(filepath, std::ios::in | std::ios::binary);
 
@@ -118,6 +122,7 @@ namespace GraphicsAbstraction {
 
 	std::unordered_map<VkShaderStageFlagBits, std::string> VulkanShader::PreProcess(const std::string& source)
 	{
+		GA_PROFILE_SCOPE();
 		std::unordered_map<VkShaderStageFlagBits, std::string> shaderSources;
 
 		const char* typeToken = "#type";
@@ -144,6 +149,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanShader::CompileOrGetVulkanBinaries(const std::unordered_map<VkShaderStageFlagBits, std::string>& shaderSources)
 	{
+		GA_PROFILE_SCOPE();
+
 		shaderc::Compiler compiler;
 		shaderc::CompileOptions options;
 		options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
@@ -205,6 +212,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanShader::CreatePipelineShaderStages()
 	{
+		GA_PROFILE_SCOPE();
+
 		for (auto&& [stage, data] : m_VulkanSPIRV)
 		{
 			VkShaderModuleCreateInfo moduleCreateInfo = {};

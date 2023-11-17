@@ -2,6 +2,7 @@
 
 #include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
 #include <GraphicsAbstraction/Core/Core.h>
+#include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 #include <VkBootstrap.h>
 
@@ -10,6 +11,7 @@ namespace GraphicsAbstraction {
 	VulkanSwapchain::VulkanSwapchain(std::shared_ptr<Window> window, std::shared_ptr<GraphicsContext> context)
 		: m_Width(window->GetWidth()), m_Height(window->GetHeight())
 	{
+		GA_PROFILE_SCOPE();
 		m_Context = std::dynamic_pointer_cast<VulkanContext>(context);
 		
 		InitSwapchain(window);
@@ -18,6 +20,8 @@ namespace GraphicsAbstraction {
 
 	uint32_t VulkanSwapchain::AcquireNextImage() const
 	{
+		GA_PROFILE_SCOPE();
+
 		uint32_t imageIndex;
 		VK_CHECK(vkAcquireNextImageKHR(m_Context->GetLogicalDevice(), m_SwapchainData.Swapchain, 1000000000, m_PresentSemaphore, nullptr, &imageIndex));
 
@@ -41,6 +45,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanSwapchain::InitSemaphores()
 	{
+		GA_PROFILE_SCOPE();
+
 		VkSemaphoreCreateInfo semaphoreCreateInfo = {};
 		semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 		semaphoreCreateInfo.pNext = nullptr;
@@ -57,6 +63,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanSwapchain::CreateSwapchain()
 	{
+		GA_PROFILE_SCOPE();
+
 		vkb::SwapchainBuilder swapchainBuilder(m_Context->GetPhysicalDevice(), m_Context->GetLogicalDevice(), m_Surface);
 
 		swapchainBuilder

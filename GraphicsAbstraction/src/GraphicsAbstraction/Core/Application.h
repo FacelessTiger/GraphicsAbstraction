@@ -7,10 +7,11 @@
 #include <GraphicsAbstraction/Renderer/Renderpass.h>
 #include <GraphicsAbstraction/Renderer/Fence.h>
 #include <GraphicsAbstraction/Renderer/Shader.h>
+#include <GraphicsAbstraction/Renderer/Pipeline.h>
 
 #include <GraphicsAbstraction/Core/Window.h>
-
 #include <GraphicsAbstraction/Events/ApplicationEvent.h>
+#include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 #include <memory>
 
@@ -24,6 +25,7 @@ namespace GraphicsAbstraction {
 		friend int ::main();
 
 		Application();
+		virtual ~Application();
 
 		void OnEvent(Event& e);
 	private:
@@ -41,10 +43,14 @@ namespace GraphicsAbstraction {
 
 		std::shared_ptr<Renderpass> m_Renderpass;
 		std::shared_ptr<Fence> m_Fence;
+
 		std::shared_ptr<Shader> m_TriangleShader;
+		std::shared_ptr<Pipeline> m_TrianglePipeline;
 
 		bool m_Running = true;
 		uint32_t m_FrameNumber = 0;
+
+		GPUProfilerContext* m_GPUProfilerContext;
 	};
 
 }
