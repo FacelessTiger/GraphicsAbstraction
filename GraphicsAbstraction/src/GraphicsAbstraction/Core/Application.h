@@ -7,10 +7,12 @@
 #include <GraphicsAbstraction/Renderer/Renderpass.h>
 #include <GraphicsAbstraction/Renderer/Fence.h>
 #include <GraphicsAbstraction/Renderer/Shader.h>
+#include <GraphicsAbstraction/Renderer/Buffer.h>
 #include <GraphicsAbstraction/Renderer/Pipeline.h>
 
 #include <GraphicsAbstraction/Core/Window.h>
 #include <GraphicsAbstraction/Events/ApplicationEvent.h>
+#include <GraphicsAbstraction/Events/KeyEvent.h>
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 #include <memory>
@@ -33,6 +35,7 @@ namespace GraphicsAbstraction {
 
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
+		bool OnKeyPressed(KeyPressedEvent& e);
 	private:
 		std::shared_ptr<GraphicsContext> m_Context;
 		std::shared_ptr<Window> m_Window;
@@ -44,8 +47,10 @@ namespace GraphicsAbstraction {
 		std::shared_ptr<Renderpass> m_Renderpass;
 		std::shared_ptr<Fence> m_Fence;
 
-		std::shared_ptr<Shader> m_TriangleShader;
-		std::shared_ptr<Pipeline> m_TrianglePipeline;
+		std::shared_ptr<VertexBuffer> m_VertexBuffer;
+
+		std::shared_ptr<Shader> m_QuadShader;
+		std::shared_ptr<Pipeline> m_QuadPipeline;
 
 		bool m_Running = true;
 		uint32_t m_FrameNumber = 0;

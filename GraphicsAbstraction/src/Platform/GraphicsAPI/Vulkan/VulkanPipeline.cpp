@@ -6,6 +6,7 @@
 #include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
 #include <Platform/GraphicsAPI/Vulkan/VulkanRenderpass.h>
 #include <Platform/GraphicsAPI/Vulkan/VulkanCommandBuffer.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanBuffer.h>
 
 namespace GraphicsAbstraction {
 
@@ -22,23 +23,71 @@ namespace GraphicsAbstraction {
 			return VK_PIPELINE_BIND_POINT_GRAPHICS;
 		}
 
+		VkFormat GAShaderDataTypeToVulkanFormat(ShaderDataType type)
+		{
+			switch (type)
+			{
+				case ShaderDataType::Float3: return VK_FORMAT_R32G32B32_SFLOAT;
+			}
+
+			GA_CORE_ASSERT(false, "Unknown shader data type!");
+			return VK_FORMAT_UNDEFINED;
+		}
+
 	}
 
-	VulkanPipeline::VulkanPipeline(std::shared_ptr<GraphicsContext> context, std::shared_ptr<Shader> shader, std::shared_ptr<Renderpass> renderpass, uint32_t width, uint32_t height)
+	VulkanPipeline::VulkanPipeline(std::shared_ptr<GraphicsContext> context, const Specification& spec)
+		: m_Context(std::dynamic_pointer_cast<VulkanContext>(context))
 	{
 		GA_PROFILE_SCOPE();
 
-		std::shared_ptr<VulkanShader> vulkanShader = std::dynamic_pointer_cast<VulkanShader>(shader);
-		const auto& shaderStages = vulkanShader->GetPipelineShaderStages();
+		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+		for (auto shader : spec.Shaders)
+		{
+			std::shared_ptr<VulkanShader> vulkanShader = std::dynamic_pointer_cast<VulkanShader>(shader);
 
-		std::shared_ptr<VulkanContext> vulkanContext = std::dynamic_pointer_cast<VulkanContext>(context);
-		std::shared_ptr<VulkanRenderpass> vulkanRenderpass = std::dynamic_pointer_cast<VulkanRenderpass>(renderpass);
+			const auto& vulkanShaderStages = vulkanShader->GetPipelineShaderStages();
+			shaderStages.insert(shaderStages.end(), vulkanShaderStages.begin(), vulkanShaderStages.end());
+		}
+
+		std::shared_ptr<VulkanRenderpass> vulkanRenderpass = std::dynamic_pointer_cast<VulkanRenderpass>(spec.Renderpass);
+
+		std::vector<VkVertexInputBindingDescription> inputBindings;
+		std::vector<VkVertexInputAttributeDescription> inputAttributes;
+
+		// Convert vertex layout to vulkan bindings/attributes
+		for (int i = 0; i < spec.VertexBuffers.size(); i++)
+		{
+			const auto& layout = spec.VertexBuffers[i]->GetLayout();
+
+			VkVertexInputBindingDescription binding = {};
+			binding.binding = i;
+			binding.stride = layout.GetStride();
+			binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+			
+			inputBindings.push_back(binding);
+
+			int location = 0;
+			for (const auto& element : layout)
+			{
+				VkVertexInputAttributeDescription attribute = {};
+				attribute.binding = i;
+				attribute.location = location;
+				attribute.format = Utils::GAShaderDataTypeToVulkanFormat(element.Type);
+				attribute.offset = element.Offset;
+
+				inputAttributes.push_back(attribute);
+				location++;
+			}
+		}
 
 		VkPipelineVertexInputStateCreateInfo inputStateInfo = {};
 		inputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		inputStateInfo.pNext = nullptr;
-		inputStateInfo.vertexBindingDescriptionCount = 0;
-		inputStateInfo.vertexAttributeDescriptionCount = 0;
+		inputStateInfo.pVertexBindingDescriptions = inputBindings.data();
+		inputStateInfo.vertexBindingDescriptionCount = (uint32_t)inputBindings.size();
+		inputStateInfo.pVertexAttributeDescriptions = inputAttributes.data();
+		inputStateInfo.vertexAttributeDescriptionCount = (uint32_t)inputAttributes.size();
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo = {};
 		inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -77,14 +126,14 @@ namespace GraphicsAbstraction {
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = width;
-		viewport.height = height;
+		viewport.width = spec.Extent.x;
+		viewport.height = spec.Extent.y;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
 		VkRect2D scissor = {};
 		scissor.offset = { 0, 0 };
-		scissor.extent = { width, height };
+		scissor.extent = { (uint32_t)spec.Extent.x, (uint32_t)spec.Extent.y };
 
 		VkPipelineViewportStateCreateInfo viewportState = {};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -111,12 +160,12 @@ namespace GraphicsAbstraction {
 		pipelineLayoutInfo.pushConstantRangeCount = 0;
 		pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-		VK_CHECK(vkCreatePipelineLayout(vulkanContext->GetLogicalDevice(), &pipelineLayoutInfo, nullptr, &m_PipelineLayout))
+		VK_CHECK(vkCreatePipelineLayout(m_Context->GetLogicalDevice(), &pipelineLayoutInfo, nullptr, &m_PipelineLayout))
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.pNext = nullptr;
-		pipelineInfo.stageCount = shaderStages.size();
+		pipelineInfo.stageCount = (uint32_t)shaderStages.size();
 		pipelineInfo.pStages = shaderStages.data();
 		pipelineInfo.pVertexInputState = &inputStateInfo;
 		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
@@ -129,7 +178,15 @@ namespace GraphicsAbstraction {
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-		VK_CHECK(vkCreateGraphicsPipelines(vulkanContext->GetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline));
+		VK_CHECK(vkCreateGraphicsPipelines(m_Context->GetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline));
+	}
+
+	VulkanPipeline::~VulkanPipeline()
+	{
+		vkDeviceWaitIdle(m_Context->GetLogicalDevice());
+
+		vkDestroyPipelineLayout(m_Context->GetLogicalDevice(), m_PipelineLayout, nullptr);
+		vkDestroyPipeline(m_Context->GetLogicalDevice(), m_Pipeline, nullptr);
 	}
 
 	void VulkanPipeline::Bind(std::shared_ptr<CommandBuffer> cmd, Renderpass::PipelineBindpoint bindpoint) const

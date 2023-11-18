@@ -5,6 +5,7 @@
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 #include <VkBootstrap.h>
+#include <GLFW/glfw3.h>
 
 namespace GraphicsAbstraction {
 
@@ -12,10 +13,21 @@ namespace GraphicsAbstraction {
 		: m_Width(window->GetWidth()), m_Height(window->GetHeight())
 	{
 		GA_PROFILE_SCOPE();
+
 		m_Context = std::dynamic_pointer_cast<VulkanContext>(context);
+		VK_CHECK(glfwCreateWindowSurface(m_Context->GetInstance(), (GLFWwindow*)window->GetNativeWindow(), nullptr, &m_Surface));
 		
-		InitSwapchain(window);
+		InitSwapchain();
 		InitSemaphores();
+	}
+
+	VulkanSwapchain::~VulkanSwapchain()
+	{
+		DestroySwapchain();
+
+		vkDestroySurfaceKHR(m_Context->GetInstance(), m_Surface, nullptr);
+		vkDestroySemaphore(m_Context->GetLogicalDevice(), m_PresentSemaphore, nullptr);
+		vkDestroySemaphore(m_Context->GetLogicalDevice(), m_RenderSemaphore, nullptr);
 	}
 
 	uint32_t VulkanSwapchain::AcquireNextImage() const
@@ -23,7 +35,7 @@ namespace GraphicsAbstraction {
 		GA_PROFILE_SCOPE();
 
 		uint32_t imageIndex;
-		VK_CHECK(vkAcquireNextImageKHR(m_Context->GetLogicalDevice(), m_SwapchainData.Swapchain, 1000000000, m_PresentSemaphore, nullptr, &imageIndex));
+		VK_CHECK(vkAcquireNextImageKHR(m_Context->GetLogicalDevice(), m_Swapchain, 1000000000, m_PresentSemaphore, nullptr, &imageIndex));
 
 		return imageIndex;
 	}
@@ -33,14 +45,42 @@ namespace GraphicsAbstraction {
 		m_Width = width;
 		m_Height = height;
 
-		CreateSwapchain();
+		InitSwapchain();
 	}
 
-	void VulkanSwapchain::InitSwapchain(std::shared_ptr<Window> window)
+	void VulkanSwapchain::DestroySwapchain()
 	{
-		m_Surface = m_Context->CreateSurface(window);
+		vkDeviceWaitIdle(m_Context->GetLogicalDevice());
 
-		CreateSwapchain();
+		for (VkImageView& view : m_ImageViews)
+			vkDestroyImageView(m_Context->GetLogicalDevice(), view, nullptr);
+
+		vkDestroySwapchainKHR(m_Context->GetLogicalDevice(), m_Swapchain, nullptr);
+	}
+
+	void VulkanSwapchain::InitSwapchain()
+	{
+		GA_PROFILE_SCOPE();
+
+		vkb::SwapchainBuilder swapchainBuilder(m_Context->GetPhysicalDevice(), m_Context->GetLogicalDevice(), m_Surface);
+
+		swapchainBuilder
+			.use_default_format_selection()
+			.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+			.set_desired_extent(m_Width, m_Height);
+
+		if (m_Initialized) swapchainBuilder.set_old_swapchain(m_Swapchain);
+
+		vkb::Swapchain vkbSwapchain = swapchainBuilder.build().value();
+
+		if (m_Initialized) DestroySwapchain();
+
+		m_Swapchain = vkbSwapchain.swapchain;
+		m_SwapchainImages = vkbSwapchain.get_images().value();
+		m_ImageViews = vkbSwapchain.get_image_views().value();
+		m_SwapchainImageFormat = vkbSwapchain.image_format;
+
+		m_Initialized = true;
 	}
 
 	void VulkanSwapchain::InitSemaphores()
@@ -54,36 +94,6 @@ namespace GraphicsAbstraction {
 
 		VK_CHECK(vkCreateSemaphore(m_Context->GetLogicalDevice(), &semaphoreCreateInfo, nullptr, &m_PresentSemaphore));
 		VK_CHECK(vkCreateSemaphore(m_Context->GetLogicalDevice(), &semaphoreCreateInfo, nullptr, &m_RenderSemaphore));
-
-		m_Context->PushToDeletionQueue([presentSemaphore = m_PresentSemaphore, renderSemaphore = m_RenderSemaphore](VulkanContext& context) {
-			vkDestroySemaphore(context.GetLogicalDevice(), presentSemaphore, nullptr);
-			vkDestroySemaphore(context.GetLogicalDevice(), renderSemaphore, nullptr);
-		});
-	}
-
-	void VulkanSwapchain::CreateSwapchain()
-	{
-		GA_PROFILE_SCOPE();
-
-		vkb::SwapchainBuilder swapchainBuilder(m_Context->GetPhysicalDevice(), m_Context->GetLogicalDevice(), m_Surface);
-
-		swapchainBuilder
-			.use_default_format_selection()
-			.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-			.set_desired_extent(m_Width, m_Height);
-
-		if (m_Initialized)
-			swapchainBuilder.set_old_swapchain(m_SwapchainData.Swapchain);
-
-		vkb::Swapchain vkbSwapchain = swapchainBuilder.build().value();
-
-		m_SwapchainData.Swapchain = vkbSwapchain.swapchain;
-		m_SwapchainImages = vkbSwapchain.get_images().value();
-		m_SwapchainData.ImageViews = vkbSwapchain.get_image_views().value();
-		m_SwapchainImageFormat = vkbSwapchain.image_format;
-
-		m_Context->AddToSwapchainData(m_Surface, m_SwapchainData);
-		m_Initialized = true;
 	}
 
 }

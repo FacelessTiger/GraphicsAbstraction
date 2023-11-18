@@ -14,7 +14,7 @@ namespace GraphicsAbstraction {
 	{
 	public:
 		VulkanShader(std::shared_ptr<GraphicsContext> context, const std::string& filepath);
-		virtual ~VulkanShader() = default;
+		virtual ~VulkanShader();
 
 		inline const std::vector<VkPipelineShaderStageCreateInfo>& GetPipelineShaderStages() const { return m_PipelineShaderStages; }
 	private:
@@ -23,12 +23,13 @@ namespace GraphicsAbstraction {
 
 		void CompileOrGetVulkanBinaries(const std::unordered_map<VkShaderStageFlagBits, std::string>& shaderSources);
 		void CreatePipelineShaderStages();
-		void Reflect(VkShaderStageFlagBits stage, const std::vector<uint32_t>& shaderData);
+		void Reflect(VkShaderStageFlagBits stage, const std::vector<uint32_t>& shaderData) const;
 	private:
 		std::string m_FilePath;
 		std::shared_ptr<VulkanContext> m_Context;
 
 		std::unordered_map<VkShaderStageFlagBits, std::vector<uint32_t>> m_VulkanSPIRV;
+		std::vector<VkShaderModule> m_ShaderModules;
 		std::vector<VkPipelineShaderStageCreateInfo> m_PipelineShaderStages;
 	};
 

@@ -19,13 +19,13 @@ namespace GraphicsAbstraction {
 	{
 	public:
 		VulkanSwapchain(std::shared_ptr<Window> window, std::shared_ptr<GraphicsContext> context);
-		virtual ~VulkanSwapchain() = default;
+		virtual ~VulkanSwapchain();
 
 		uint32_t AcquireNextImage() const override;
 		void Resize(uint32_t width, uint32_t height) override;
 
 		inline VkSurfaceKHR GetSurface() const { return m_Surface; }
-		inline VkSwapchainKHR GetInternal() const { return m_SwapchainData.Swapchain; }
+		inline VkSwapchainKHR GetInternal() const { return m_Swapchain; }
 		inline VkFormat GetImageFormat() const { return m_SwapchainImageFormat; }
 		inline VkSemaphore GetPresentSemaphore() const { return m_PresentSemaphore; }
 		inline VkSemaphore GetRenderSemaphore() const { return m_RenderSemaphore; }
@@ -34,19 +34,20 @@ namespace GraphicsAbstraction {
 		inline uint32_t GetHeight() const override { return m_Height; }
 
 		inline uint32_t GetImageCount() const { return (uint32_t)m_SwapchainImages.size(); }
-		inline const std::vector<VkImageView>& GetImageViews() const { return m_SwapchainData.ImageViews; }
+		inline const std::vector<VkImageView>& GetImageViews() const { return m_ImageViews; }
 	private:
-		void InitSwapchain(std::shared_ptr<Window> window);
-		void InitSemaphores();
+		void DestroySwapchain();
 
-		void CreateSwapchain();
+		void InitSwapchain();
+		void InitSemaphores();
 	private:
+		VkSwapchainKHR m_Swapchain;
 		VkSurfaceKHR m_Surface;
 		VkFormat m_SwapchainImageFormat;
 		VkSemaphore m_PresentSemaphore, m_RenderSemaphore;
 
 		std::vector<VkImage> m_SwapchainImages;
-		SwapchainData m_SwapchainData;
+		std::vector<VkImageView> m_ImageViews;
 
 		uint32_t m_Width;
 		uint32_t m_Height;

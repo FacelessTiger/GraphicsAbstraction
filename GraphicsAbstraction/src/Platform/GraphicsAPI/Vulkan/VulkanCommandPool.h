@@ -12,7 +12,7 @@ namespace GraphicsAbstraction {
 	{
 	public:
 		VulkanCommandPool(std::shared_ptr<GraphicsContext> context, QueueType type);
-		virtual ~VulkanCommandPool() = default;
+		virtual ~VulkanCommandPool();
 
 		std::shared_ptr<CommandBuffer> CreateCommandBuffer() const override;
 		CommandPoolBuffers CreateCommandBuffers(uint32_t count) const override;

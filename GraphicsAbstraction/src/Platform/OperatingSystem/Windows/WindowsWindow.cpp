@@ -1,6 +1,8 @@
 #include "WindowsWindow.h"
 
 #include <GraphicsAbstraction/Events/ApplicationEvent.h>
+#include <GraphicsAbstraction/Events/KeyEvent.h>
+
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {
@@ -58,6 +60,35 @@ namespace GraphicsAbstraction {
 
 			WindowCloseEvent event;
 			data.EventCallback(event);
+		});
+
+		glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, int action, int mods)
+		{
+			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+			switch (action)
+			{
+				case GLFW_PRESS:
+				{
+					KeyPressedEvent event(key);
+					data.EventCallback(event);
+					break;
+				}
+
+				case GLFW_RELEASE:
+				{
+					KeyReleasedEvent event(key);
+					data.EventCallback(event);
+					break;
+				}
+
+				case GLFW_REPEAT:
+				{
+					KeyPressedEvent event(key, true);
+					data.EventCallback(event);
+					break;
+				}
+			}
 		});
 	}
 

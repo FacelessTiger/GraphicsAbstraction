@@ -12,7 +12,7 @@ namespace GraphicsAbstraction {
 	{
 	public:
 		VulkanFence(std::shared_ptr<GraphicsContext> context);
-		virtual ~VulkanFence() = default;
+		virtual ~VulkanFence();
 
 		void Wait() const override;
 

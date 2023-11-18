@@ -72,7 +72,14 @@ namespace GraphicsAbstraction {
 		Recreate(swapchain);
 	}
 
-	void VulkanRenderpass::Begin(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<CommandBuffer> cmd, const Vector4& clearColor, uint32_t swapchainImageIndex) const
+	VulkanRenderpass::~VulkanRenderpass()
+	{
+		vkDestroyRenderPass(m_Context->GetLogicalDevice(), m_Renderpass, nullptr);
+
+		DestroyFramebuffers();
+	}
+
+	void VulkanRenderpass::Begin(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<CommandBuffer> cmd, const glm::vec4& clearColor, uint32_t swapchainImageIndex) const
 	{
 		GA_PROFILE_SCOPE();
 
@@ -107,7 +114,14 @@ namespace GraphicsAbstraction {
 
 	void VulkanRenderpass::Recreate(std::shared_ptr<Swapchain> swapchain)
 	{
+		DestroyFramebuffers();
 		CreateFramebuffers(swapchain);
+	}
+
+	void VulkanRenderpass::DestroyFramebuffers()
+	{
+		for (VkFramebuffer& framebuffer : m_Framebuffers)
+			vkDestroyFramebuffer(m_Context->GetLogicalDevice(), framebuffer, nullptr);
 	}
 
 	void VulkanRenderpass::InitRenderpass(const Specification& spec, std::shared_ptr<VulkanSwapchain> swapchain)
@@ -175,10 +189,6 @@ namespace GraphicsAbstraction {
 		renderpassInfo.pSubpasses = vulkanSubpasses.data();
 
 		VK_CHECK(vkCreateRenderPass(m_Context->GetLogicalDevice(), &renderpassInfo, nullptr, &m_Renderpass));
-
-		m_Context->PushToDeletionQueue([renderpass = m_Renderpass](VulkanContext& context) {
-			vkDestroyRenderPass(context.GetLogicalDevice(), renderpass, nullptr);
-		});
 	}
 
 	void VulkanRenderpass::CreateFramebuffers(std::shared_ptr<Swapchain> swapchain)
@@ -205,8 +215,6 @@ namespace GraphicsAbstraction {
 			fbInfo.pAttachments = &imageViews[i];
 			VK_CHECK(vkCreateFramebuffer(m_Context->GetLogicalDevice(), &fbInfo, nullptr, &m_Framebuffers[i]));
 		}
-
-		m_Context->AddToFramebufferData(m_Renderpass, m_Framebuffers);
 	}
 
 }

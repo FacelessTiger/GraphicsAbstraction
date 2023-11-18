@@ -16,3 +16,6 @@
 [submodule "GraphicsAbstraction/vendor/tracy"]
 	path = GraphicsAbstraction/vendor/tracy
 	url = https://github.com/FacelessTiger/tracy
+[submodule "GraphicsAbstraction/vendor/vma"]
+	path = GraphicsAbstraction/vendor/vma
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator

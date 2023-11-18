@@ -21,9 +21,11 @@ namespace GraphicsAbstraction {
 		commandPoolInfo.queueFamilyIndex = m_QueueFamily;
 
 		VK_CHECK(vkCreateCommandPool(m_Context->GetLogicalDevice(), &commandPoolInfo, nullptr, &m_CommandPool));
-		m_Context->PushToDeletionQueue([commandPool = m_CommandPool](VulkanContext& context) {
-			vkDestroyCommandPool(context.GetLogicalDevice(), commandPool, nullptr);
-		});
+	}
+
+	VulkanCommandPool::~VulkanCommandPool()
+	{
+		vkDestroyCommandPool(m_Context->GetLogicalDevice(), m_CommandPool, nullptr);
 	}
 
 	std::shared_ptr<CommandBuffer> VulkanCommandPool::CreateCommandBuffer() const

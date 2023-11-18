@@ -18,9 +18,11 @@ namespace GraphicsAbstraction {
 		fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 		VK_CHECK(vkCreateFence(m_Context->GetLogicalDevice(), &fenceCreateInfo, nullptr, &m_Fence));
-		m_Context->PushToDeletionQueue([fence = m_Fence](VulkanContext& context) {
-			vkDestroyFence(context.GetLogicalDevice(), fence, nullptr);
-		});
+	}
+
+	VulkanFence::~VulkanFence()
+	{
+		vkDestroyFence(m_Context->GetLogicalDevice(), m_Fence, nullptr);
 	}
 
 	void VulkanFence::Wait() const

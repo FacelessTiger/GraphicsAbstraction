@@ -2,7 +2,8 @@
 
 #include <GraphicsAbstraction/Core/Core.h>
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
-#include <GraphicsAbstraction/Core/Vector4.h>
+
+#include <glm/glm.hpp>
 
 #include <vector>
 
@@ -68,7 +69,7 @@ namespace GraphicsAbstraction {
 	public:
 		virtual ~Renderpass() = default;
 
-		virtual void Begin(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<CommandBuffer> cmd, const Vector4& clearColor, uint32_t swapchainImageIndex) const = 0;
+		virtual void Begin(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<CommandBuffer> cmd, const glm::vec4& clearColor, uint32_t swapchainImageIndex) const = 0;
 		virtual void End(std::shared_ptr<CommandBuffer> cmd) const = 0;
 
 		virtual void Recreate(std::shared_ptr<Swapchain> swapchain) = 0;

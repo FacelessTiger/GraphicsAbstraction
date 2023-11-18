@@ -1,9 +1,11 @@
 #include "VulkanContext.h"
 
 #include <VkBootstrap.h>
-#include <GLFW/glfw3.h>
 
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
+
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
 
 namespace GraphicsAbstraction {
 
@@ -17,6 +19,8 @@ namespace GraphicsAbstraction {
 				case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:		GA_CORE_ERROR("Vulkan validation error: {0}", pCallbackData->pMessage); return false;
 			}
 		}
+
+		return false;
 	}
 
 	VulkanContext::VulkanContext()
@@ -59,6 +63,12 @@ namespace GraphicsAbstraction {
 		m_GetPhysicalDeviceCalibrateableTimeDomainsEXT = (PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT)vkGetDeviceProcAddr(m_Device, "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT");
 		m_GetCalibratedTimestampsEXT = (PFN_vkGetCalibratedTimestampsEXT)vkGetDeviceProcAddr(m_Device, "vkGetCalibratedTimestampsEXT");
 #endif
+
+		VmaAllocatorCreateInfo allocatorInfo = {};
+		allocatorInfo.physicalDevice = m_ChosenGPU;
+		allocatorInfo.device = m_Device;
+		allocatorInfo.instance = m_Instance;
+		vmaCreateAllocator(&allocatorInfo, &m_Allocator);
 	}
 
 	VulkanContext::~VulkanContext()
@@ -66,74 +76,13 @@ namespace GraphicsAbstraction {
 		GA_PROFILE_SCOPE();
 
 		vkDeviceWaitIdle(m_Device);
-		m_DeletionQueue.Flush(*this);
-
-		for (auto [surface, data] : m_SwapchainData)
-		{
-			vkDestroySwapchainKHR(m_Device, data.Swapchain, nullptr);
-			for (VkImageView view : data.ImageViews)
-				vkDestroyImageView(m_Device, view, nullptr);
-		}
-
-		for (auto [Renderpass, data] : m_FramebufferData)
-		{
-			for (VkFramebuffer framebuffer : data)
-				vkDestroyFramebuffer(m_Device, framebuffer, nullptr);
-		}
-
+		vmaDestroyAllocator(m_Allocator);
 		vkDestroyDevice(m_Device, nullptr);
-
-		for (auto [window, surface] : m_Surfaces)
-			vkDestroySurfaceKHR(m_Instance, surface, nullptr);
 
 #ifndef GA_DIST
 		vkb::destroy_debug_utils_messenger(m_Instance, m_DebugMessenger);
 #endif
 		vkDestroyInstance(m_Instance, nullptr);
-	}
-
-	VkSurfaceKHR VulkanContext::CreateSurface(std::shared_ptr<Window> window)
-	{
-		if (m_Surfaces.contains(window)) return m_Surfaces.at(window);
-
-		VkSurfaceKHR surface;
-		VK_CHECK(glfwCreateWindowSurface(m_Instance, (GLFWwindow*)window->GetNativeWindow(), nullptr, &surface));
-
-		m_Surfaces[window] = surface;
-		return surface;
-	}
-
-	void VulkanContext::AddToSwapchainData(VkSurfaceKHR surface, const SwapchainData& data)
-	{
-		GA_PROFILE_SCOPE();
-
-		if (m_SwapchainData.contains(surface))
-		{
-			auto& oldData = m_SwapchainData[surface];
-
-			vkDeviceWaitIdle(m_Device);
-			vkDestroySwapchainKHR(m_Device, oldData.Swapchain, nullptr);
-			for (VkImageView view : oldData.ImageViews)
-				vkDestroyImageView(m_Device, view, nullptr);
-		}
-
-		m_SwapchainData[surface] = data;
-	}
-
-	void VulkanContext::AddToFramebufferData(VkRenderPass renderpass, const std::vector<VkFramebuffer>& framebuffers)
-	{
-		GA_PROFILE_SCOPE();
-
-		if (m_FramebufferData.contains(renderpass))
-		{
-			auto& oldData = m_FramebufferData[renderpass];
-
-			vkDeviceWaitIdle(m_Device);
-			for (VkFramebuffer framebuffer : oldData)
-				vkDestroyFramebuffer(m_Device, framebuffer, nullptr);
-		}
-
-		m_FramebufferData[renderpass] = framebuffers;
 	}
 
 }

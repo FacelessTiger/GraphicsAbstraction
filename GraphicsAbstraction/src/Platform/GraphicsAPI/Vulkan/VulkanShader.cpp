@@ -86,6 +86,12 @@ namespace GraphicsAbstraction {
 		CreatePipelineShaderStages();
 	}
 
+	VulkanShader::~VulkanShader()
+	{
+		for (VkShaderModule& module : m_ShaderModules)
+			vkDestroyShaderModule(m_Context->GetLogicalDevice(), module, nullptr);
+	}
+
 	std::string VulkanShader::ReadFile(const std::string& filepath)
 	{
 		GA_PROFILE_SCOPE();
@@ -224,6 +230,7 @@ namespace GraphicsAbstraction {
 
 			VkShaderModule shaderModule;
 			VK_CHECK(vkCreateShaderModule(m_Context->GetLogicalDevice(), &moduleCreateInfo, nullptr, &shaderModule));
+			m_ShaderModules.push_back(shaderModule);
 
 			VkPipelineShaderStageCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -232,14 +239,10 @@ namespace GraphicsAbstraction {
 			info.module = shaderModule;
 			info.pName = "main"; // hard coding entry point to main
 			m_PipelineShaderStages.push_back(info);
-
-			m_Context->PushToDeletionQueue([module = shaderModule](VulkanContext& context) {
-				vkDestroyShaderModule(context.GetLogicalDevice(), module, nullptr);
-			});
 		}
 	}
 
-	void VulkanShader::Reflect(VkShaderStageFlagBits stage, const std::vector<uint32_t>& shaderData)
+	void VulkanShader::Reflect(VkShaderStageFlagBits stage, const std::vector<uint32_t>& shaderData) const
 	{
 		spirv_cross::Compiler compiler(shaderData);
 		spirv_cross::ShaderResources resources = compiler.get_shader_resources();
@@ -252,9 +255,9 @@ namespace GraphicsAbstraction {
 		for (const auto& resource : resources.uniform_buffers)
 		{
 			const auto& bufferType = compiler.get_type(resource.base_type_id);
-			uint32_t bufferSize = compiler.get_declared_struct_size(bufferType);
+			size_t bufferSize = compiler.get_declared_struct_size(bufferType);
 			uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
-			int memberCount = bufferType.member_types.size();
+			size_t memberCount = bufferType.member_types.size();
 
 			GA_CORE_TRACE("  {0}", resource.name);
 			GA_CORE_TRACE("    Size = {0}", bufferSize);

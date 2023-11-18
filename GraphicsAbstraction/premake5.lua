@@ -8,6 +8,9 @@ project "GraphicsAbstraction"
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
 
+	disablewarnings { "4996" }
+	linkoptions { "-IGNORE:4099" }
+
 	files
 	{
 		"src/GraphicsAbstraction/**.h",
@@ -55,7 +58,8 @@ project "GraphicsAbstraction"
 		includedirs
 		{
 			"%{IncludeDir.VulkanSDK}",
-			"%{IncludeDir.VKBootstrap}"
+			"%{IncludeDir.VKBootstrap}",
+			"%{IncludeDir.vma}"
 		}
 
 		links

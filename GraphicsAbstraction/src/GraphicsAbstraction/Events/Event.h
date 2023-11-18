@@ -7,13 +7,16 @@ namespace GraphicsAbstraction {
 	enum class EventType
 	{
 		None = 0,
-		WindowClose, WindowResize
+		WindowClose, WindowResize,
+		KeyPressed, KeyReleased
 	};
 
 	enum EventCategory
 	{
 		None = 0,
-		EventCategoryApplication = 1
+		EventCategoryApplication	= 1,
+		EventCategoryInput			= 2,
+		EventCategoryKeyboard		= 4
 	};
 
 #define EVENT_CLASS_TYPE(type)	static EventType GetStaticType() { return EventType::type; }\
