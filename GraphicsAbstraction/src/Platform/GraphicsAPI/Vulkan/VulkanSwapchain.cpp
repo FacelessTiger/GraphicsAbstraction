@@ -1,6 +1,5 @@
 #include "VulkanSwapchain.h"
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
 #include <GraphicsAbstraction/Core/Core.h>
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
@@ -10,7 +9,7 @@
 namespace GraphicsAbstraction {
 
 	VulkanSwapchain::VulkanSwapchain(std::shared_ptr<Window> window, std::shared_ptr<GraphicsContext> context)
-		: m_Width(window->GetWidth()), m_Height(window->GetHeight())
+		: m_Size(window->GetWidth(), window->GetHeight())
 	{
 		GA_PROFILE_SCOPE();
 
@@ -42,8 +41,8 @@ namespace GraphicsAbstraction {
 
 	void VulkanSwapchain::Resize(uint32_t width, uint32_t height)
 	{
-		m_Width = width;
-		m_Height = height;
+		m_Size.x = (float)width;
+		m_Size.y = (float)height;
 
 		InitSwapchain();
 	}
@@ -52,8 +51,8 @@ namespace GraphicsAbstraction {
 	{
 		vkDeviceWaitIdle(m_Context->GetLogicalDevice());
 
-		for (VkImageView& view : m_ImageViews)
-			vkDestroyImageView(m_Context->GetLogicalDevice(), view, nullptr);
+		for (auto& view : m_SwapchainImages)
+			vkDestroyImageView(m_Context->GetLogicalDevice(), std::dynamic_pointer_cast<VulkanImage>(view)->GetView(), nullptr);
 
 		vkDestroySwapchainKHR(m_Context->GetLogicalDevice(), m_Swapchain, nullptr);
 	}
@@ -67,7 +66,7 @@ namespace GraphicsAbstraction {
 		swapchainBuilder
 			.use_default_format_selection()
 			.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-			.set_desired_extent(m_Width, m_Height);
+			.set_desired_extent((uint32_t)m_Size.x, (uint32_t)m_Size.y);
 
 		if (m_Initialized) swapchainBuilder.set_old_swapchain(m_Swapchain);
 
@@ -76,9 +75,16 @@ namespace GraphicsAbstraction {
 		if (m_Initialized) DestroySwapchain();
 
 		m_Swapchain = vkbSwapchain.swapchain;
-		m_SwapchainImages = vkbSwapchain.get_images().value();
-		m_ImageViews = vkbSwapchain.get_image_views().value();
+
+		auto images = vkbSwapchain.get_images().value();
+		auto imageViews = vkbSwapchain.get_image_views().value();
 		m_SwapchainImageFormat = vkbSwapchain.image_format;
+
+		m_SwapchainImages.resize(images.size());
+		for (int i = 0; i < images.size(); i++)
+		{
+			m_SwapchainImages[i] = std::make_shared<VulkanImage>(images[i], imageViews[i], m_SwapchainImageFormat);
+		}
 
 		m_Initialized = true;
 	}

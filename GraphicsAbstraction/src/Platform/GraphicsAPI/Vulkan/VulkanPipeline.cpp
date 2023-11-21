@@ -12,17 +12,6 @@ namespace GraphicsAbstraction {
 
 	namespace Utils {
 
-		static VkPipelineBindPoint GAPipelineBindpointToVulkan(Renderpass::PipelineBindpoint pipelineBindpoint)
-		{
-			switch (pipelineBindpoint)
-			{
-				case Renderpass::PipelineBindpoint::Graphics:			return VK_PIPELINE_BIND_POINT_GRAPHICS;
-			}
-
-			GA_CORE_ERROR("Unknown pipeline bindpoint for renderpass, {0}. Defaulting to Graphics", (int)pipelineBindpoint);
-			return VK_PIPELINE_BIND_POINT_GRAPHICS;
-		}
-
 		VkFormat GAShaderDataTypeToVulkanFormat(ShaderDataType type)
 		{
 			switch (type)
@@ -32,6 +21,17 @@ namespace GraphicsAbstraction {
 
 			GA_CORE_ASSERT(false, "Unknown shader data type!");
 			return VK_FORMAT_UNDEFINED;
+		}
+
+		static VkShaderStageFlags GAShaderStageToVulkan(PushConstant::ShaderStage stage)
+		{
+			switch (stage)
+			{
+				case PushConstant::ShaderStage::Vertex: return VK_SHADER_STAGE_VERTEX_BIT;
+			}
+
+			GA_CORE_ASSERT(false, "Unknown shader stage!");
+			return VK_SHADER_STAGE_ALL;
 		}
 
 	}
@@ -51,9 +51,11 @@ namespace GraphicsAbstraction {
 		}
 
 		std::shared_ptr<VulkanRenderpass> vulkanRenderpass = std::dynamic_pointer_cast<VulkanRenderpass>(spec.Renderpass);
+		m_Bindpoint = vulkanRenderpass->GetBindpoint();
 
 		std::vector<VkVertexInputBindingDescription> inputBindings;
 		std::vector<VkVertexInputAttributeDescription> inputAttributes;
+		std::vector<VkPushConstantRange> pushConstants;
 
 		// Convert vertex layout to vulkan bindings/attributes
 		for (int i = 0; i < spec.VertexBuffers.size(); i++)
@@ -79,6 +81,16 @@ namespace GraphicsAbstraction {
 				inputAttributes.push_back(attribute);
 				location++;
 			}
+		}
+
+		for (auto constant : spec.PushConstants)
+		{
+			VkPushConstantRange pushConstant;
+			pushConstant.offset = constant->GetOffset();
+			pushConstant.size = constant->GetSize();
+			pushConstant.stageFlags = Utils::GAShaderStageToVulkan(constant->GetStage());
+
+			pushConstants.push_back(pushConstant);
 		}
 
 		VkPipelineVertexInputStateCreateInfo inputStateInfo = {};
@@ -108,6 +120,17 @@ namespace GraphicsAbstraction {
 		rasterizationInfo.depthBiasConstantFactor = 0.0f;
 		rasterizationInfo.depthBiasClamp = 0.0f;
 		rasterizationInfo.depthBiasSlopeFactor = 0.0f;
+
+		VkPipelineDepthStencilStateCreateInfo depthStencilInfo = {};
+		depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencilInfo.pNext = nullptr;
+		depthStencilInfo.depthTestEnable = true;
+		depthStencilInfo.depthWriteEnable = true;
+		depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		depthStencilInfo.depthBoundsTestEnable = false;
+		depthStencilInfo.minDepthBounds = 0.0f; // Optional
+		depthStencilInfo.maxDepthBounds = 1.0f; // Optional
+		depthStencilInfo.stencilTestEnable = false;
 
 		VkPipelineMultisampleStateCreateInfo multisamplingInfo = {};
 		multisamplingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -157,8 +180,8 @@ namespace GraphicsAbstraction {
 		pipelineLayoutInfo.flags = 0;
 		pipelineLayoutInfo.setLayoutCount = 0;
 		pipelineLayoutInfo.pSetLayouts = nullptr;
-		pipelineLayoutInfo.pushConstantRangeCount = 0;
-		pipelineLayoutInfo.pPushConstantRanges = nullptr;
+		pipelineLayoutInfo.pushConstantRangeCount = (uint32_t)pushConstants.size();
+		pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
 
 		VK_CHECK(vkCreatePipelineLayout(m_Context->GetLogicalDevice(), &pipelineLayoutInfo, nullptr, &m_PipelineLayout))
 
@@ -177,6 +200,7 @@ namespace GraphicsAbstraction {
 		pipelineInfo.renderPass = vulkanRenderpass->GetInternal();
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineInfo.pDepthStencilState = &depthStencilInfo;
 
 		VK_CHECK(vkCreateGraphicsPipelines(m_Context->GetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline));
 	}
@@ -189,10 +213,10 @@ namespace GraphicsAbstraction {
 		vkDestroyPipeline(m_Context->GetLogicalDevice(), m_Pipeline, nullptr);
 	}
 
-	void VulkanPipeline::Bind(std::shared_ptr<CommandBuffer> cmd, Renderpass::PipelineBindpoint bindpoint) const
+	void VulkanPipeline::Bind(std::shared_ptr<CommandBuffer> cmd) const
 	{
 		std::shared_ptr<VulkanCommandBuffer> vulkanCommandBuffer = std::dynamic_pointer_cast<VulkanCommandBuffer>(cmd);
-		vkCmdBindPipeline(vulkanCommandBuffer->GetInternal(), Utils::GAPipelineBindpointToVulkan(bindpoint), m_Pipeline);
+		vkCmdBindPipeline(vulkanCommandBuffer->GetInternal(), m_Bindpoint, m_Pipeline);
 	}
 
 }

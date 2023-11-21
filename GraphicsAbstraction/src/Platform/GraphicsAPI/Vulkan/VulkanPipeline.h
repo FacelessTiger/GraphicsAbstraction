@@ -14,9 +14,12 @@ namespace GraphicsAbstraction {
 		VulkanPipeline(std::shared_ptr<GraphicsContext> context, const Specification& spec);
 		virtual ~VulkanPipeline();
 
-		void Bind(std::shared_ptr<CommandBuffer> cmd, Renderpass::PipelineBindpoint bindpoint) const override;
+		inline VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
+
+		void Bind(std::shared_ptr<CommandBuffer> cmd) const override;
 	private:
 		VkPipelineLayout m_PipelineLayout;
+		VkPipelineBindPoint m_Bindpoint;
 		VkPipeline m_Pipeline;
 
 		std::shared_ptr<VulkanContext> m_Context;

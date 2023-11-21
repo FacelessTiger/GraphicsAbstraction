@@ -10,6 +10,7 @@ IncludeDir["VKBootstrap"] = "%{wks.location}/GraphicsAbstraction/vendor/VkBootst
 IncludeDir["VulkanSDK"] = "%{VULKAN_SDK}/Include"
 IncludeDir["tracy"] = "%{wks.location}/GraphicsAbstraction/vendor/tracy/public"
 IncludeDir["vma"] = "%{wks.location}/GraphicsAbstraction/vendor/vma/include"
+IncludeDir["tinyobjloader"] = "%{wks.location}/GraphicsAbstraction/vendor/tinyobjloader"
 
 LibraryDir = {}
 

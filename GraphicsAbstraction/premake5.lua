@@ -35,7 +35,8 @@ project "GraphicsAbstraction"
 		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.stb_image}",
-		"%{IncludeDir.spdlog}"
+		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.tinyobjloader}"
 	}
 
 	links 

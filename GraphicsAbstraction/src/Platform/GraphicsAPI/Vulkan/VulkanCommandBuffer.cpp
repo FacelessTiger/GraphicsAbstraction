@@ -50,6 +50,11 @@ namespace GraphicsAbstraction {
 		vkCmdDraw(m_CommandBuffer, vertexCount, instanceCount, 0, 0);
 	}
 
+	void VulkanCommandBuffer::DrawIndexed(uint32_t indexCount, uint32_t instanceCount) const
+	{
+		vkCmdDrawIndexed(m_CommandBuffer, indexCount, instanceCount, 0, 0, 0);
+	}
+
 	void VulkanCommandBuffer::Present(std::shared_ptr<Swapchain> swapchain, uint32_t swapchainImageIndex) const
 	{
 		GA_PROFILE_SCOPE();

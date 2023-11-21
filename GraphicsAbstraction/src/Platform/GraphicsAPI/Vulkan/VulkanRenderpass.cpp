@@ -9,67 +9,15 @@
 
 namespace GraphicsAbstraction {
 
-	namespace Utils {
-
-		VkAttachmentLoadOp GALoadOperationToVulkan(Renderpass::LoadOperation loadOperation)
-		{
-			switch (loadOperation)
-			{
-				case Renderpass::LoadOperation::None:					return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				case Renderpass::LoadOperation::Clear:					return VK_ATTACHMENT_LOAD_OP_CLEAR;
-			}
-
-			GA_CORE_ERROR("Unknown load operation for renderpass, {0}. Defaulting to none", (int)loadOperation);
-			return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		}
-
-		VkAttachmentStoreOp GAStoreOperationToVulkan(Renderpass::StoreOperation storeOperation)
-		{
-			switch (storeOperation)
-			{
-				case Renderpass::StoreOperation::None:					return VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				case Renderpass::StoreOperation::Store:					return VK_ATTACHMENT_STORE_OP_STORE;
-			}
-
-			GA_CORE_ERROR("Unknown store operation for renderpass, {0}. Defaulting to none", (int)storeOperation);
-			return VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		}
-
-		VkImageLayout GAImageLayoutToVulkan(Renderpass::ImageLayout imageLayout)
-		{
-			switch (imageLayout)
-			{
-				case Renderpass::ImageLayout::None:						return VK_IMAGE_LAYOUT_UNDEFINED;
-				case Renderpass::ImageLayout::ColorAttachmentOptimal:	return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-				case Renderpass::ImageLayout::PresentSource:			return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			}
-
-			GA_CORE_ERROR("Unknown image layout for renderpass, {0}. Defaulting to none", (int)imageLayout);
-			return VK_IMAGE_LAYOUT_UNDEFINED;
-		}
-
-		static VkPipelineBindPoint GAPipelineBindpointToVulkan(Renderpass::PipelineBindpoint pipelineBindpoint)
-		{
-			switch (pipelineBindpoint)
-			{
-				case Renderpass::PipelineBindpoint::Graphics:			return VK_PIPELINE_BIND_POINT_GRAPHICS;
-			}
-
-			GA_CORE_ERROR("Unknown pipeline bindpoint for renderpass, {0}. Defaulting to Graphics", (int)pipelineBindpoint);
-			return VK_PIPELINE_BIND_POINT_GRAPHICS;
-		}
-
-	}
-
-	VulkanRenderpass::VulkanRenderpass(const Specification& spec, std::shared_ptr<GraphicsContext> context, std::shared_ptr<Swapchain> swapchain)
+	VulkanRenderpass::VulkanRenderpass(std::shared_ptr<GraphicsContext> context, const Specification& spec)
 	{
 		GA_PROFILE_SCOPE();
 
 		m_Context = std::dynamic_pointer_cast<VulkanContext>(context);
-		std::shared_ptr<VulkanSwapchain> vulkanSwapchain = std::dynamic_pointer_cast<VulkanSwapchain>(swapchain);
 
-		InitRenderpass(spec, vulkanSwapchain);
-		Recreate(swapchain);
+		InitRenderpass(spec);
+		CreateFramebuffers(spec);
+		//Recreate(swapchain);
 	}
 
 	VulkanRenderpass::~VulkanRenderpass()
@@ -79,15 +27,25 @@ namespace GraphicsAbstraction {
 		DestroyFramebuffers();
 	}
 
-	void VulkanRenderpass::Begin(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<CommandBuffer> cmd, const glm::vec4& clearColor, uint32_t swapchainImageIndex) const
+	void VulkanRenderpass::Begin(const glm::vec2& size, std::shared_ptr<CommandBuffer> cmd, const std::vector<ClearValue>& clearValues, uint32_t swapchainImageIndex) const
 	{
 		GA_PROFILE_SCOPE();
 
-		std::shared_ptr<VulkanSwapchain> vulkanSwapchain = std::dynamic_pointer_cast<VulkanSwapchain>(swapchain);
 		std::shared_ptr<VulkanCommandBuffer> vulkanCommandBuffer = std::dynamic_pointer_cast<VulkanCommandBuffer>(cmd);
 
-		VkClearValue clearValue;
-		clearValue.color = { { clearColor.x, clearColor.y, clearColor.z, clearColor.w } };
+		std::vector<VkClearValue> vulkanClearValues;
+		for (const ClearValue& value : clearValues)
+		{
+			VkClearDepthStencilValue depthValue;
+			depthValue.depth = value.Depth;
+			depthValue.stencil = value.Stencil;
+
+			VkClearValue vulkanClearValue;
+			vulkanClearValue.color = { value.ClearColor.r, value.ClearColor.g, value.ClearColor.b, value.ClearColor.a };
+			vulkanClearValue.depthStencil = depthValue;
+
+			vulkanClearValues.push_back(vulkanClearValue);
+		}
 
 		VkRenderPassBeginInfo rpInfo = {};
 		rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -95,11 +53,11 @@ namespace GraphicsAbstraction {
 		rpInfo.renderPass = m_Renderpass;
 		rpInfo.renderArea.offset.x = 0;
 		rpInfo.renderArea.offset.y = 0;
-		rpInfo.renderArea.extent = { vulkanSwapchain->GetWidth(), vulkanSwapchain->GetHeight() };
+		rpInfo.renderArea.extent = { (uint32_t)size.x, (uint32_t)size.y };
 		rpInfo.framebuffer = m_Framebuffers[swapchainImageIndex];
 		
-		rpInfo.clearValueCount = 1;
-		rpInfo.pClearValues = &clearValue;
+		rpInfo.clearValueCount = (uint32_t)vulkanClearValues.size();
+		rpInfo.pClearValues = vulkanClearValues.data();
 
 		vkCmdBeginRenderPass(vulkanCommandBuffer->GetInternal(), &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
@@ -112,10 +70,10 @@ namespace GraphicsAbstraction {
 		vkCmdEndRenderPass(vulkanCommandBuffer->GetInternal());
 	}
 
-	void VulkanRenderpass::Recreate(std::shared_ptr<Swapchain> swapchain)
+	void VulkanRenderpass::Recreate(const Specification& spec)
 	{
 		DestroyFramebuffers();
-		CreateFramebuffers(swapchain);
+		CreateFramebuffers(spec);
 	}
 
 	void VulkanRenderpass::DestroyFramebuffers()
@@ -124,95 +82,135 @@ namespace GraphicsAbstraction {
 			vkDestroyFramebuffer(m_Context->GetLogicalDevice(), framebuffer, nullptr);
 	}
 
-	void VulkanRenderpass::InitRenderpass(const Specification& spec, std::shared_ptr<VulkanSwapchain> swapchain)
+	void VulkanRenderpass::InitRenderpass(const Specification& spec)
 	{
 		GA_PROFILE_SCOPE();
 
-		std::vector<VkAttachmentDescription> vulkanAttachments;
-		vulkanAttachments.reserve(spec.Attachments.size());
+		std::vector<VkAttachmentDescription> attachments;
+		std::vector<VkAttachmentReference> colorAttachmentRefs;
+		VkAttachmentReference depthAttachment;
 
-		for (const Attachment& attachment : spec.Attachments)
+		std::vector<VkSubpassDependency> dependencies;
+
+		int attachmentIndex = 0;
+
+		for (auto& colorOutput : spec.ColorOutputs)
 		{
-			VkAttachmentDescription vulkanAttachment = {};
-			vulkanAttachment.format = swapchain->GetImageFormat();
-			vulkanAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+			std::shared_ptr<VulkanImage> vulkanImage = std::dynamic_pointer_cast<VulkanImage>(colorOutput.Images[0]);
 
-			vulkanAttachment.loadOp = Utils::GALoadOperationToVulkan(attachment.LoadOperation);
-			vulkanAttachment.storeOp = Utils::GAStoreOperationToVulkan(attachment.StoreOperation);
+			VkAttachmentDescription attachment = {};
+			attachment.format = vulkanImage->GetFormat();
+			attachment.samples = vulkanImage->GetSamples();
+			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // have to change below when adding more complciated logic
+			attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-			vulkanAttachment.stencilLoadOp = Utils::GALoadOperationToVulkan(attachment.StencilLoadOperation);
-			vulkanAttachment.stencilStoreOp = Utils::GAStoreOperationToVulkan(attachment.StencilStoreOperation);
+			VkAttachmentReference attachmentRef = {};
+			attachmentRef.attachment = attachmentIndex++;
+			attachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-			vulkanAttachment.initialLayout = Utils::GAImageLayoutToVulkan(attachment.InitialImageLayout);
-			vulkanAttachment.finalLayout = Utils::GAImageLayoutToVulkan(attachment.FinalImageLayout);
+			VkSubpassDependency dependency = {};
+			dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+			dependency.dstSubpass = 0;
+			dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependency.srcAccessMask = 0;
+			dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-			vulkanAttachments.emplace_back(vulkanAttachment);
+			attachments.push_back(attachment);
+			colorAttachmentRefs.push_back(attachmentRef);
+			dependencies.push_back(dependency);
 		}
 
-		std::vector<VkSubpassDescription> vulkanSubpasses;
-		std::vector<std::vector<VkAttachmentReference>> vulkanColorAttachmentsList(spec.Subpasses.size());
-		vulkanSubpasses.reserve(spec.Subpasses.size());
-
-		for (int i = 0; i < spec.Subpasses.size(); i++)
+		for (auto& depthOutput : spec.DepthStencilOutput)
 		{
-			const SubpassSpecification& subpass = spec.Subpasses[i];
+			std::shared_ptr<VulkanImage> vulkanImage = std::dynamic_pointer_cast<VulkanImage>(depthOutput.Images[0]);
 
-			std::vector<VkAttachmentReference>& vulkanColorAttachments = vulkanColorAttachmentsList[i];
-			vulkanColorAttachments.reserve(subpass.ColorAttachments.size());
+			VkAttachmentDescription attachment = {};
+			attachment.format = vulkanImage->GetFormat();
+			attachment.samples = vulkanImage->GetSamples();
+			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // have to change below when adding more complciated logic
+			attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-			for (const AttachmentReference& colorAttachement : subpass.ColorAttachments)
-			{
-				VkAttachmentReference vulkanColorAttachement = {};
-				vulkanColorAttachement.attachment = colorAttachement.AttachmentIndex;
-				vulkanColorAttachement.layout = Utils::GAImageLayoutToVulkan(colorAttachement.ImageLayout);
+			VkAttachmentReference attachmentRef = {};
+			attachmentRef.attachment = attachmentIndex++;
+			attachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-				vulkanColorAttachments.emplace_back(vulkanColorAttachement);
-			}
+			VkSubpassDependency dependency = {};
+			dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+			dependency.dstSubpass = 0;
+			dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			dependency.srcAccessMask = 0;
+			dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-			VkSubpassDescription vulkanSubpass = {};
-			vulkanSubpass.pipelineBindPoint = Utils::GAPipelineBindpointToVulkan(subpass.Bindpoint);
-
-			if (vulkanColorAttachments.size())
-			{
-				vulkanSubpass.colorAttachmentCount = (uint32_t)vulkanColorAttachments.size();
-				vulkanSubpass.pColorAttachments = vulkanColorAttachments.data();
-			}
-
-			vulkanSubpasses.emplace_back(vulkanSubpass);
+			attachments.push_back(attachment);
+			depthAttachment = attachmentRef;
+			dependencies.push_back(dependency);
 		}
+
+		VkSubpassDescription subpass = {}; // need to rewrite this
+		subpass.colorAttachmentCount = (uint32_t)colorAttachmentRefs.size();
+		subpass.pColorAttachments = colorAttachmentRefs.data();
+		subpass.pDepthStencilAttachment = &depthAttachment;
+		subpass.pipelineBindPoint = m_Bindpoint;
 
 		VkRenderPassCreateInfo renderpassInfo = {};
 		renderpassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderpassInfo.attachmentCount = (uint32_t)vulkanAttachments.size();
-		renderpassInfo.pAttachments = vulkanAttachments.data();
-		renderpassInfo.subpassCount = (uint32_t)vulkanSubpasses.size();
-		renderpassInfo.pSubpasses = vulkanSubpasses.data();
+		renderpassInfo.attachmentCount = (uint32_t)attachments.size();
+		renderpassInfo.pAttachments = attachments.data();
+		renderpassInfo.subpassCount = 1;
+		renderpassInfo.pSubpasses = &subpass;
+		renderpassInfo.dependencyCount = (uint32_t)dependencies.size();
+		renderpassInfo.pDependencies = dependencies.data();
 
 		VK_CHECK(vkCreateRenderPass(m_Context->GetLogicalDevice(), &renderpassInfo, nullptr, &m_Renderpass));
 	}
 
-	void VulkanRenderpass::CreateFramebuffers(std::shared_ptr<Swapchain> swapchain)
+	void VulkanRenderpass::CreateFramebuffers(const Specification& spec)
 	{
 		GA_PROFILE_SCOPE();
-
-		std::shared_ptr<VulkanSwapchain> vulkanSwapchain = std::dynamic_pointer_cast<VulkanSwapchain>(swapchain);
 
 		VkFramebufferCreateInfo fbInfo = {};
 		fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		fbInfo.pNext = nullptr;
-
 		fbInfo.renderPass = m_Renderpass;
 		fbInfo.attachmentCount = 1;
-		fbInfo.width = vulkanSwapchain->GetWidth();
-		fbInfo.height = vulkanSwapchain->GetHeight();
+		fbInfo.width = (uint32_t)spec.Size.x;
+		fbInfo.height = (uint32_t)spec.Size.y;
 		fbInfo.layers = 1;
 
-		m_Framebuffers.resize(vulkanSwapchain->GetImageCount());
-		const auto& imageViews = vulkanSwapchain->GetImageViews();
-
-		for (uint32_t i = 0; i < vulkanSwapchain->GetImageCount(); i++)
+		m_Framebuffers.resize(spec.FramebufferCount);
+		for (uint32_t i = 0; i < spec.FramebufferCount; i++)
 		{
-			fbInfo.pAttachments = &imageViews[i];
+			std::vector<VkImageView> attachments;
+
+			for (auto& attachment : spec.ColorOutputs)
+			{
+				auto& images = attachment.Images;
+
+				if (images.size() == 1) attachments.push_back(std::dynamic_pointer_cast<VulkanImage>(images[0])->GetView());
+				else attachments.push_back(std::dynamic_pointer_cast<VulkanImage>(images[i])->GetView());
+			}
+
+			for (auto& attachment : spec.DepthStencilOutput)
+			{
+				auto& images = attachment.Images;
+
+				if (images.size() == 1) attachments.push_back(std::dynamic_pointer_cast<VulkanImage>(images[0])->GetView());
+				else attachments.push_back(std::dynamic_pointer_cast<VulkanImage>(images[i])->GetView());
+			}
+
+			fbInfo.attachmentCount = (uint32_t)attachments.size();
+			fbInfo.pAttachments = attachments.data();
+			
 			VK_CHECK(vkCreateFramebuffer(m_Context->GetLogicalDevice(), &fbInfo, nullptr, &m_Framebuffers[i]));
 		}
 	}

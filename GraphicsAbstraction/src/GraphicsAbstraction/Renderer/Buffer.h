@@ -116,9 +116,21 @@ namespace GraphicsAbstraction {
 		virtual void SetLayout(const BufferLayout& layout) = 0;
 		virtual const BufferLayout& GetLayout() const = 0;
 
-		virtual void Bind(std::shared_ptr<CommandBuffer> cmd) = 0;
+		virtual void Bind(std::shared_ptr<CommandBuffer> cmd) const = 0;
 
 		static std::shared_ptr<VertexBuffer> Create(std::shared_ptr<GraphicsContext> context, uint32_t size);
+	};
+
+	class IndexBuffer
+	{
+	public:
+		virtual ~IndexBuffer() = default;
+
+		virtual void Bind(std::shared_ptr<CommandBuffer> cmd) const = 0;
+
+		virtual uint32_t GetCount() const = 0;
+
+		static std::shared_ptr<IndexBuffer> Create(std::shared_ptr<GraphicsContext> context, uint32_t* indices, uint32_t count);
 	};
 
 }

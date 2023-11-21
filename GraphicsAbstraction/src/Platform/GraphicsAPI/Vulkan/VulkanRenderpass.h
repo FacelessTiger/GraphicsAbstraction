@@ -13,23 +13,26 @@ namespace GraphicsAbstraction {
 	class VulkanRenderpass : public Renderpass
 	{
 	public:
-		VulkanRenderpass(const Specification& spec, std::shared_ptr<GraphicsContext> context, std::shared_ptr<Swapchain> swapchain);
+		VulkanRenderpass(std::shared_ptr<GraphicsContext> context, const Specification& spec);
 		virtual ~VulkanRenderpass();
 
-		void Begin(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<CommandBuffer> cmd, const glm::vec4& clearColor, uint32_t swapchainImageIndex) const override;
+		void Begin(const glm::vec2& size, std::shared_ptr<CommandBuffer> cmd, const std::vector<ClearValue>& clearValues, uint32_t swapchainImageIndex) const override;
 		void End(std::shared_ptr<CommandBuffer> cmd) const override;
 
-		void Recreate(std::shared_ptr<Swapchain> swapchain) override;
+		void Recreate(const Specification& spec) override;
 
 		inline VkRenderPass GetInternal() const { return m_Renderpass; }
+		inline VkPipelineBindPoint GetBindpoint() const { return m_Bindpoint; }
 	private:
 		void DestroyFramebuffers();
 
-		void InitRenderpass(const Specification& spec, std::shared_ptr<VulkanSwapchain> swapchain);
-		void CreateFramebuffers(std::shared_ptr<Swapchain> swapchain);
+		void InitRenderpass(const Specification& spec);
+		void CreateFramebuffers(const Specification& spec);
 	private:
 		VkRenderPass m_Renderpass;
 		std::vector<VkFramebuffer> m_Framebuffers;
+
+		VkPipelineBindPoint m_Bindpoint = VK_PIPELINE_BIND_POINT_GRAPHICS; // hard coding bindpoint to graphics for now
 
 		std::shared_ptr<VulkanContext> m_Context;
 	};

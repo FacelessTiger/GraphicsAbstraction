@@ -8,7 +8,8 @@ namespace GraphicsAbstraction {
 	{
 		None = 0,
 		WindowClose, WindowResize,
-		KeyPressed, KeyReleased
+		KeyPressed, KeyReleased,
+		MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled
 	};
 
 	enum EventCategory
@@ -16,7 +17,9 @@ namespace GraphicsAbstraction {
 		None = 0,
 		EventCategoryApplication	= 1,
 		EventCategoryInput			= 2,
-		EventCategoryKeyboard		= 4
+		EventCategoryKeyboard		= 4,
+		EventCategoryMouse			= 8,
+		EventCategoryMouseButton	= 16
 	};
 
 #define EVENT_CLASS_TYPE(type)	static EventType GetStaticType() { return EventType::type; }\

@@ -10,71 +10,55 @@
 namespace GraphicsAbstraction {
 
 	class CommandBuffer;
+	class Image;
+
+	struct ClearValue
+	{
+		glm::vec4 ClearColor = glm::vec4(0.0f);
+		float Depth = 0.0f;
+		uint32_t Stencil = 0;
+
+		ClearValue(const glm::vec4& clearColor)
+			: ClearColor(clearColor)
+		{ }
+		ClearValue(float depth, uint32_t stencil)
+			: Depth(depth), Stencil(stencil)
+		{ }
+	};
 
 	class Renderpass
 	{
 	public:
-		enum class LoadOperation
-		{
-			None = 0, // Don't care
-			Clear
-		};
-
-		enum class StoreOperation
-		{
-			None = 0, // Don't care
-			Store
-		};
-
-		enum class ImageLayout
-		{
-			None = 0, // Don't care
-			ColorAttachmentOptimal, // Layout optimal to be written into by rendering commands
-			PresentSource // Layout that allows displaying on the screen
-		};
-
-		enum class PipelineBindpoint
-		{
-			Graphics = 0
-		};
-
 		struct Attachment
 		{
-			Renderpass::LoadOperation LoadOperation = Renderpass::LoadOperation::None;
-			Renderpass::StoreOperation StoreOperation = Renderpass::StoreOperation::None;
-			Renderpass::LoadOperation StencilLoadOperation = Renderpass::LoadOperation::None;
-			Renderpass::StoreOperation StencilStoreOperation = Renderpass::StoreOperation::None;
+			std::vector<std::shared_ptr<Image>> Images;
 
-			ImageLayout InitialImageLayout = ImageLayout::None;
-			ImageLayout FinalImageLayout = ImageLayout::None;
-		};
-
-		struct AttachmentReference
-		{
-			uint32_t AttachmentIndex = -1;
-			ImageLayout ImageLayout = ImageLayout::None;
-		};
-
-		struct SubpassSpecification
-		{
-			PipelineBindpoint Bindpoint = PipelineBindpoint::Graphics;
-			std::vector<AttachmentReference> ColorAttachments;
+			Attachment(const std::vector<std::shared_ptr<Image>>& images)
+				: Images(images)
+			{ }
+			Attachment(std::shared_ptr<Image> image)
+			{ Images.push_back(image); }
 		};
 
 		struct Specification
 		{
-			std::vector<Attachment> Attachments;
-			std::vector<SubpassSpecification> Subpasses;
+			std::vector<Attachment> ColorInputs;
+			std::vector<Attachment> ColorOutputs;
+			std::vector<Attachment> DepthStencilInput;
+			std::vector<Attachment> DepthStencilOutput;
+
+			uint32_t FramebufferCount;
+			glm::vec2 Size;
 		};
 	public:
 		virtual ~Renderpass() = default;
 
-		virtual void Begin(std::shared_ptr<Swapchain> swapchain, std::shared_ptr<CommandBuffer> cmd, const glm::vec4& clearColor, uint32_t swapchainImageIndex) const = 0;
+		virtual void Begin(const glm::vec2& size, std::shared_ptr<CommandBuffer> cmd, const std::vector<ClearValue>& clearValues, uint32_t swapchainImageIndex) const = 0;
 		virtual void End(std::shared_ptr<CommandBuffer> cmd) const = 0;
 
-		virtual void Recreate(std::shared_ptr<Swapchain> swapchain) = 0;
+		virtual void Recreate(const Specification& spec) = 0;
 
-		static std::shared_ptr<Renderpass> Create(const Specification& spec, std::shared_ptr<GraphicsContext> context, std::shared_ptr<Swapchain> swapchain);
+		static std::shared_ptr<Renderpass> Create(std::shared_ptr<GraphicsContext> context, const Specification& spec);
 	};
 
 }

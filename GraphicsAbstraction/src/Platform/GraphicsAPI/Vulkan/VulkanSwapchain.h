@@ -5,6 +5,7 @@
 #include <GraphicsAbstraction/Core/Window.h>
 
 #include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanImage.h>
 
 #include <vulkan/vulkan.h>
 #include <vector>
@@ -30,11 +31,13 @@ namespace GraphicsAbstraction {
 		inline VkSemaphore GetPresentSemaphore() const { return m_PresentSemaphore; }
 		inline VkSemaphore GetRenderSemaphore() const { return m_RenderSemaphore; }
 
-		inline uint32_t GetWidth() const override { return m_Width; }
-		inline uint32_t GetHeight() const override { return m_Height; }
+		inline uint32_t GetWidth() const override { return (uint32_t)m_Size.x; }
+		inline uint32_t GetHeight() const override { return (uint32_t)m_Size.y; }
+		inline const glm::vec2& GetSize() const override { return m_Size; }
+
+		inline const std::vector<std::shared_ptr<Image>>& GetImages() const override { return m_SwapchainImages; }
 
 		inline uint32_t GetImageCount() const { return (uint32_t)m_SwapchainImages.size(); }
-		inline const std::vector<VkImageView>& GetImageViews() const { return m_ImageViews; }
 	private:
 		void DestroySwapchain();
 
@@ -46,11 +49,9 @@ namespace GraphicsAbstraction {
 		VkFormat m_SwapchainImageFormat;
 		VkSemaphore m_PresentSemaphore, m_RenderSemaphore;
 
-		std::vector<VkImage> m_SwapchainImages;
-		std::vector<VkImageView> m_ImageViews;
+		std::vector<std::shared_ptr<Image>> m_SwapchainImages;
 
-		uint32_t m_Width;
-		uint32_t m_Height;
+		glm::vec2 m_Size;
 
 		bool m_Initialized = false;
 		std::shared_ptr<VulkanContext> m_Context;
