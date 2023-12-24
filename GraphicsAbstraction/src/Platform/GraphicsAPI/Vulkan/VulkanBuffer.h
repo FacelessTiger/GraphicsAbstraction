@@ -1,6 +1,8 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/Buffer.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanResourceHandle.h>
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
@@ -9,45 +11,26 @@ namespace GraphicsAbstraction {
 
 	class VulkanContext;
 
-	struct AllocatedBuffer
-	{
-		VkBuffer Buffer;
-		VmaAllocation Allocation;
-	};
-
-	class VulkanVertexBuffer : public VertexBuffer
+	class VulkanBuffer : public Buffer
 	{
 	public:
-		VulkanVertexBuffer(std::shared_ptr<GraphicsContext> context, uint32_t size);
-		virtual ~VulkanVertexBuffer();
+		uint32_t Size;
+		Utils::AllocatedBuffer Buffer;
 
-		void SetData(const void* data, uint32_t size) override;
-
-		void SetLayout(const BufferLayout& layout) override { m_Layout = layout; }
-		const BufferLayout& GetLayout() const override { return m_Layout; }
-
-		void Bind(std::shared_ptr<CommandBuffer> cmd) const override;
-	private:
-		BufferLayout m_Layout;
-		AllocatedBuffer m_VertexBuffer;
-
-		std::shared_ptr<VulkanContext> m_Context;
-	};
-
-	class VulkanIndexBuffer : public IndexBuffer
-	{
+		VulkanResourceHandle Handle = { ResourceType::StorageBuffer };
 	public:
-		VulkanIndexBuffer(std::shared_ptr<GraphicsContext> context, uint32_t* indices, uint32_t count);
-		virtual ~VulkanIndexBuffer();
+		VulkanBuffer(uint32_t size, BufferUsage usage, BufferFlags flags);
+		virtual ~VulkanBuffer();
 
-		void Bind(std::shared_ptr<CommandBuffer> cmd) const override;
+		void SetData(const void* data, uint32_t size = 0, uint32_t offset = 0) override;
+		void SetData(const std::shared_ptr<GraphicsAbstraction::Buffer>& buffer) override;
 
-		inline uint32_t GetCount() const { return m_Count; }
+		void GetData(void* data, uint32_t size, uint32_t offset) override;
+		inline uint32_t GetSize() const override { return Size; }
 	private:
-		AllocatedBuffer m_IndexBuffer;
-		uint32_t m_Count;
-
-		std::shared_ptr<VulkanContext> m_Context;
+		void UpdateDescriptor();
+	private:
+		VulkanContextReference m_Context;
 	};
 
 }

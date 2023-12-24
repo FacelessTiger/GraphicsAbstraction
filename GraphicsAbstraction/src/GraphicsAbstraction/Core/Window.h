@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <glm/glm.hpp>
 
 namespace GraphicsAbstraction {
 
@@ -13,11 +14,13 @@ namespace GraphicsAbstraction {
 		std::string Title;
 		uint32_t Width;
 		uint32_t Height;
+		bool CustomTitlebar;
 
 		WindowProps(const std::string& title = "Graphics Abstraction",
 			uint32_t width = 1600,
-			uint32_t height = 900)
-			: Title(title), Width(width), Height(height)
+			uint32_t height = 900, 
+			bool customTitlebar = false)
+			: Title(title), Width(width), Height(height), CustomTitlebar(customTitlebar)
 		{ }
 	};
 
@@ -30,6 +33,7 @@ namespace GraphicsAbstraction {
 
 		virtual void OnUpdate() = 0;
 
+		virtual glm::vec2 GetSize() const = 0;
 		virtual inline uint32_t GetWidth() const = 0;
 		virtual inline uint32_t GetHeight() const = 0;
 

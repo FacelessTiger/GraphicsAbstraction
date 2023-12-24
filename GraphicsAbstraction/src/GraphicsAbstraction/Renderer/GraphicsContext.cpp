@@ -6,16 +6,16 @@
 
 namespace GraphicsAbstraction {
 
-    std::shared_ptr<GraphicsContext> GraphicsContext::Create()
+    std::unique_ptr<GraphicsContext> GraphicsContext::s_Instance = nullptr;
+
+    void GraphicsContext::Init(uint32_t frameInFlightCount)
     {
 #ifdef GA_RENDERER_NONE
         GA_CORE_ASSERT(false, "RendererAPI::None is currently not supported!");
-        return nullptr;
 #elif defined(GA_RENDERER_VULKAN)
-        return std::make_shared<VulkanContext>();
+        s_Instance = std::make_unique<VulkanContext>(frameInFlightCount);
 #else
         GA_CORE_ASSERT(false, "Unknown RendererAPI!");
-		return nullptr;
 #endif
     }
 

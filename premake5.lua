@@ -8,7 +8,7 @@ newoption {
 
 workspace "GraphicsAbstraction"
 	architecture "x86_64"
-	startproject "GraphicsAbstraction"
+	startproject "RendererExample"
 	
 	configurations
 	{
@@ -33,4 +33,5 @@ group ""
 
 group "Core"
 	include "GraphicsAbstraction"
+	include "RendererExample"
 group ""

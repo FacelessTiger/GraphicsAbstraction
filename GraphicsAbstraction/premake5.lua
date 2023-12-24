@@ -1,5 +1,5 @@
 project "GraphicsAbstraction"
-	kind "ConsoleApp"
+	kind "StaticLib"
 	language "C++"
 	cppdialect "C++20"
 	staticruntime "off"
@@ -15,7 +15,6 @@ project "GraphicsAbstraction"
 	{
 		"src/GraphicsAbstraction/**.h",
 		"src/GraphicsAbstraction/**.cpp",
-		"src/Main.cpp",
 		"vendor/stb_image/**.h",
 		"vendor/stb_image/**.cpp",
 		"vendor/glm/glm/**.hpp",
@@ -35,8 +34,7 @@ project "GraphicsAbstraction"
 		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.stb_image}",
-		"%{IncludeDir.spdlog}",
-		"%{IncludeDir.tinyobjloader}"
+		"%{IncludeDir.spdlog}"
 	}
 
 	links 
@@ -51,27 +49,25 @@ project "GraphicsAbstraction"
 		files
 		{
 			"src/Platform/GraphicsAPI/Vulkan/**.h",
-			"src/Platform/GraphicsAPI/Vulkan/**.cpp",
-			"vendor/VkBootstrap/src/**.h",
-			"vendor/VkBootstrap/src/**.cpp"
+			"src/Platform/GraphicsAPI/Vulkan/**.cpp"
 		}
 
 		includedirs
 		{
 			"%{IncludeDir.VulkanSDK}",
-			"%{IncludeDir.VKBootstrap}",
+			"%{IncludeDir.DXC}",
 			"%{IncludeDir.vma}"
 		}
 
 		links
 		{
-			"%{Library.Vulkan}"
+			"%{Library.Vulkan}",
+			"%{Library.DXCompiler}"
 		}
 
 	filter { "options:with-vulkan", "configurations:Debug" }
 		links
 		{
-			"%{Library.ShaderC_Debug}",
 			"%{Library.SPIRV_Cross_Debug}",
 			"%{Library.SPIRV_Cross_GLSL_Debug}"
 		}
@@ -79,7 +75,6 @@ project "GraphicsAbstraction"
 	filter { "options:with-vulkan", "configurations:Release or Dist" }
 		links
 		{
-			"%{Library.ShaderC_Release}",
 			"%{Library.SPIRV_Cross_Release}",
 			"%{Library.SPIRV_Cross_GLSL_Release}"
 		}

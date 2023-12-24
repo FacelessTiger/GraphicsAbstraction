@@ -5,6 +5,7 @@
 #include <GraphicsAbstraction/Events/MouseEvent.h>
 
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
+#include <GraphicsAbstraction/Core/Assert.h>
 
 namespace GraphicsAbstraction {
 
@@ -39,12 +40,18 @@ namespace GraphicsAbstraction {
 		}
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		if (props.CustomTitlebar) glfwWindowHint(GLFW_TITLEBAR, false);
 		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		s_WindowCount++;
 		
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 
 		// Set GLFW callbacks
+		glfwSetTitlebarHitTestCallback(m_Window, [](GLFWwindow*, int x, int y, int* hit)
+		{
+			*hit = true;
+		});
+
 		glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, int width, int height)
 		{
 			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);

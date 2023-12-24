@@ -1,36 +1,44 @@
 #include "VulkanFence.h"
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
-
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {
 
-	VulkanFence::VulkanFence(std::shared_ptr<GraphicsContext> context)
+	VulkanFence::VulkanFence()
+		: m_Context(VulkanContext::GetReference())
 	{
-		GA_PROFILE_SCOPE();
+		VkSemaphoreTypeCreateInfo timelineCreateInfo = {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+			.pNext = nullptr,
+			.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+			.initialValue = Value
+		};
 
-		m_Context = std::dynamic_pointer_cast<VulkanContext>(context);
-
-		VkFenceCreateInfo fenceCreateInfo = {};
-		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceCreateInfo.pNext = nullptr;
-		fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-		VK_CHECK(vkCreateFence(m_Context->GetLogicalDevice(), &fenceCreateInfo, nullptr, &m_Fence));
+		VkSemaphoreCreateInfo createInfo = {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+			.pNext = &timelineCreateInfo
+		};
+		
+		VK_CHECK(vkCreateSemaphore(m_Context->Device, &createInfo, nullptr, &TimelineSemaphore));
 	}
 
 	VulkanFence::~VulkanFence()
 	{
-		vkDestroyFence(m_Context->GetLogicalDevice(), m_Fence, nullptr);
+		m_Context->GetFrameDeletionQueue().Push(TimelineSemaphore);
 	}
 
-	void VulkanFence::Wait() const
+	void VulkanFence::Wait()
 	{
 		GA_PROFILE_SCOPE();
 
-		VK_CHECK(vkWaitForFences(m_Context->GetLogicalDevice(), 1, &m_Fence, true, 1000000000));
-		VK_CHECK(vkResetFences(m_Context->GetLogicalDevice(), 1, &m_Fence));
+		VkSemaphoreWaitInfo waitInfo = {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+			.semaphoreCount = 1,
+			.pSemaphores = &TimelineSemaphore,
+			.pValues = &Value
+		};
+		
+		VK_CHECK(vkWaitSemaphores(m_Context->Device, &waitInfo, UINT64_MAX));
 	}
 
 }

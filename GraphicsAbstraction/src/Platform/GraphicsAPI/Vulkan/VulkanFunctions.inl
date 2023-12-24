@@ -1,0 +1,19 @@
+#ifndef GA_VULKAN_FUNCTION
+	#define GA_VULKAN_FUNCTION(...)
+#endif
+
+GA_VULKAN_FUNCTION(vkCreateDebugUtilsMessengerEXT);
+GA_VULKAN_FUNCTION(vkDestroyDebugUtilsMessengerEXT);
+GA_VULKAN_FUNCTION(vkCmdBindShadersEXT);
+GA_VULKAN_FUNCTION(vkCreateShadersEXT);
+GA_VULKAN_FUNCTION(vkDestroyShaderEXT);
+GA_VULKAN_FUNCTION(vkCmdSetPolygonModeEXT);
+GA_VULKAN_FUNCTION(vkCmdSetRasterizationSamplesEXT);
+GA_VULKAN_FUNCTION(vkCmdSetSampleMaskEXT);
+GA_VULKAN_FUNCTION(vkCmdSetAlphaToCoverageEnableEXT);
+GA_VULKAN_FUNCTION(vkCmdSetVertexInputEXT);
+GA_VULKAN_FUNCTION(vkCmdSetColorBlendEnableEXT);
+GA_VULKAN_FUNCTION(vkCmdSetColorWriteMaskEXT);
+GA_VULKAN_FUNCTION(vkCmdSetColorBlendEquationEXT);
+
+#undef GA_VULKAN_FUNCTION

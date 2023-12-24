@@ -1,82 +1,95 @@
 #include "VulkanBuffer.h"
 
-#include <GraphicsAbstraction/Debug/Instrumentor.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
 
 namespace GraphicsAbstraction {
 
-	VulkanVertexBuffer::VulkanVertexBuffer(std::shared_ptr<GraphicsContext> context, uint32_t size)
-		: m_Context(std::dynamic_pointer_cast<VulkanContext>(context))
-	{
-		GA_PROFILE_SCOPE();
+	namespace Utils {
 
-		VkBufferCreateInfo bufferInfo = {};
-		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = size;
-		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		static VkBufferUsageFlags GABufferUsageToVulkan(BufferUsage usage)
+		{
+			VkBufferUsageFlags ret = 0;
 
-		VmaAllocationCreateInfo vmaAllocInfo = {};
-		vmaAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+			if (usage & BufferUsage::StorageBuffer)	ret |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			if (usage & BufferUsage::TransferSrc)	ret |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			if (usage & BufferUsage::TransferDst)	ret |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+			if (usage & BufferUsage::IndexBuffer)	ret |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
-		VK_CHECK(vmaCreateBuffer(m_Context->GetAllocator(), &bufferInfo, &vmaAllocInfo, &m_VertexBuffer.Buffer, &m_VertexBuffer.Allocation, nullptr));
+			return ret;
+		}
+
+		static VmaAllocationCreateFlags GABufferFlagsToVMA(BufferFlags flags)
+		{
+			VmaAllocationCreateFlags ret = 0;
+
+			// if its mapped, we're enforcing host access since no reason to map for gpu-only memory
+			if (flags & BufferFlags::Mapped)			ret |= (VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+			if (flags & BufferFlags::DedicatedMemory)	ret |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+
+			return ret;
+		}
+
 	}
 
-	VulkanVertexBuffer::~VulkanVertexBuffer()
+	VulkanBuffer::VulkanBuffer(uint32_t size, BufferUsage usage, BufferFlags flags)
+		: m_Context(VulkanContext::GetReference()), Size(size)
 	{
-		vmaDestroyBuffer(m_Context->GetAllocator(), m_VertexBuffer.Buffer, m_VertexBuffer.Allocation);
+		VkBufferCreateInfo bufferInfo = {
+			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+			.size = (VkDeviceSize)Size,
+			.usage = Utils::GABufferUsageToVulkan(usage),
+		};
+
+		VmaAllocationCreateInfo vmaAllocInfo = {
+			.flags = Utils::GABufferFlagsToVMA(flags),
+			.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE
+		};
+
+		vmaCreateBuffer(m_Context->Allocator, &bufferInfo, &vmaAllocInfo, &Buffer.Buffer, &Buffer.Allocation, &Buffer.Info);
+		if (usage & BufferUsage::StorageBuffer) UpdateDescriptor();
 	}
 
-	void VulkanVertexBuffer::SetData(const void* data, uint32_t size)
+	VulkanBuffer::~VulkanBuffer()
 	{
-		GA_PROFILE_SCOPE();
-		void* gpuData;
-
-		vmaMapMemory(m_Context->GetAllocator(), m_VertexBuffer.Allocation, &gpuData);
-		memcpy(gpuData, data, size);
-		vmaUnmapMemory(m_Context->GetAllocator(), m_VertexBuffer.Allocation);
+		m_Context->GetFrameDeletionQueue().Push(Buffer);
 	}
 
-	void VulkanVertexBuffer::Bind(std::shared_ptr<CommandBuffer> cmd) const
+	void VulkanBuffer::SetData(const void* data, uint32_t size, uint32_t offset)
 	{
-		GA_PROFILE_SCOPE();
-		std::shared_ptr<VulkanCommandBuffer> vulkanCommandBuffer = std::dynamic_pointer_cast<VulkanCommandBuffer>(cmd);
-
-		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(vulkanCommandBuffer->GetInternal(), 0, 1, &m_VertexBuffer.Buffer, &offset);
+		uint32_t bufferSize = size ? size : Size; // If user passes a size use it, otherwise use creation size
+		memcpy((char*)Buffer.Info.pMappedData + offset, data, bufferSize);
 	}
 
-	VulkanIndexBuffer::VulkanIndexBuffer(std::shared_ptr<GraphicsContext> context, uint32_t* indices, uint32_t count)
-		: m_Context(std::dynamic_pointer_cast<VulkanContext>(context)), m_Count(count)
+	void VulkanBuffer::SetData(const std::shared_ptr<GraphicsAbstraction::Buffer>& buffer)
 	{
-		GA_PROFILE_SCOPE();
-		size_t size = count * sizeof(uint32_t);
-
-		VkBufferCreateInfo bufferInfo = {};
-		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = size;
-		bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-
-		VmaAllocationCreateInfo vmaAllocInfo = {};
-		vmaAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-		VK_CHECK(vmaCreateBuffer(m_Context->GetAllocator(), &bufferInfo, &vmaAllocInfo, &m_IndexBuffer.Buffer, &m_IndexBuffer.Allocation, nullptr));
-
-		void* gpuData;
-		vmaMapMemory(m_Context->GetAllocator(), m_IndexBuffer.Allocation, &gpuData);
-		memcpy(gpuData, indices, size);
-		vmaUnmapMemory(m_Context->GetAllocator(), m_IndexBuffer.Allocation);
+		auto vulkanBuffer = std::static_pointer_cast<VulkanBuffer>(buffer);
+		memcpy(Buffer.Info.pMappedData, vulkanBuffer->Buffer.Info.pMappedData, vulkanBuffer->Size);
 	}
 
-	VulkanIndexBuffer::~VulkanIndexBuffer()
+	void VulkanBuffer::GetData(void* data, uint32_t size, uint32_t offset)
 	{
-		vmaDestroyBuffer(m_Context->GetAllocator(), m_IndexBuffer.Buffer, m_IndexBuffer.Allocation);
+		memcpy(data, (char*)Buffer.Info.pMappedData + offset, size);
 	}
 
-	void VulkanIndexBuffer::Bind(std::shared_ptr<CommandBuffer> cmd) const
+	void VulkanBuffer::UpdateDescriptor()
 	{
-		GA_PROFILE_SCOPE();
-		std::shared_ptr<VulkanCommandBuffer> vulkanCommandBuffer = std::dynamic_pointer_cast<VulkanCommandBuffer>(cmd);
+		VkDescriptorBufferInfo descriptorBufferInfo = {
+			.buffer = Buffer.Buffer,
+			.offset = 0,
+			.range = VK_WHOLE_SIZE
+		};
 
-		vkCmdBindIndexBuffer(vulkanCommandBuffer->GetInternal(), m_IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
+		VkWriteDescriptorSet write = {
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = m_Context->BindlessSet,
+			.dstBinding = m_Context->STORAGE_BINDING,
+			.dstArrayElement = Handle.GetValue(),
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.pBufferInfo = &descriptorBufferInfo
+		};
+
+		vkUpdateDescriptorSets(m_Context->Device, 1, &write, 0, nullptr);
 	}
 
 }

@@ -1,83 +1,58 @@
 #include "VulkanCommandPool.h"
 
 #include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanQueue.h>
 #include <Platform/GraphicsAPI/Vulkan/VulkanCommandBuffer.h>
-
-#include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {
 
-	VulkanCommandPool::VulkanCommandPool(std::shared_ptr<GraphicsContext> context, QueueType type)
+	VulkanCommandPool::VulkanCommandPool(const std::shared_ptr<Queue>& queue)
+		: m_Context(VulkanContext::GetReference())
 	{
-		GA_PROFILE_SCOPE();
+		auto vulkanQueue = std::static_pointer_cast<VulkanQueue>(queue);
 
-		m_Context = std::dynamic_pointer_cast<VulkanContext>(context);
-		InitQueues(type);
+		VkCommandPoolCreateInfo commandPoolInfo = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.pNext = nullptr,
+			.queueFamilyIndex = vulkanQueue->QueueFamily
+		};
 
-		VkCommandPoolCreateInfo commandPoolInfo = {};
-		commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		commandPoolInfo.pNext = nullptr;
-		commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		commandPoolInfo.queueFamilyIndex = m_QueueFamily;
+		VK_CHECK(vkCreateCommandPool(m_Context->Device, &commandPoolInfo, nullptr, &CommandPool));
 
-		VK_CHECK(vkCreateCommandPool(m_Context->GetLogicalDevice(), &commandPoolInfo, nullptr, &m_CommandPool));
+		VkCommandBufferAllocateInfo cmdAllocInfo = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.pNext = nullptr,
+			.commandPool = CommandPool,
+			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			.commandBufferCount = 1
+		};
+
+		VK_CHECK(vkAllocateCommandBuffers(m_Context->Device, &cmdAllocInfo, &MainCommandBuffer));
 	}
 
 	VulkanCommandPool::~VulkanCommandPool()
 	{
-		vkDestroyCommandPool(m_Context->GetLogicalDevice(), m_CommandPool, nullptr);
+		m_Context->GetFrameDeletionQueue().Push(CommandPool);
 	}
 
-	std::shared_ptr<CommandBuffer> VulkanCommandPool::CreateCommandBuffer() const
+	void VulkanCommandPool::Reset()
 	{
-		GA_PROFILE_SCOPE();
-
-		VkCommandBuffer buffer;
-		CreateVulkanCommandBuffers(1, &buffer);
-
-		return std::make_shared<VulkanCommandBuffer>(buffer, m_Queue);
+		vkResetCommandPool(m_Context->Device, CommandPool, 0);
 	}
 
-	CommandPoolBuffers VulkanCommandPool::CreateCommandBuffers(uint32_t count) const
+	std::shared_ptr<CommandBuffer> VulkanCommandPool::Begin()
 	{
-		GA_PROFILE_SCOPE();
+		VkCommandBufferBeginInfo info = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+		};
+		
+		vkBeginCommandBuffer(MainCommandBuffer, &info);
+		vkCmdBindDescriptorSets(MainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Context->BindlessPipelineLayout, 0, 1, &m_Context->BindlessSet, 0, nullptr);
+		vkCmdBindDescriptorSets(MainCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_Context->BindlessPipelineLayout, 0, 1, &m_Context->BindlessSet, 0, nullptr);
 
-		std::vector<VkCommandBuffer> vulkanBuffers(count);
-		CommandPoolBuffers buffers;
-		buffers.reserve(count);
-
-		CreateVulkanCommandBuffers(count, vulkanBuffers.data());
-		for (VkCommandBuffer& vulkanBuffer : vulkanBuffers)
-			buffers.emplace_back(std::make_shared<VulkanCommandBuffer>(vulkanBuffer, m_Queue));
-
-		return buffers;
-	}
-
-	void VulkanCommandPool::InitQueues(QueueType type)
-	{
-		switch (type)
-		{
-			case QueueType::Graphics:
-				m_Queue = m_Context->GetGraphicsQeue();
-				m_QueueFamily = m_Context->GetGraphicsQueueFamily(); 
-				return;
-		}
-
-		GA_CORE_ASSERT(false, "Unknown queue type!");
-	}
-
-	void VulkanCommandPool::CreateVulkanCommandBuffers(uint32_t count, VkCommandBuffer* data) const
-	{
-		GA_PROFILE_SCOPE();
-
-		VkCommandBufferAllocateInfo cmdAllocInfo = {};
-		cmdAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		cmdAllocInfo.pNext = nullptr;
-		cmdAllocInfo.commandPool = m_CommandPool;
-		cmdAllocInfo.commandBufferCount = count;
-		cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-		VK_CHECK(vkAllocateCommandBuffers(m_Context->GetLogicalDevice(), &cmdAllocInfo, data));
+		return std::make_shared<VulkanCommandBuffer>(MainCommandBuffer);
 	}
 
 }

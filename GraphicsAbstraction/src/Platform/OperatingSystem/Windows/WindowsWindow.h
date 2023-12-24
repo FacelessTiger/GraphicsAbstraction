@@ -1,7 +1,6 @@
 #pragma once
 
 #include <GraphicsAbstraction/Core/Window.h>
-#include <GraphicsAbstraction/Renderer/GraphicsContext.h>
 
 #include <GLFW/glfw3.h>
 
@@ -15,6 +14,7 @@ namespace GraphicsAbstraction {
 
 		void OnUpdate() override;
 
+		inline glm::vec2 GetSize() const override { return { m_Data.Width, m_Data.Height }; }
 		inline unsigned int GetWidth() const override { return m_Data.Width; }
 		inline unsigned int GetHeight() const override { return m_Data.Height; }
 

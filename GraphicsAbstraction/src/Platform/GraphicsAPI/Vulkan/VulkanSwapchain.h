@@ -1,59 +1,52 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
-#include <GraphicsAbstraction/Renderer/GraphicsContext.h>
-#include <GraphicsAbstraction/Core/Window.h>
-
 #include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
 #include <Platform/GraphicsAPI/Vulkan/VulkanImage.h>
 
 #include <vulkan/vulkan.h>
-#include <vector>
 
 namespace GraphicsAbstraction {
 
-	class Window;
-	class GraphicsContext;
-	class VulkanContext;
+	class VulkanSurface;
 
 	class VulkanSwapchain : public Swapchain
 	{
 	public:
-		VulkanSwapchain(std::shared_ptr<Window> window, std::shared_ptr<GraphicsContext> context);
+		VkSwapchainKHR Swapchain;
+		VkFormat ImageFormat;
+		std::vector<std::shared_ptr<VulkanImage>> Images;
+
+		std::vector<VkSemaphore> Semaphores;
+		uint32_t SemaphoreIndex = 0;
+		uint32_t ImageIndex = 0;
+
+		uint32_t Width, Height;
+		bool Dirty = false;
+	public:
+		VulkanSwapchain(const std::shared_ptr<Surface>& surface, const glm::vec2& size, bool enableVSync);
 		virtual ~VulkanSwapchain();
 
-		uint32_t AcquireNextImage() const override;
 		void Resize(uint32_t width, uint32_t height) override;
+		void SetVsync(bool enabled) override;
 
-		inline VkSurfaceKHR GetSurface() const { return m_Surface; }
-		inline VkSwapchainKHR GetInternal() const { return m_Swapchain; }
-		inline VkFormat GetImageFormat() const { return m_SwapchainImageFormat; }
-		inline VkSemaphore GetPresentSemaphore() const { return m_PresentSemaphore; }
-		inline VkSemaphore GetRenderSemaphore() const { return m_RenderSemaphore; }
+		std::shared_ptr<Image> GetCurrent() override { return Images[ImageIndex]; }
 
-		inline uint32_t GetWidth() const override { return (uint32_t)m_Size.x; }
-		inline uint32_t GetHeight() const override { return (uint32_t)m_Size.y; }
-		inline const glm::vec2& GetSize() const override { return m_Size; }
-
-		inline const std::vector<std::shared_ptr<Image>>& GetImages() const override { return m_SwapchainImages; }
-
-		inline uint32_t GetImageCount() const { return (uint32_t)m_SwapchainImages.size(); }
+		void Recreate();
 	private:
-		void DestroySwapchain();
+		void CreateSwapchain(bool firstCreation);
 
-		void InitSwapchain();
-		void InitSemaphores();
+		VkSurfaceFormatKHR ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+		VkPresentModeKHR ChooseVsyncOffPresent(const std::vector<VkPresentModeKHR>& presentModes);
+		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 	private:
-		VkSwapchainKHR m_Swapchain;
-		VkSurfaceKHR m_Surface;
-		VkFormat m_SwapchainImageFormat;
-		VkSemaphore m_PresentSemaphore, m_RenderSemaphore;
+		VulkanContextReference m_Context;
+		std::shared_ptr<VulkanSurface> m_Surface;
+		bool m_EnableVsync;
 
-		std::vector<std::shared_ptr<Image>> m_SwapchainImages;
-
-		glm::vec2 m_Size;
-
-		bool m_Initialized = false;
-		std::shared_ptr<VulkanContext> m_Context;
+		VkSurfaceFormatKHR m_ChosenSufaceFormat;
+		VkPresentModeKHR m_VsyncOnPresent;
+		VkPresentModeKHR m_VsyncOffPresent;
 	};
+
 }

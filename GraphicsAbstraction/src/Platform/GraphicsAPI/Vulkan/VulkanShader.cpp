@@ -1,38 +1,53 @@
 #include "VulkanShader.h"
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
+#include <GraphicsAbstraction/Core/Log.h>
+#include <GraphicsAbstraction/Core/Assert.h>
 
-#include <fstream>
+#include <Platform/GraphicsAPI/Vulkan/VulkanImage.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+
 #include <filesystem>
+#include <fstream>
 
-#include <shaderc/shaderc.hpp>
+#include <wtypes.h>
+#include <Unknwn.h>
+#include <wrl/client.h>
+#include <dxc/dxcapi.h>
 #include <spirv_cross/spirv_cross.hpp>
 #include <spirv_cross/spirv_glsl.hpp>
 
 namespace GraphicsAbstraction {
 
+	static uint32_t s_IDCounter = 0;
+	static std::unordered_map<uint32_t, VulkanShader*> s_ShaderList;
+
 	namespace Utils {
 
-		static VkShaderStageFlagBits ShaderTypeFromString(const std::string& type)
+		static VkShaderStageFlagBits ShaderStageToVulkan(ShaderStage stage)
 		{
-			if (type == "vertex")						return VK_SHADER_STAGE_VERTEX_BIT;
-			if (type == "fragment" || type == "pixel")	return VK_SHADER_STAGE_FRAGMENT_BIT;
+			switch (stage)
+			{
+				case ShaderStage::Vertex:	return VK_SHADER_STAGE_VERTEX_BIT;
+				case ShaderStage::Pixel:	return VK_SHADER_STAGE_FRAGMENT_BIT;
+				case ShaderStage::Compute:	return VK_SHADER_STAGE_COMPUTE_BIT;
+			}
 
 			GA_CORE_ASSERT(false, "Unknown shader type!");
 			return (VkShaderStageFlagBits)0;
 		}
 
-		static shaderc_shader_kind ShaderStageToShaderC(VkShaderStageFlagBits stage)
+		static LPCWSTR ShaderStageToDXC(VkShaderStageFlagBits stage)
 		{
 			switch (stage)
 			{
-				case VK_SHADER_STAGE_VERTEX_BIT:	return shaderc_glsl_vertex_shader;
-				case VK_SHADER_STAGE_FRAGMENT_BIT:	return shaderc_glsl_fragment_shader;
+				case VK_SHADER_STAGE_VERTEX_BIT:	return L"vs_6_5";
+				case VK_SHADER_STAGE_FRAGMENT_BIT:	return L"ps_6_5";
+				case VK_SHADER_STAGE_COMPUTE_BIT:	return L"cs_6_5";
 			}
 
 			GA_CORE_ASSERT(false);
-			return (shaderc_shader_kind)0;
+			return nullptr;
 		}
 
 		static const char* ShaderStageToString(VkShaderStageFlagBits stage)
@@ -41,6 +56,7 @@ namespace GraphicsAbstraction {
 			{
 				case VK_SHADER_STAGE_VERTEX_BIT:	return "VK_SHADER_STAGE_VERTEX_BIT";
 				case VK_SHADER_STAGE_FRAGMENT_BIT:	return "VK_SHADER_STAGE_FRAGMENT_BIT";
+				case VK_SHADER_STAGE_COMPUTE_BIT:	return "VK_SHADER_STAGE_COMPUTE_BIT";
 			}
 
 			GA_CORE_ASSERT(false);
@@ -63,8 +79,9 @@ namespace GraphicsAbstraction {
 		{
 			switch (stage)
 			{
-				case VK_SHADER_STAGE_VERTEX_BIT: return ".cached_vulkan.vert";
-				case VK_SHADER_STAGE_FRAGMENT_BIT: return ".cached_vulkan.frag";
+				case VK_SHADER_STAGE_VERTEX_BIT:	return ".cached_vulkan.vert";
+				case VK_SHADER_STAGE_FRAGMENT_BIT:	return ".cached_vulkan.frag";
+				case VK_SHADER_STAGE_COMPUTE_BIT:	return ".cached_vulkan.compute";
 			}
 
 			GA_CORE_ASSERT(false);
@@ -73,186 +90,243 @@ namespace GraphicsAbstraction {
 
 	}
 
-	VulkanShader::VulkanShader(std::shared_ptr<GraphicsContext> context, const std::string& filepath)
-		: m_FilePath(filepath), m_Context(std::dynamic_pointer_cast<VulkanContext>(context))
+	VulkanShader::VulkanShader(const std::string& path, ShaderStage stage)
+		: m_Context(VulkanContext::GetReference()), m_Path(path), Stage(Utils::ShaderStageToVulkan(stage)), ID(s_IDCounter++)
 	{
 		GA_PROFILE_SCOPE();
 		Utils::CreateCacheDirectoryIfNeeded();
 
-		std::string source = ReadFile(filepath);
-		auto shaderSources = PreProcess(source);
+		auto spirv = CompileOrGetVulkanBinaries();
+		CreatePipelineShaderStage(spirv);
+		CreateDescriptorBuffer();
 
-		CompileOrGetVulkanBinaries(shaderSources);
-		CreatePipelineShaderStages();
+		s_ShaderList[ID] = this;
 	}
 
 	VulkanShader::~VulkanShader()
 	{
-		for (VkShaderModule& module : m_ShaderModules)
-			vkDestroyShaderModule(m_Context->GetLogicalDevice(), module, nullptr);
+		if (m_Context->ShaderObjectSupported) m_Context->GetFrameDeletionQueue().Push(ShaderObject);
+		else m_Context->GetFrameDeletionQueue().Push(Module);
+
+		s_ShaderList.erase(ID);
 	}
 
-	std::string VulkanShader::ReadFile(const std::string& filepath)
+	void VulkanShader::WriteImage(const std::shared_ptr<Image> image, uint32_t index)
+	{
+		auto vulkanImage = std::static_pointer_cast<VulkanImage>(image);
+
+		uint32_t handle = vulkanImage->Handle.GetValue();
+		if ((m_PushConstants.size() - 1) < index || m_PushConstants.empty()) m_PushConstants.push_back(handle);
+		else m_PushConstants[index] = handle;
+
+		m_PushConstantsDirty = true;
+	}
+
+	void VulkanShader::WriteBuffer(const std::shared_ptr<Buffer> buffer, uint32_t index)
+	{
+		auto vulkanBuffer = std::static_pointer_cast<VulkanBuffer>(buffer);
+
+		uint32_t handle = vulkanBuffer->Handle.GetValue();
+		if ((m_PushConstants.size() - 1) < index || m_PushConstants.empty()) m_PushConstants.push_back(handle);
+		else m_PushConstants[index] = handle;
+
+		m_PushConstantsDirty = true;
+	}
+
+	uint32_t VulkanShader::GetPushConstantBufferID()
+	{
+		if (m_PushConstantsDirty)
+		{
+			m_PushConstantBuffer->SetData(m_PushConstants.data(), (uint32_t)(m_PushConstants.size() * sizeof(uint32_t)));
+			m_PushConstantsDirty = false;
+		}
+
+		return m_PushConstantBuffer->Handle.GetValue();
+	}
+
+	VulkanShader* VulkanShader::GetShaderByID(uint32_t id)
+	{
+		auto it = s_ShaderList.find(id);
+		if (it == s_ShaderList.end()) return nullptr;
+
+		return it->second;
+	}
+
+	std::vector<uint32_t> VulkanShader::CompileOrGetVulkanBinaries()
 	{
 		GA_PROFILE_SCOPE();
 
-		std::string result;
-		std::ifstream in(filepath, std::ios::in | std::ios::binary);
+		std::filesystem::path cacheDirectory = Utils::GetCacheDirectory();
+		std::vector<uint32_t> shaderData;
 
-		if (in)
+		std::filesystem::path shaderFilePath = m_Path;
+		std::filesystem::path cachedPath = cacheDirectory / (shaderFilePath.filename().string() + Utils::ShaderStageCachedVulkanFileExtension(Stage));
+
+		std::ifstream in(cachedPath, std::ios::in | std::ios::binary);
+
+		bool needsCompile = true;
+		if (in.is_open())
+			needsCompile = std::filesystem::last_write_time(m_Path) > std::filesystem::last_write_time(cachedPath);
+
+		if (needsCompile)
 		{
-			in.seekg(0, std::ios::end);
+			shaderData = CompileVulkanBinaries();
 
-			size_t size = in.tellg();
-			if (size != -1)
+			std::ofstream out(cachedPath, std::ios::out | std::ios::binary);
+			if (out.is_open())
 			{
-				result.resize(in.tellg());
-
-				in.seekg(0, std::ios::beg);
-				in.read(&result[0], result.size());
-
-				in.close();
-			}
-			else
-			{
-				GA_CORE_ERROR("Could not open file \"{0}\"", filepath);
+				auto& data = shaderData;
+				out.write((char*)data.data(), data.size() * sizeof(uint32_t));
+				out.flush();
+				out.close();
 			}
 		}
 		else
 		{
-			GA_CORE_ERROR("Could not open file \"{0}\"", filepath);
+			in.seekg(0, std::ios::end);
+			auto size = in.tellg();
+			in.seekg(0, std::ios::beg);
+
+			auto& data = shaderData;
+			data.resize(size / sizeof(uint32_t));
+			in.read((char*)data.data(), size);
 		}
 
-		return result;
+		Reflect(shaderData);
+		return shaderData;
 	}
 
-	std::unordered_map<VkShaderStageFlagBits, std::string> VulkanShader::PreProcess(const std::string& source)
+	std::vector<uint32_t> VulkanShader::CompileVulkanBinaries()
 	{
-		GA_PROFILE_SCOPE();
-		std::unordered_map<VkShaderStageFlagBits, std::string> shaderSources;
+		HRESULT hres;
 
-		const char* typeToken = "#type";
-		size_t typeTokenLength = strlen(typeToken);
+		IDxcUtils* utils;
+		hres = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&utils));
+		GA_CORE_ASSERT(SUCCEEDED(hres));
 
-		size_t pos = source.find(typeToken, 0);
-		while (pos != std::string::npos)
+		IDxcCompiler3* compiler;
+		hres = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+		GA_CORE_ASSERT(SUCCEEDED(hres));
+
+		std::wstring wstring = std::filesystem::path(m_Path).wstring();
+		LPCWSTR filePath = wstring.c_str();
+
+		uint32_t codePage = DXC_CP_ACP;
+		IDxcBlobEncoding* sourceBlob;
+		hres = utils->LoadFile(filePath, &codePage, &sourceBlob);
+
+		if (FAILED(hres))
 		{
-			size_t eol = source.find_first_of("\r\n", pos);
-			GA_CORE_ASSERT(eol != std::string::npos, "Syntax error");
-
-			size_t begin = pos + typeTokenLength + 1;
-			std::string type = source.substr(begin, eol - begin);
-
-			size_t nextLinePos = source.find_first_not_of("\r\n", eol);
-			GA_CORE_ASSERT(nextLinePos != std::string::npos, "Syntax error");
-
-			pos = source.find(typeToken, nextLinePos);
-			shaderSources[Utils::ShaderTypeFromString(type)] = source.substr(nextLinePos, pos - (nextLinePos == std::string::npos ? source.size() - 1 : nextLinePos));
+			GA_CORE_ERROR("Could not open file \"{0}\"", m_Path);
+			GA_CORE_ASSERT(false);
 		}
 
-		return shaderSources;
-	}
+		IDxcIncludeHandler* handler;
+		utils->CreateDefaultIncludeHandler(&handler);
+		
+		// Note: Zi causes debug information
+		std::vector<LPCWSTR> arguments = {
+			filePath,
+			L"-E", L"main",
+			L"-T", Utils::ShaderStageToDXC(Stage),
+			L"-spirv",
+			L"-Zi"
+		};
 
-	void VulkanShader::CompileOrGetVulkanBinaries(const std::unordered_map<VkShaderStageFlagBits, std::string>& shaderSources)
-	{
-		GA_PROFILE_SCOPE();
+		DxcBuffer buffer{};
+		buffer.Encoding = DXC_CP_ACP;
+		buffer.Ptr = sourceBlob->GetBufferPointer();
+		buffer.Size = sourceBlob->GetBufferSize();
+		
+		IDxcResult* result;
+		hres = compiler->Compile(&buffer, arguments.data(), (uint32_t)arguments.size(), handler, IID_PPV_ARGS(&result));
+		result->GetStatus(&hres);
 
-		shaderc::Compiler compiler;
-		shaderc::CompileOptions options;
-		options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
-		const bool optimize = true;
-		if (optimize)
-			options.SetOptimizationLevel(shaderc_optimization_level_performance);
-
-		std::filesystem::path cacheDirectory = Utils::GetCacheDirectory();
-
-		auto& shaderData = m_VulkanSPIRV;
-		shaderData.clear();
-
-		for (auto&& [stage, source] : shaderSources)
+		if (FAILED(hres) && result)
 		{
-			std::filesystem::path shaderFilePath = m_FilePath;
-			std::filesystem::path cachedPath = cacheDirectory / (shaderFilePath.filename().string() + Utils::ShaderStageCachedVulkanFileExtension(stage));
+			IDxcBlobEncoding* errorBlob;
+			result->GetErrorBuffer(&errorBlob);
 
-			std::ifstream in(cachedPath, std::ios::in | std::ios::binary);
-
-			bool needsCompile = true;
-			if (in.is_open())
-				needsCompile = std::filesystem::last_write_time(m_FilePath) > std::filesystem::last_write_time(cachedPath);		
-
-			if (needsCompile)
-			{
-				shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source, Utils::ShaderStageToShaderC(stage), m_FilePath.c_str(), options);
-				if (module.GetCompilationStatus() != shaderc_compilation_status_success)
-				{
-					GA_CORE_ERROR(module.GetErrorMessage());
-					GA_CORE_ASSERT(false);
-				}
-
-				shaderData[stage] = std::vector<uint32_t>(module.cbegin(), module.cend());
-
-				std::ofstream out(cachedPath, std::ios::out | std::ios::binary);
-				if (out.is_open())
-				{
-					auto& data = shaderData[stage];
-					out.write((char*)data.data(), data.size() * sizeof(uint32_t));
-					out.flush();
-					out.close();
-				}
-			}
-			else
-			{
-				in.seekg(0, std::ios::end);
-				auto size = in.tellg();
-				in.seekg(0, std::ios::beg);
-
-				auto& data = shaderData[stage];
-				data.resize(size / sizeof(uint32_t));
-				in.read((char*)data.data(), size);
-			}
+			GA_CORE_ERROR((const char*)errorBlob->GetBufferPointer());
+			GA_CORE_ASSERT(false);
 		}
 
-		for (auto&& [stage, data] : shaderData)
-			Reflect(stage, data);
+		IDxcBlob* code;
+		result->GetResult(&code);
+
+		std::vector<uint32_t> ret(code->GetBufferSize() / sizeof(uint32_t));
+		memcpy(ret.data(), code->GetBufferPointer(), code->GetBufferSize());
+		return ret;
 	}
 
-	void VulkanShader::CreatePipelineShaderStages()
+	void VulkanShader::CreatePipelineShaderStage(const std::vector<uint32_t>& data)
 	{
-		GA_PROFILE_SCOPE();
-
-		for (auto&& [stage, data] : m_VulkanSPIRV)
+		if (m_Context->ShaderObjectSupported)
 		{
-			VkShaderModuleCreateInfo moduleCreateInfo = {};
-			moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-			moduleCreateInfo.pNext = nullptr;
-			moduleCreateInfo.codeSize = data.size() * sizeof(uint32_t);
-			moduleCreateInfo.pCode = data.data();
+			VkShaderCreateInfoEXT shaderInfo = {
+				.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO_EXT,
+				.stage = Stage,
+				.nextStage = (Stage == VK_SHADER_STAGE_VERTEX_BIT) ? VK_SHADER_STAGE_FRAGMENT_BIT : (VkShaderStageFlags)0,
+				.codeType = VK_SHADER_CODE_TYPE_SPIRV_EXT,
+				.codeSize = data.size() * sizeof(uint32_t),
+				.pCode = data.data(),
+				.pName = "main", // hard coding entry point to main
+				.setLayoutCount = 1,
+				.pSetLayouts = &m_Context->BindlessSetLayout,
+				.pushConstantRangeCount = (uint32_t)m_Context->PushConstantRanges.size(),
+				.pPushConstantRanges = m_Context->PushConstantRanges.data()
+			};
+			m_Context->vkCreateShadersEXT(m_Context->Device, 1, &shaderInfo, nullptr, &ShaderObject);
+		}
+		else
+		{
+			VkShaderModuleCreateInfo moduleInfo = {
+				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+				.codeSize = data.size() * sizeof(uint32_t),
+				.pCode = data.data()
+			};
+			vkCreateShaderModule(m_Context->Device, &moduleInfo, nullptr, &Module);
 
-			VkShaderModule shaderModule;
-			VK_CHECK(vkCreateShaderModule(m_Context->GetLogicalDevice(), &moduleCreateInfo, nullptr, &shaderModule));
-			m_ShaderModules.push_back(shaderModule);
-
-			VkPipelineShaderStageCreateInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			info.pNext = nullptr;
-			info.stage = stage;
-			info.module = shaderModule;
-			info.pName = "main"; // hard coding entry point to main
-			m_PipelineShaderStages.push_back(info);
+			StageInfo = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				.stage = Stage,
+				.module = Module,
+				.pName = "main" // hard coding entry point to main
+			};
 		}
 	}
 
-	void VulkanShader::Reflect(VkShaderStageFlagBits stage, const std::vector<uint32_t>& shaderData) const
+	void VulkanShader::CreateDescriptorBuffer()
 	{
-		spirv_cross::Compiler compiler(shaderData);
+		m_PushConstantBuffer = std::make_shared<VulkanBuffer>((uint32_t)(10 * sizeof(uint32_t)), BufferUsage::StorageBuffer, BufferFlags::Mapped); // for now we're hard coding 10 max bindings per shader
+	}
+
+	void VulkanShader::Reflect(const std::vector<uint32_t>& data)
+	{
+		spirv_cross::Compiler compiler(data);
 		spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-
-		GA_CORE_TRACE("VulkanShader::Reflect - {0} {1}", Utils::ShaderStageToString(stage), m_FilePath);
+		
+		GA_CORE_TRACE("VulkanShader::Reflect - {0} {1}", Utils::ShaderStageToString(Stage), m_Path);
 		GA_CORE_TRACE("    {0} uniform buffers", resources.uniform_buffers.size());
+		GA_CORE_TRACE("    {0} push constants", resources.push_constant_buffers.size());
 		GA_CORE_TRACE("    {0} resources", resources.sampled_images.size());
 
 		GA_CORE_TRACE("Uniform buffers:");
 		for (const auto& resource : resources.uniform_buffers)
+		{
+			const auto& bufferType = compiler.get_type(resource.base_type_id);
+			size_t bufferSize = compiler.get_declared_struct_size(bufferType);
+			uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
+			size_t memberCount = bufferType.member_types.size();
+
+			GA_CORE_TRACE("  {0}", resource.name);
+			GA_CORE_TRACE("    Size = {0}", bufferSize);
+			GA_CORE_TRACE("    Binding = {0}", binding);
+			GA_CORE_TRACE("    Members = {0}", memberCount);
+		}
+
+		GA_CORE_TRACE("Push constants:");
+		for (const auto& resource : resources.push_constant_buffers)
 		{
 			const auto& bufferType = compiler.get_type(resource.base_type_id);
 			size_t bufferSize = compiler.get_declared_struct_size(bufferType);

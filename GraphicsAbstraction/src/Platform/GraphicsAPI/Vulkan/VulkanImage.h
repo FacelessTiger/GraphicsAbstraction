@@ -1,9 +1,11 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/Image.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanResourceHandle.h>
 
 #include <vulkan/vulkan.h>
-#include <vk_mem_alloc.h>
+#include <memory>
 
 namespace GraphicsAbstraction {
 
@@ -12,34 +14,35 @@ namespace GraphicsAbstraction {
 	class VulkanImage : public Image
 	{
 	public:
-		VulkanImage(std::shared_ptr<GraphicsContext> context, const Specification& spec);
-		VulkanImage(VkImage image, VkImageView imageView, VkFormat format);
+		Utils::AllocatedImage Image;
+		VkImageView View;
+		VkImageLayout Layout;
+		VkFormat Format;
+		VkImageUsageFlags Usage;
+
+		uint32_t Width;
+		uint32_t Height;
+
+		VulkanResourceHandle Handle;
+	public:
+		VulkanImage(const glm::vec2& size, ImageFormat format, ImageUsage usage);
+		VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, VkFormat imageFormat, VkImageUsageFlags usage, uint32_t width, uint32_t height);
 		virtual ~VulkanImage();
 
-		inline VkImageView GetView() { return m_ImageView; }
+		void CopyTo(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<GraphicsAbstraction::Image>& other) override;
+		void Resize(const glm::vec2& size) override;
 
-		inline VkFormat GetFormat() const { return m_Format; }
-		inline VkSampleCountFlagBits GetSamples() const { return m_Samples; }
+		inline uint32_t GetHandle() const override { return Handle.GetValue(); }
+
+		void TransitionLayout(VkCommandBuffer cmd, VkImageLayout newLayout);
 	private:
-		VkImageUsageFlags FormatToUsage(VkFormat format);
-		VkSampleCountFlagBits SampleNumberToVulkan(uint32_t samples);
-		VkImageAspectFlags UsageToAspect(VkImageUsageFlags usage);
+		void Create();
+		void Destroy();
 
-		void CreateImage(VkImageUsageFlags usageFlags, VkExtent3D extent);
-		void CreateImageView(VkImageAspectFlags aspect);
+		void UpdateDescriptor();
 	private:
-		std::shared_ptr<VulkanContext> m_Context;
-		bool m_HandledExternally = false;
-
-		VkImage m_Image;
-		VkImageView m_ImageView;
-		VmaAllocation m_Allocation;
-
-		VkSampleCountFlagBits m_Samples;
-		VkFormat m_Format;
-
-		uint32_t m_Levels;
-		uint32_t m_Layers;
+		VulkanContextReference m_Context;
+		bool m_ExternalAllocation = false;
 	};
 
 }

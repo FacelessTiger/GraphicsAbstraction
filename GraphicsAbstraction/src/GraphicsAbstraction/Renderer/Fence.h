@@ -1,21 +1,19 @@
 #pragma once
 
-#include <GraphicsAbstraction/Core/Core.h>
-
 #include <memory>
 
-namespace GraphicsAbstraction {
+#include <GraphicsAbstraction/Core/Log.h>
 
-	class GraphicsContext;
+namespace GraphicsAbstraction {
 
 	class Fence
 	{
 	public:
 		virtual ~Fence() = default;
 
-		virtual void Wait() const = 0;
+		virtual void Wait() = 0;
 
-		static std::shared_ptr<Fence> Create(std::shared_ptr<GraphicsContext> context);
+		static std::shared_ptr<Fence> Create();
 	};
 
 }

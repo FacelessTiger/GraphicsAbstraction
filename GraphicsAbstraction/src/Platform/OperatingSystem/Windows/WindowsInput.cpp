@@ -1,4 +1,4 @@
-#include <GraphicsAbstraction/Core/Input.h>
+/*#include <GraphicsAbstraction/Core/Input.h>
 #include <GraphicsAbstraction/Core/Application.h>
 
 #include <GLFW/glfw3.h>
@@ -43,4 +43,4 @@ namespace GraphicsAbstraction {
 		return y;
 	}
 
-}
+}*/

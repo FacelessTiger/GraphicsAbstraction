@@ -1,123 +1,236 @@
 #include "VulkanImage.h"
-#include "VulkanUtils.h"
 
-#include <GraphicsAbstraction/Core/Core.h>
+#include <GraphicsAbstraction/Core/Log.h>
+
 #include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanCommandBuffer.h>
+#include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {
 
-	VulkanImage::VulkanImage(std::shared_ptr<GraphicsContext> context, const Specification& spec)
-		: m_Layers(spec.Layers), m_Levels(spec.Levels)
-	{
-		m_Context = std::dynamic_pointer_cast<VulkanContext>(context);
-		m_Samples = SampleNumberToVulkan(spec.Samples);
-		m_Format = Utils::GAImageFormatToVulkan(spec.Format);
+	namespace Utils {
 
-		VkImageUsageFlags usage = FormatToUsage(m_Format);
-		VkImageAspectFlags aspect = UsageToAspect(usage);
+		VkFormat GAImageFormatToVulkan(ImageFormat format)
+		{
+			switch (format)
+			{
+				case ImageFormat::R16G16B16A16_SFLOAT:	return VK_FORMAT_R16G16B16A16_SFLOAT;
+				case ImageFormat::R8G8B8A8_UNORM:		return VK_FORMAT_R8G8B8A8_UNORM;
+				case ImageFormat::D32_SFLOAT:			return VK_FORMAT_D32_SFLOAT;
+			}
 
-		CreateImage(usage, { (uint32_t)spec.Size.x, (uint32_t)spec.Size.y, 1 });
-		CreateImageView(aspect);
+			GA_CORE_ASSERT(false, "Unknown image format!");
+			return (VkFormat)0;
+		}
+
+		VkImageUsageFlags GAImageUsageToVulkan(ImageUsage usage)
+		{
+			VkImageUsageFlags ret = 0;
+
+			if (usage & ImageUsage::ColorAttachment)		ret |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			if (usage & ImageUsage::DepthStencilAttachment)	ret |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			if (usage & ImageUsage::TransferSrc)			ret |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+			if (usage & ImageUsage::TransferDst)			ret |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			if (usage & ImageUsage::Storage)				ret |= VK_IMAGE_USAGE_STORAGE_BIT;
+			if (usage & ImageUsage::Sampled)				ret |= VK_IMAGE_USAGE_SAMPLED_BIT;
+
+			return ret;
+		}
+
 	}
 
-	VulkanImage::VulkanImage(VkImage image, VkImageView imageView, VkFormat format)
-		: m_Image(image), m_ImageView(imageView), m_Format(format), m_Samples(VK_SAMPLE_COUNT_1_BIT), m_HandledExternally(true)
-	{ }
+	VulkanImage::VulkanImage(const glm::vec2& size, ImageFormat format, ImageUsage usage)
+		: m_Context(VulkanContext::GetReference()), Layout(VK_IMAGE_LAYOUT_UNDEFINED), Width((uint32_t)size.x), Height((uint32_t)size.y), Handle((usage & ImageUsage::Sampled) ? ResourceType::SampledImage : ResourceType::StorageImage)
+	{
+		Format = Utils::GAImageFormatToVulkan(format);
+		Usage = Utils::GAImageUsageToVulkan(usage);
+
+		Create();
+		UpdateDescriptor();
+	}
+
+	VulkanImage::VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, VkFormat imageFormat, VkImageUsageFlags usage, uint32_t width, uint32_t height)
+		: m_Context(VulkanContext::GetReference()), View(imageView), Layout(imageLayout), Format(imageFormat), Usage(usage), Width(width), Height(height), m_ExternalAllocation(true), Handle(ResourceType::StorageImage)
+	{ 
+		Image.Image = image;
+	}
 
 	VulkanImage::~VulkanImage()
 	{
-		if (!m_HandledExternally)
+		Destroy();
+	}
+
+	void VulkanImage::CopyTo(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<GraphicsAbstraction::Image>& other)
+	{
+		GA_PROFILE_SCOPE();
+
+		auto vulkanCommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(cmd);
+		auto vulkanImage = std::static_pointer_cast<VulkanImage>(other);
+
+		TransitionLayout(vulkanCommandBuffer->CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		vulkanImage->TransitionLayout(vulkanCommandBuffer->CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+		VkImageBlit2 blitRegion{};
+		blitRegion.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
+		blitRegion.pNext = nullptr;
+
+		blitRegion.srcOffsets[1].x = vulkanImage->Width;
+		blitRegion.srcOffsets[1].y = vulkanImage->Height;
+		blitRegion.srcOffsets[1].z = 1;
+
+		blitRegion.dstOffsets[1].x = vulkanImage->Width;
+		blitRegion.dstOffsets[1].y = vulkanImage->Height;
+		blitRegion.dstOffsets[1].z = 1;
+
+		blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		blitRegion.srcSubresource.baseArrayLayer = 0;
+		blitRegion.srcSubresource.layerCount = 1;
+		blitRegion.srcSubresource.mipLevel = 0;
+
+		blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		blitRegion.dstSubresource.baseArrayLayer = 0;
+		blitRegion.dstSubresource.layerCount = 1;
+		blitRegion.dstSubresource.mipLevel = 0;
+
+		VkBlitImageInfo2 blitInfo{};
+		blitInfo.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
+		blitInfo.pNext = nullptr;
+		blitInfo.dstImage = vulkanImage->Image.Image;
+		blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		blitInfo.srcImage = Image.Image;
+		blitInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		blitInfo.filter = VK_FILTER_LINEAR;
+		blitInfo.regionCount = 1;
+		blitInfo.pRegions = &blitRegion;
+
+		vkCmdBlitImage2(vulkanCommandBuffer->CommandBuffer, &blitInfo);
+	}
+
+	void VulkanImage::Resize(const glm::vec2& size)
+	{
+		Width = (uint32_t)size.x;
+		Height = (uint32_t)size.y;
+		Layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		Destroy();
+		Create();
+	}
+
+	void VulkanImage::Create()
+	{
+		VkImageCreateInfo imageInfo = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+			.imageType = VK_IMAGE_TYPE_2D, // TODO: specify somehow
+
+			.format = Format,
+			.extent = { Width, Height, 1 },
+
+			.mipLevels = 1,
+			.arrayLayers = 1,
+			.samples = VK_SAMPLE_COUNT_1_BIT,
+
+			.tiling = VK_IMAGE_TILING_OPTIMAL,
+			.usage = Usage
+		};
+
+		VmaAllocationCreateInfo imgAllocInfo = {
+			.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+		};
+		vmaCreateImage(m_Context->Allocator, &imageInfo, &imgAllocInfo, &Image.Image, &Image.Allocation, nullptr);
+
+		VkImageSubresourceRange range = {
+			.aspectMask = (VkImageAspectFlags)((Usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT),
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		};
+		VkImageViewCreateInfo imageViewInfo = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.image = Image.Image,
+			.viewType = VK_IMAGE_VIEW_TYPE_2D, // TODO: specify, will be the same as image type above
+			.format = Format,
+			.subresourceRange = range
+		};
+		VK_CHECK(vkCreateImageView(m_Context->Device, &imageViewInfo, nullptr, &View));
+	}
+
+	void VulkanImage::Destroy()
+	{
+		m_Context->GetFrameDeletionQueue().Push(View);
+		if (!m_ExternalAllocation)
+			m_Context->GetFrameDeletionQueue().Push(Image);
+	}
+
+	void VulkanImage::UpdateDescriptor()
+	{
+		if (Usage & VK_IMAGE_USAGE_STORAGE_BIT)
 		{
-			vkDestroyImageView(m_Context->GetLogicalDevice(), m_ImageView, nullptr);
-			vmaDestroyImage(m_Context->GetAllocator(), m_Image, m_Allocation);
+			VkDescriptorImageInfo imageInfo = {
+				.imageView = View,
+				.imageLayout = VK_IMAGE_LAYOUT_GENERAL
+			};
+
+			VkWriteDescriptorSet write = {
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = m_Context->BindlessSet,
+				.dstBinding = m_Context->STORAGE_IMAGE_BINDING,
+				.dstArrayElement = Handle.GetValue(),
+				.descriptorCount = 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				.pImageInfo = &imageInfo,
+			};
+
+			vkUpdateDescriptorSets(m_Context->Device, 1, &write, 0, nullptr);
+		}
+		else if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT)
+		{
+			VkDescriptorImageInfo imageInfo = {
+				.imageView = View,
+				.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			};
+
+			VkWriteDescriptorSet write = {
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = m_Context->BindlessSet,
+				.dstBinding = m_Context->SAMPLED_IMAGE_BINDING,
+				.dstArrayElement = Handle.GetValue(),
+				.descriptorCount = 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+				.pImageInfo = &imageInfo,
+			};
+
+			vkUpdateDescriptorSets(m_Context->Device, 1, &write, 0, nullptr);
 		}
 	}
 
-	VkImageUsageFlags VulkanImage::FormatToUsage(VkFormat format)
+	void VulkanImage::TransitionLayout(VkCommandBuffer cmd, VkImageLayout newLayout)
 	{
-		switch (format)
-		{
-			case VK_FORMAT_D32_SFLOAT:
-				return VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-			case VK_FORMAT_B8G8R8A8_SRGB:
-				return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		}
-	}
+		if (Layout == newLayout) return;
+		VkImageAspectFlags aspectMask = (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
 
-	VkSampleCountFlagBits VulkanImage::SampleNumberToVulkan(uint32_t samples)
-	{
-		// Round up to nearest power of 2 for a 32 bit int
-		samples--;
-		samples |= samples >> 1;
-		samples |= samples >> 2;
-		samples |= samples >> 4;
-		samples |= samples >> 8;
-		samples |= samples >> 16;
-		samples++;
+		VkImageMemoryBarrier2 imageBarrier = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+			.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT,
+			.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+			.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT,
 
-		switch (samples)
-		{
-			case 1:		return VK_SAMPLE_COUNT_1_BIT;
-			case 2:		return VK_SAMPLE_COUNT_2_BIT;
-			case 4:		return VK_SAMPLE_COUNT_4_BIT;
-			case 8:		return VK_SAMPLE_COUNT_8_BIT;
-			case 16:	return VK_SAMPLE_COUNT_16_BIT;
-			case 32:	return VK_SAMPLE_COUNT_32_BIT;
-			case 64:	return VK_SAMPLE_COUNT_64_BIT;
-		}
+			.oldLayout = Layout,
+			.newLayout = newLayout,
 
-		GA_CORE_ASSERT(false, "Number too high!");
-		return VK_SAMPLE_COUNT_1_BIT;
-	}
+			.image = Image.Image,
+			.subresourceRange = Utils::ImageSubresourceRange(aspectMask)
+		};
 
-	VkImageAspectFlags VulkanImage::UsageToAspect(VkImageUsageFlags usage)
-	{
-		switch (usage)
-		{
-			case VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT:			return VK_IMAGE_ASPECT_COLOR_BIT;
-			case VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT:	return VK_IMAGE_ASPECT_DEPTH_BIT;
-		}
+		VkDependencyInfo dependencyInfo = {
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.imageMemoryBarrierCount = 1,
+			.pImageMemoryBarriers = &imageBarrier
+		};
 
-		GA_CORE_ASSERT(false, "Unknown image usgae!");
-		return VK_IMAGE_ASPECT_COLOR_BIT;
-	}
-
-	void VulkanImage::CreateImage(VkImageUsageFlags usageFlags, VkExtent3D extent)
-	{
-		VkImageCreateInfo info = {};
-		info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		info.pNext = nullptr;
-		info.imageType = VK_IMAGE_TYPE_2D;
-		info.format = m_Format;
-		info.extent = extent;
-		info.mipLevels = m_Levels;
-		info.samples = m_Samples;
-		info.arrayLayers = m_Layers;
-		info.tiling = VK_IMAGE_TILING_OPTIMAL;
-		info.usage = usageFlags;
-		
-		VmaAllocationCreateInfo vmaInfo = {};
-		vmaInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-		vmaInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		VK_CHECK(vmaCreateImage(m_Context->GetAllocator(), &info, &vmaInfo, &m_Image, &m_Allocation, nullptr));
-	}
-
-	void VulkanImage::CreateImageView(VkImageAspectFlags aspect)
-	{
-		VkImageViewCreateInfo info = {};
-		info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		info.pNext = nullptr;
-		info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		info.image = m_Image;
-		info.format = m_Format;
-		info.subresourceRange.baseMipLevel = 0;
-		info.subresourceRange.levelCount = 1;
-		info.subresourceRange.baseArrayLayer = 0;
-		info.subresourceRange.layerCount = 1;
-		info.subresourceRange.aspectMask = aspect;
-
-		VK_CHECK(vkCreateImageView(m_Context->GetLogicalDevice(), &info, nullptr, &m_ImageView));
+		vkCmdPipelineBarrier2(cmd, &dependencyInfo);
+		Layout = newLayout;
 	}
 
 }

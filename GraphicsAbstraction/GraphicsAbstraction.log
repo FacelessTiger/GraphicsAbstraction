@@ -1,7 +1,31 @@
-[13:50:48] [warning] GRAPHICS: Material file [ monkey_smooth.mtl ] not found in a path : 
-Failed to load material file(s). Use default material.
-material [ 'None' ] not found in .mtl
-
-[13:50:49] [error] GRAPHICS: Vulkan validation error: loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win32.json
-[13:50:49] [error] GRAPHICS: Vulkan validation error: loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win64.json
-[13:50:50] [error] GRAPHICS: Vulkan validation error: Validation Error: [ VUID-VkSubpassDescription-pColorAttachments-parameter ] | MessageID = 0xf4f0de62 | vkCreateRenderPass(): pCreateInfo->pSubpasses[0].pColorAttachments is NULL. The Vulkan spec states: If colorAttachmentCount is not 0, pColorAttachments must be a valid pointer to an array of colorAttachmentCount valid VkAttachmentReference structures (https://vulkan.lunarg.com/doc/view/1.3.268.0/windows/1.3-extensions/vkspec.html#VUID-VkSubpassDescription-pColorAttachments-parameter)
+[10:15:16] [error] GRAPHICS: loader_get_json: Failed to open JSON file E:\nsight\target-windows-x64\vulkan-layers\VkLayer_nsight-sys_windows.json
+[10:15:16] [error] GRAPHICS: loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win32.json
+[10:15:16] [error] GRAPHICS: loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win64.json
+[10:15:16] [warning] GRAPHICS: Layer VK_LAYER_OW_OVERLAY uses API version 1.2 which is older than the application specified API version of 1.3. May cause issues.
+[10:15:16] [warning] GRAPHICS: Layer VK_LAYER_OW_OBS_HOOK uses API version 1.2 which is older than the application specified API version of 1.3. May cause issues.
+[10:15:17] [trace] GRAPHICS: VulkanShader::Reflect - VK_SHADER_STAGE_COMPUTE_BIT Assets/shaders/gradient.hlsl
+[10:15:17] [trace] GRAPHICS:     0 uniform buffers
+[10:15:17] [trace] GRAPHICS:     1 push constants
+[10:15:17] [trace] GRAPHICS:     0 resources
+[10:15:17] [trace] GRAPHICS: Uniform buffers:
+[10:15:17] [trace] GRAPHICS: Push constants:
+[10:15:17] [trace] GRAPHICS:   g_BindingsOffset
+[10:15:17] [trace] GRAPHICS:     Size = 12
+[10:15:17] [trace] GRAPHICS:     Binding = 0
+[10:15:17] [trace] GRAPHICS:     Members = 1
+[10:15:17] [trace] GRAPHICS: VulkanShader::Reflect - VK_SHADER_STAGE_VERTEX_BIT Assets/shaders/triangleVertex.hlsl
+[10:15:17] [trace] GRAPHICS:     0 uniform buffers
+[10:15:17] [trace] GRAPHICS:     1 push constants
+[10:15:17] [trace] GRAPHICS:     0 resources
+[10:15:17] [trace] GRAPHICS: Uniform buffers:
+[10:15:17] [trace] GRAPHICS: Push constants:
+[10:15:17] [trace] GRAPHICS:   g_BindingsOffset
+[10:15:17] [trace] GRAPHICS:     Size = 4
+[10:15:17] [trace] GRAPHICS:     Binding = 0
+[10:15:17] [trace] GRAPHICS:     Members = 1
+[10:15:17] [trace] GRAPHICS: VulkanShader::Reflect - VK_SHADER_STAGE_FRAGMENT_BIT Assets/shaders/trianglePixel.hlsl
+[10:15:17] [trace] GRAPHICS:     0 uniform buffers
+[10:15:17] [trace] GRAPHICS:     0 push constants
+[10:15:17] [trace] GRAPHICS:     0 resources
+[10:15:17] [trace] GRAPHICS: Uniform buffers:
+[10:15:17] [trace] GRAPHICS: Push constants:

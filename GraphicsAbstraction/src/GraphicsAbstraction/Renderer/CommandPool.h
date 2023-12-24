@@ -1,31 +1,24 @@
 #pragma once
 
-#include <GraphicsAbstraction/Core/Core.h>
-
 #include <memory>
-#include <vector>
+
+#include <GraphicsAbstraction/Core/Log.h>
 
 namespace GraphicsAbstraction {
 
 	class GraphicsContext;
 	class CommandBuffer;
-
-	enum class QueueType
-	{
-		Graphics
-	};
-
-	using CommandPoolBuffers = std::vector<std::shared_ptr<CommandBuffer>>;
+	class Queue;
 
 	class CommandPool
 	{
 	public:
 		virtual ~CommandPool() = default;
 
-		virtual std::shared_ptr<CommandBuffer> CreateCommandBuffer() const = 0;
-		virtual CommandPoolBuffers CreateCommandBuffers(uint32_t count) const = 0;
+		virtual void Reset() = 0;
+		virtual std::shared_ptr<CommandBuffer> Begin() = 0;
 
-		static std::shared_ptr<CommandPool> Create(std::shared_ptr<GraphicsContext> context, QueueType type);
+		static std::shared_ptr<CommandPool> Create(const std::shared_ptr<Queue>& queue);
 	};
 
 }

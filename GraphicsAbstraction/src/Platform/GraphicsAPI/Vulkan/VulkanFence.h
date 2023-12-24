@@ -2,25 +2,24 @@
 
 #include <GraphicsAbstraction/Renderer/Fence.h>
 
+#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+
 #include <vulkan/vulkan.h>
 
 namespace GraphicsAbstraction {
 
-	class VulkanContext;
-
 	class VulkanFence : public Fence
 	{
 	public:
-		VulkanFence(std::shared_ptr<GraphicsContext> context);
+		VkSemaphore TimelineSemaphore;
+		uint64_t Value = 0;
+	public:
+		VulkanFence();
 		virtual ~VulkanFence();
 
-		void Wait() const override;
-
-		inline VkFence GetInternal() const { return m_Fence; }
+		void Wait() override;
 	private:
-		VkFence m_Fence;
-
-		std::shared_ptr<VulkanContext> m_Context;
+		VulkanContextReference m_Context;
 	};
 
 }

@@ -2,13 +2,13 @@
 
 #include <GraphicsAbstraction/Core/PlatformDetection.h>
 
-#ifdef GA_DEBUG
+#ifndef GA_DIST
 	#define GA_ENABLE_ASSERTS
 #endif
 
 #if defined(GA_PLATFORM_WINDOWS)
 	#define GA_DEBUGBREAK() __debugbreak()
-#elif defined (GA_PLATFORM_LINUX)
+#elif defined (GA_PLATFORM_LINUX) || defined (GA_PLATFORM_ANDROID)
 	#include <signal.h>
 	#define GA_DEBUGBREAK() raise(SIGTRAP)
 #else

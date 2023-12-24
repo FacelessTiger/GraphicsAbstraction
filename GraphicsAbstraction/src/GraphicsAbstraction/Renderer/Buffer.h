@@ -1,136 +1,46 @@
 #pragma once
 
-#include <GraphicsAbstraction/Debug/Instrumentor.h>
+#include <GraphicsAbstraction/Core/Core.h>
 
-#include <vector>
+#include <memory>
 
 namespace GraphicsAbstraction {
 
 	class GraphicsContext;
 
-	enum class ShaderDataType
+	enum class BufferUsage : uint32_t
+	{
+		StorageBuffer = 1,
+		TransferSrc = 2,
+		TransferDst = 4,
+		IndexBuffer = 8
+	};
+
+	enum class BufferFlags : uint32_t
 	{
 		None = 0,
-		Float, Float2, Float3, Float4,
-		Int, Int2, Int3, Int4,
-		Mat3, Mat4,
-		Bool
+		Mapped = 1,
+		DedicatedMemory = 2
 	};
 
-	static uint32_t ShaderDataTypeSize(ShaderDataType type)
-	{
-		switch (type)
-		{
-			case ShaderDataType::Float:    return 4;
-			case ShaderDataType::Float2:   return 4 * 2;
-			case ShaderDataType::Float3:   return 4 * 3;
-			case ShaderDataType::Float4:   return 4 * 4;
-			case ShaderDataType::Int:      return 4;
-			case ShaderDataType::Int2:     return 4 * 2;
-			case ShaderDataType::Int3:     return 4 * 3;
-			case ShaderDataType::Int4:     return 4 * 4;
-			case ShaderDataType::Mat3:     return 4 * 3 * 3;
-			case ShaderDataType::Mat4:     return 4 * 4 * 4;
-			case ShaderDataType::Bool:     return 1;
-		}
+	inline BufferUsage operator|(BufferUsage a, BufferUsage b) { return (BufferUsage)((int)a | (int)b); };
+	inline bool operator&(BufferUsage a, BufferUsage b) { return (int)a & (int)b; };
 
-		GA_CORE_ASSERT(false, "Unknown ShaderDataType!");
-		return 0;
-	}
+	inline BufferFlags operator|(BufferFlags a, BufferFlags b) { return (BufferFlags)((int)a | (int)b); };
+	inline bool operator&(BufferFlags a, BufferFlags b) { return (int)a & (int)b; };
 
-	struct BufferElement
-	{
-		std::string Name;
-		ShaderDataType Type;
-		uint32_t Size;
-		uint32_t Offset;
-		bool Normalized;
-
-		BufferElement() { }
-		BufferElement(ShaderDataType type, const std::string& name, bool normalized = false)
-			: Type(type), Name(name), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized)
-		{ }
-
-		uint32_t GetComponentCount() const
-		{
-			switch (Type)
-			{
-				case ShaderDataType::Float:   return 1;
-				case ShaderDataType::Float2:  return 2;
-				case ShaderDataType::Float3:  return 3;
-				case ShaderDataType::Float4:  return 4;
-				case ShaderDataType::Int:     return 1;
-				case ShaderDataType::Int2:    return 2;
-				case ShaderDataType::Int3:    return 3;
-				case ShaderDataType::Int4:    return 4;
-				case ShaderDataType::Mat3:    return 3 * 3;
-				case ShaderDataType::Mat4:    return 4 * 4;
-				case ShaderDataType::Bool:    return 1;
-			}
-
-			GA_CORE_ASSERT(false, "Unknown ShaderDataType!");
-			return 0;
-		}
-	};
-
-	class BufferLayout
+	class Buffer
 	{
 	public:
-		BufferLayout() { }
-		BufferLayout(const std::initializer_list<BufferElement>& elements)
-			: m_Elements(elements)
-		{ CalculateOffsetsAndStride(); }
+		virtual ~Buffer() = default;
 
-		inline uint32_t GetStride() const { return m_Stride; }
-		inline const std::vector<BufferElement>& GetElements() const { return m_Elements; }
+		virtual void SetData(const void* data, uint32_t size = 0, uint32_t offset = 0) = 0;
+		virtual void SetData(const std::shared_ptr<Buffer>& buffer) = 0;
 
-		std::vector<BufferElement>::iterator begin() { return m_Elements.begin(); }
-		std::vector<BufferElement>::iterator end() { return m_Elements.end(); }
-		std::vector<BufferElement>::const_iterator begin() const { return m_Elements.begin(); }
-		std::vector<BufferElement>::const_iterator end() const { return m_Elements.end(); }
-	private:
-		void CalculateOffsetsAndStride()
-		{
-			uint32_t offset = 0;
-			m_Stride = 0;
+		virtual void GetData(void* data, uint32_t size, uint32_t offset) = 0;
+		virtual uint32_t GetSize() const = 0;
 
-			for (auto& element : m_Elements)
-			{
-				element.Offset = offset;
-				offset += element.Size;
-				m_Stride += element.Size;
-			}
-		}
-	private:
-		std::vector<BufferElement> m_Elements;
-		uint32_t m_Stride = 0;
-	};
-
-	class VertexBuffer
-	{
-	public:
-		virtual ~VertexBuffer() = default;
-
-		virtual void SetData(const void* data, uint32_t size) = 0;
-
-		virtual void SetLayout(const BufferLayout& layout) = 0;
-		virtual const BufferLayout& GetLayout() const = 0;
-
-		virtual void Bind(std::shared_ptr<CommandBuffer> cmd) const = 0;
-
-		static std::shared_ptr<VertexBuffer> Create(std::shared_ptr<GraphicsContext> context, uint32_t size);
-	};
-
-	class IndexBuffer
-	{
-	public:
-		virtual ~IndexBuffer() = default;
-
-		virtual void Bind(std::shared_ptr<CommandBuffer> cmd) const = 0;
-
-		virtual uint32_t GetCount() const = 0;
-
-		static std::shared_ptr<IndexBuffer> Create(std::shared_ptr<GraphicsContext> context, uint32_t* indices, uint32_t count);
+		static std::shared_ptr<Buffer> Create(uint32_t size, BufferUsage usage, BufferFlags flags = BufferFlags::None);
 	};
 
 }

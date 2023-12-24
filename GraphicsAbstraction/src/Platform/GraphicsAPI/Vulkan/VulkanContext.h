@@ -1,57 +1,112 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/GraphicsContext.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanDeletionQueue.h>
+#include <Platform/GraphicsAPI/Vulkan/VulkanPipelineKeys.h>
 
 #include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
 #include <vk_mem_alloc.h>
 
-#include <map>
-
-struct GLFWwindow;
-
-#define VK_CHECK(x)										\
-	do													\
-	{													\
-		VkResult err = x;								\
-		if (err)										\
-		{												\
-			GA_CORE_ERROR("Vulkan error: {0}", err);	\
-			GA_CORE_ASSERT(false);						\
-		}												\
-	} while (0);
+#ifndef GA_DIST
+	#define VK_CHECK(x)                                                 \
+		do                                                              \
+		{                                                               \
+			VkResult err = x;                                           \
+			if (err)                                                    \
+				GA_CORE_ASSERT(false, string_VkResult(err))				\
+		} while (0)
+#else
+	#define VK_CHECK(x) x
+#endif
 
 namespace GraphicsAbstraction {
+
+	class VulkanShader;
+	class VulkanContext;
+
+	class VulkanContextReference
+	{
+	public:
+		VulkanContextReference(const VulkanContextReference& other);
+		VulkanContextReference(VulkanContext* context);
+		~VulkanContextReference();
+
+		VulkanContext* operator->() { return m_Context; }
+	private:
+		VulkanContext* m_Context;
+	};
 
 	class VulkanContext : public GraphicsContext
 	{
 	public:
-		VulkanContext();
-		virtual ~VulkanContext();
+		friend VulkanContextReference;
 
-		inline VkInstance GetInstance() const { return m_Instance; }
-		inline VkPhysicalDevice GetPhysicalDevice() const { return m_ChosenGPU; }
-		inline VkDevice GetLogicalDevice() const { return m_Device; }
+		VkInstance Instance;
+		VkDebugUtilsMessengerEXT DebugMessenger;
+		VkPhysicalDevice ChosenGPU;
+		VkDevice Device;
+		VmaAllocator Allocator;
 
-		inline VmaAllocator GetAllocator() const { return m_Allocator; }
+		VkQueue GraphicsQueue;
+		uint32_t GraphicsQueueFamily;
 
-		inline VkQueue GetGraphicsQeue() const { return m_GraphicsQueue; }
-		inline uint32_t GetGraphicsQueueFamily() const { return m_GraphicsQueueFamily; }
+		VkDescriptorSetLayout BindlessSetLayout;
+		VkDescriptorSet BindlessSet;
+		VkPipelineLayout BindlessPipelineLayout;
 
-		inline PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT GetPhysicalDeviceCalibrateableTimeDomainsEXT() { return m_GetPhysicalDeviceCalibrateableTimeDomainsEXT; }
-		inline PFN_vkGetCalibratedTimestampsEXT GetCalibratedTimestampsEXT() { return m_GetCalibratedTimestampsEXT; }
+		std::vector<VulkanDeletionQueue> FrameDeletionQueues;
+		uint32_t FrameInFlight = 0;
+
+		static constexpr uint32_t STORAGE_BINDING = 0;
+		static constexpr uint32_t SAMPLER_BINDING = 1;
+		static constexpr uint32_t STORAGE_IMAGE_BINDING = 2;
+		static constexpr uint32_t SAMPLED_IMAGE_BINDING = 3;
+
+		static constexpr auto PushConstantRanges = std::array {
+			VkPushConstantRange { VK_SHADER_STAGE_ALL, 0, 128 }
+		};
+
+		bool ShaderObjectSupported = false;
+		bool DynamicState3Supported = false;
+
+		#define GA_VULKAN_FUNCTION(name) PFN_##name name = (PFN_##name)+[]{ GA_CORE_ASSERT(false, "Function " #name " not loaded"); }
+		#include "VulkanFunctions.inl"
+	public:
+		VulkanContext(uint32_t frameInFlightCount);
+		inline void ShutdownImpl() override { m_ShutdownImplCalled = true; Destroy(); };
+
+		std::shared_ptr<Queue> GetQueueImpl(QueueType type) override;
+		inline void SetFrameInFlightImpl(uint32_t fif) override { FrameInFlight = fif; FrameDeletionQueues[FrameInFlight].Flush(); }
+
+		inline VulkanDeletionQueue& GetFrameDeletionQueue() { return FrameDeletionQueues[FrameInFlight]; }
+		VkPipeline GetGraphicsPipeline(const VulkanGraphicsPipelineKey& key);
+		VkPipeline GetComputePipeline(const VulkanComputePipelineKey& key);
+
+		inline static VulkanContextReference GetReference() { return VulkanContextReference(s_Instance); }
 	private:
-		VkInstance m_Instance;
-		VkDebugUtilsMessengerEXT m_DebugMessenger;
-		VkPhysicalDevice m_ChosenGPU;
-		VkDevice m_Device;
+		void SetupInstance();
+		void SetupPhysicalDevice();
+		void SetupLogicalDevice();
+		void SetupBindless();
+		void SetupFunctions();
 
-		VmaAllocator m_Allocator;
+		void Destroy();
+	private:
+#ifndef GA_DIST
+		bool m_UseValidationLayers = true;
+#else
+		bool m_UseValidationLayers = false;
+#endif
+		bool m_ShutdownImplCalled = false;
+		uint32_t m_ReferenceCount = 0;
 
-		VkQueue m_GraphicsQueue;
-		uint32_t m_GraphicsQueueFamily;
+		VkDescriptorPool m_BindlessPool;
+		VkPipelineCache m_PipelineCache;
+		static VulkanContext* s_Instance;
 
-		PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT m_GetPhysicalDeviceCalibrateableTimeDomainsEXT;
-		PFN_vkGetCalibratedTimestampsEXT m_GetCalibratedTimestampsEXT;
+		std::unordered_map<VulkanGraphicsPipelineKey, VkPipeline> m_GraphicsPipelines;
+		std::unordered_map<VulkanComputePipelineKey, VkPipeline> m_ComputePipelines;
 	};
 
 }

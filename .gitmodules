@@ -7,9 +7,6 @@
 [submodule "VulkanAbstractionPractice/vendor/imgui"]
 	path = GraphicsAbstraction/vendor/imgui
 	url = https://github.com/FacelessTiger/imgui
-[submodule "VulkanAbstractionPractice/vendor/VkBootstrap"]
-	path = GraphicsAbstraction/vendor/VkBootstrap
-	url = https://github.com/charles-lunarg/vk-bootstrap
 [submodule "GraphicsAbstraction/vendor/spdlog"]
 	path = GraphicsAbstraction/vendor/spdlog
 	url = https://github.com/gabime/spdlog
@@ -19,6 +16,3 @@
 [submodule "GraphicsAbstraction/vendor/vma"]
 	path = GraphicsAbstraction/vendor/vma
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
-[submodule "GraphicsAbstraction/vendor/tinyobjloader"]
-	path = GraphicsAbstraction/vendor/tinyobjloader
-	url = https://github.com/tinyobjloader/tinyobjloader.git
