@@ -1,7 +1,7 @@
 #include "Surface.h"
 
 #ifdef GA_RENDERER_VULKAN
-	#include <Platform/GraphicsAPI/Vulkan/VulkanSurface.h>
+	#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSurface.h>
 #endif
 
 namespace GraphicsAbstraction {

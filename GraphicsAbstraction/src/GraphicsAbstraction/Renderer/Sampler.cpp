@@ -1,7 +1,7 @@
 #include "Sampler.h"
 
 #ifdef GA_RENDERER_VULKAN
-#include <Platform/GraphicsAPI/Vulkan/VulkanSampler.h>
+	#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSampler.h>
 #endif
 
 namespace GraphicsAbstraction {

@@ -1,6 +1,6 @@
 #include "VulkanBuffer.h"
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 
 namespace GraphicsAbstraction {
 

@@ -4,8 +4,8 @@
 #include <GraphicsAbstraction/Core/Log.h>
 #include <GraphicsAbstraction/Core/Assert.h>
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanImage.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanImage.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 
 #include <filesystem>
 #include <fstream>

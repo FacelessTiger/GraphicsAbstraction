@@ -1,8 +1,8 @@
 #include "VulkanQueue.h"
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanSwapchain.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanCommandBuffer.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanFence.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSwapchain.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandBuffer.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanFence.h>
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {

@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanUtils.h>
+#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanUtils.h>
 
 #include <vector>
 #include <list>

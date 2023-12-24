@@ -1,6 +1,6 @@
 #include "VulkanUtils.h"
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanShader.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanShader.h>
 
 namespace GraphicsAbstraction::Utils {
 

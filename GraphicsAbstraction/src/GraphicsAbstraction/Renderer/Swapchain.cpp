@@ -1,7 +1,7 @@
 #include "Swapchain.h"
 
 #ifdef GA_RENDERER_VULKAN
-	#include <Platform/GraphicsAPI/Vulkan/VulkanSwapchain.h>
+	#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSwapchain.h>
 #endif
 
 namespace GraphicsAbstraction {

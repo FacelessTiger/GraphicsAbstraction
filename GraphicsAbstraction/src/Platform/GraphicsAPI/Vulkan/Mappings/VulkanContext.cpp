@@ -7,11 +7,10 @@
 #include <GraphicsAbstraction/Core/Log.h>
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 #include <GraphicsAbstraction/Core/Assert.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanQueue.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanShader.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanUtils.h>
-
-#include <variant>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanQueue.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanShader.h>
+#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanUtils.h>
+#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanPipelineManager.h>
 
 namespace GraphicsAbstraction {
 
@@ -45,34 +44,15 @@ namespace GraphicsAbstraction {
 		vmaCreateAllocator(&allocatorInfo, &Allocator);
 
 		SetupBindless();
-		SetupFunctions();
+
+#define GA_VULKAN_FUNCTION(name) {												\
+				auto pfn = (PFN_##name)vkGetDeviceProcAddr(Device, #name);		\
+				if (pfn) name = pfn;											\
+		}
+#include "../InternalManagers/VulkanFunctions.inl"
 
 		FrameDeletionQueues.resize(frameInFlightCount, *this);
-
-		if (!ShaderObjectSupported)
-		{
-			std::vector<uint8_t> fileData;
-			std::ifstream file("Assets/cache/pipelineCache.vulkan", std::ios::binary);
-
-			if (file.is_open())
-			{
-				std::streampos fileSize;
-
-				file.seekg(0, std::ios::end);
-				fileSize = file.tellg();
-				file.seekg(0, std::ios::beg);
-
-				fileData.resize(fileSize);
-				file.read((char*)fileData.data(), fileSize);
-			}
-
-			VkPipelineCacheCreateInfo cacheInfo = {
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-				.initialDataSize = fileData.size(),
-				.pInitialData = fileData.data()
-			};
-			VK_CHECK(vkCreatePipelineCache(Device, &cacheInfo, nullptr, &m_PipelineCache));
-		}
+		if (!ShaderObjectSupported) PipelineManager = new VulkanPipelineManager(*this);
 	}
 
 	std::shared_ptr<GraphicsAbstraction::Queue> VulkanContext::GetQueueImpl(QueueType type)
@@ -84,111 +64,6 @@ namespace GraphicsAbstraction {
 
 		GA_CORE_ASSERT(false, "Unknown queue type!"); 
 		return nullptr;
-	}
-
-	VkPipeline VulkanContext::GetGraphicsPipeline(const VulkanGraphicsPipelineKey& key)
-	{
-		GA_PROFILE_SCOPE();
-		if (m_GraphicsPipelines.find(key) != m_GraphicsPipelines.end()) return m_GraphicsPipelines[key];
-
-		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-		for (uint32_t id : key.Shaders) shaderStages.push_back(VulkanShader::GetShaderByID(id)->StageInfo);
-
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-		VkPipelineViewportStateCreateInfo viewportStateInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
-		VkPipelineRasterizationStateCreateInfo rasterizationInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, .polygonMode = VK_POLYGON_MODE_FILL };
-		VkPipelineDepthStencilStateCreateInfo depthInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-
-		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo = { 
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, 
-			.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
-		};
-
-		VkPipelineMultisampleStateCreateInfo multisampleInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-			.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-			.minSampleShading = 1.0f,
-			.pSampleMask = nullptr,
-			.alphaToCoverageEnable = VK_FALSE,
-			.alphaToOneEnable = VK_FALSE
-		};
-
-		VkPipelineColorBlendAttachmentState colorAttachment = {
-			.blendEnable = VK_FALSE,
-			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-		};
-		VkPipelineColorBlendStateCreateInfo colorBlendInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-			.logicOpEnable = VK_FALSE,
-			.logicOp = VK_LOGIC_OP_COPY,
-			.attachmentCount = 1,
-			.pAttachments = &colorAttachment
-		};
-
-		std::vector<VkDynamicState> dynamicStates = {
-			VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT, VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT, VK_DYNAMIC_STATE_LINE_WIDTH, VK_DYNAMIC_STATE_BLEND_CONSTANTS,
-			VK_DYNAMIC_STATE_DEPTH_BOUNDS, VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK, VK_DYNAMIC_STATE_STENCIL_WRITE_MASK, VK_DYNAMIC_STATE_STENCIL_REFERENCE,
-			VK_DYNAMIC_STATE_CULL_MODE, VK_DYNAMIC_STATE_FRONT_FACE, VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY, VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE,
-			VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE, VK_DYNAMIC_STATE_DEPTH_COMPARE_OP, VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE, VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE,
-			VK_DYNAMIC_STATE_STENCIL_OP, VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE, VK_DYNAMIC_STATE_PRIMITIVE_RESTART_ENABLE, VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE
-		};
-		if (DynamicState3Supported) dynamicStates.insert(dynamicStates.end(), {
-			VK_DYNAMIC_STATE_POLYGON_MODE_EXT, VK_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT, VK_DYNAMIC_STATE_SAMPLE_MASK_EXT, VK_DYNAMIC_STATE_ALPHA_TO_COVERAGE_ENABLE_EXT,
-			VK_DYNAMIC_STATE_COLOR_BLEND_ENABLE_EXT, VK_DYNAMIC_STATE_COLOR_WRITE_MASK_EXT
-		});
-
-		VkPipelineDynamicStateCreateInfo dynamicInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-			.dynamicStateCount = (uint32_t)dynamicStates.size(),
-			.pDynamicStates = dynamicStates.data()
-		};
-
-		VkPipelineRenderingCreateInfo renderingInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-			.colorAttachmentCount = (uint32_t)key.ColorAttachments.size(),
-			.pColorAttachmentFormats = key.ColorAttachments.data(),
-			.depthAttachmentFormat = key.DepthAttachment
-		};
-
-		VkGraphicsPipelineCreateInfo pipelineInfo = {
-			.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-			.pNext = &renderingInfo,
-			.stageCount = (uint32_t)shaderStages.size(),
-			.pStages = shaderStages.data(),
-			.pVertexInputState = &vertexInputInfo,
-			.pInputAssemblyState = &inputAssemblyInfo,
-			.pViewportState = &viewportStateInfo,
-			.pRasterizationState = &rasterizationInfo,
-			.pMultisampleState = &multisampleInfo,
-			.pDepthStencilState = &depthInfo,
-			.pColorBlendState = &colorBlendInfo,
-			.pDynamicState = &dynamicInfo,
-			.layout = BindlessPipelineLayout
-		};
-
-		VkPipeline pipeline;
-		VK_CHECK(vkCreateGraphicsPipelines(Device, m_PipelineCache, 1, &pipelineInfo, nullptr, &pipeline));
-		m_GraphicsPipelines[key] = pipeline;
-
-		return pipeline;
-	}
-
-	VkPipeline VulkanContext::GetComputePipeline(const VulkanComputePipelineKey& key)
-	{
-		GA_PROFILE_SCOPE();
-		if (m_ComputePipelines.find(key) != m_ComputePipelines.end()) return m_ComputePipelines[key];
-
-		VkComputePipelineCreateInfo createInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage = VulkanShader::GetShaderByID(key.Shader)->StageInfo,
-			.layout = BindlessPipelineLayout
-		};
-
-		VkPipeline pipeline;
-		VK_CHECK(vkCreateComputePipelines(Device, m_PipelineCache, 1, &createInfo, nullptr, &pipeline));
-		m_ComputePipelines[key] = pipeline;
-
-		return pipeline;
 	}
 
 	void VulkanContext::SetupInstance()
@@ -228,7 +103,7 @@ namespace GraphicsAbstraction {
 				auto pfn = (PFN_##name)vkGetInstanceProcAddr(Instance, #name);	\
 				if (pfn) name = pfn;											\
 		}
-#include "VulkanFunctions.inl"
+#include "../InternalManagers/VulkanFunctions.inl"
 
 #ifndef GA_DIST
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {
@@ -270,7 +145,6 @@ namespace GraphicsAbstraction {
 		std::vector<VkExtensionProperties> properties(propertyCount);
 		vkEnumerateDeviceExtensionProperties(ChosenGPU, nullptr, &propertyCount, properties.data());
 
-		// TODO: we should also check for the dynamic state extensions themselves
 		for (auto& property : properties)
 		{
 			if (!std::strcmp(property.extensionName, VK_EXT_SHADER_OBJECT_EXTENSION_NAME))
@@ -452,15 +326,6 @@ namespace GraphicsAbstraction {
 		VK_CHECK(vkCreatePipelineLayout(Device, &pipelineInfo, nullptr, &BindlessPipelineLayout));
 	}
 
-	void VulkanContext::SetupFunctions()
-	{
-		#define GA_VULKAN_FUNCTION(name) {										\
-				auto pfn = (PFN_##name)vkGetDeviceProcAddr(Device, #name);		\
-				if (pfn) name = pfn;											\
-		}
-		#include "VulkanFunctions.inl"
-	}
-
 	void VulkanContext::Destroy()
 	{
 		if (m_ReferenceCount != 0) return;
@@ -470,23 +335,7 @@ namespace GraphicsAbstraction {
 
 		for (auto& deletionQueue : FrameDeletionQueues)
 			deletionQueue.Flush();
-
-		if (!ShaderObjectSupported)
-		{
-			size_t dataSize;
-			vkGetPipelineCacheData(Device, m_PipelineCache, &dataSize, nullptr);
-			std::vector<uint8_t> data(dataSize);
-			vkGetPipelineCacheData(Device, m_PipelineCache, &dataSize, data.data());
-
-			std::ofstream file("Assets/cache/pipelineCache.vulkan", std::ios::binary);
-			file.write((const char*)data.data(), dataSize);
-
-			vkDestroyPipelineCache(Device, m_PipelineCache, nullptr);
-			for (auto& [key, pipeline] : m_GraphicsPipelines)
-				vkDestroyPipeline(Device, pipeline, nullptr);
-			for (auto& [key, pipeline] : m_ComputePipelines)
-				vkDestroyPipeline(Device, pipeline, nullptr);
-		}
+		if (!ShaderObjectSupported) delete PipelineManager;
 
 		vkDestroyDescriptorPool(Device, m_BindlessPool, nullptr);
 		vkDestroyDescriptorSetLayout(Device, BindlessSetLayout, nullptr);

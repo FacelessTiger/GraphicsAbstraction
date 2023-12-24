@@ -1,6 +1,6 @@
 #include "VulkanSurface.h"
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 
 #include <glfw/glfw3.h>
 

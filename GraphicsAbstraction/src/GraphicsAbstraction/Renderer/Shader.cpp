@@ -1,7 +1,7 @@
 #include "Shader.h"
 
 #ifdef GA_RENDERER_VULKAN
-	#include <Platform/GraphicsAPI/Vulkan/VulkanShader.h>
+	#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanShader.h>
 #endif
 
 namespace GraphicsAbstraction {

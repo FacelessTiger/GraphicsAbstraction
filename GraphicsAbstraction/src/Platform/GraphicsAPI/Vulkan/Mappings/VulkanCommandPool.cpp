@@ -1,8 +1,8 @@
 #include "VulkanCommandPool.h"
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanQueue.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanCommandBuffer.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanQueue.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandBuffer.h>
 
 namespace GraphicsAbstraction {
 

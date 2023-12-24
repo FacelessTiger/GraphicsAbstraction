@@ -1,7 +1,7 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/CommandPool.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 
 #include <vulkan/vulkan.h>
 

@@ -7,10 +7,10 @@
 #include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_glfw.h>
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanSwapchain.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanCommandPool.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanCommandBuffer.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSwapchain.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandPool.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandBuffer.h>
 #include <GraphicsAbstraction/Core/Window.h>
 
 namespace GraphicsAbstraction {

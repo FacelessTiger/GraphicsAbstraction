@@ -1,8 +1,8 @@
 #include "VulkanCommandBuffer.h"
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanSwapchain.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanShader.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanUtils.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSwapchain.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanShader.h>
+#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanUtils.h>
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {
@@ -58,7 +58,7 @@ namespace GraphicsAbstraction {
 	{
 		if (!m_Context->ShaderObjectSupported && m_ComputePipelineStateChanged)
 		{
-			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_Context->GetComputePipeline(m_ComputePipelineKey));
+			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_Context->PipelineManager->GetComputePipeline(m_ComputePipelineKey));
 			m_ComputePipelineStateChanged = false;
 		}
 
@@ -283,7 +283,7 @@ namespace GraphicsAbstraction {
 
 		if (!m_Context->ShaderObjectSupported && m_GraphicsPipelineStateChanged)
 		{
-			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Context->GetGraphicsPipeline(m_GraphicsPipelineKey));
+			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Context->PipelineManager->GetGraphicsPipeline(m_GraphicsPipelineKey));
 			m_GraphicsPipelineStateChanged = false;
 		}
 		if (m_DefaultDynamicStateSet) return;

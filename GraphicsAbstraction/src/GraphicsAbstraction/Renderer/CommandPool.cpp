@@ -1,7 +1,7 @@
 #include "CommandPool.h"
 
 #ifdef GA_RENDERER_VULKAN
-	#include <Platform/GraphicsAPI/Vulkan/VulkanCommandPool.h>
+	#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandPool.h>
 #endif
 
 namespace GraphicsAbstraction {

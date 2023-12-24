@@ -1,7 +1,7 @@
 #include "Buffer.h"
 
 #ifdef GA_RENDERER_VULKAN
-	#include <Platform/GraphicsAPI/Vulkan/VulkanBuffer.h>
+	#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanBuffer.h>
 #endif
 
 namespace GraphicsAbstraction {

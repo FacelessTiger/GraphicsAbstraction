@@ -3,8 +3,8 @@
 #include <GraphicsAbstraction/Renderer/Sampler.h>
 #include <vulkan/vulkan.h>
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanResourceHandle.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanResourceHandle.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 
 namespace GraphicsAbstraction {
 

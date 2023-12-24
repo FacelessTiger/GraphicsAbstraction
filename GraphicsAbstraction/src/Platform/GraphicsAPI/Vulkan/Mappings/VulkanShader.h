@@ -1,8 +1,8 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/Shader.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanBuffer.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanBuffer.h>
 
 #include <vulkan/vulkan.h>
 

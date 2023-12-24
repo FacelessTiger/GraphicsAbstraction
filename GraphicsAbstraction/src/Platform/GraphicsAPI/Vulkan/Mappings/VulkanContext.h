@@ -1,8 +1,9 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/GraphicsContext.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanDeletionQueue.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanPipelineKeys.h>
+#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanDeletionQueue.h>
+#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanPipelineKeys.h>
+#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanPipelineManager.h>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -55,6 +56,7 @@ namespace GraphicsAbstraction {
 		VkDescriptorSet BindlessSet;
 		VkPipelineLayout BindlessPipelineLayout;
 
+		VulkanPipelineManager* PipelineManager;
 		std::vector<VulkanDeletionQueue> FrameDeletionQueues;
 		uint32_t FrameInFlight = 0;
 
@@ -71,7 +73,7 @@ namespace GraphicsAbstraction {
 		bool DynamicState3Supported = false;
 
 		#define GA_VULKAN_FUNCTION(name) PFN_##name name = (PFN_##name)+[]{ GA_CORE_ASSERT(false, "Function " #name " not loaded"); }
-		#include "VulkanFunctions.inl"
+		#include "../InternalManagers/VulkanFunctions.inl"
 	public:
 		VulkanContext(uint32_t frameInFlightCount);
 		inline void ShutdownImpl() override { m_ShutdownImplCalled = true; Destroy(); };
@@ -80,16 +82,12 @@ namespace GraphicsAbstraction {
 		inline void SetFrameInFlightImpl(uint32_t fif) override { FrameInFlight = fif; FrameDeletionQueues[FrameInFlight].Flush(); }
 
 		inline VulkanDeletionQueue& GetFrameDeletionQueue() { return FrameDeletionQueues[FrameInFlight]; }
-		VkPipeline GetGraphicsPipeline(const VulkanGraphicsPipelineKey& key);
-		VkPipeline GetComputePipeline(const VulkanComputePipelineKey& key);
-
 		inline static VulkanContextReference GetReference() { return VulkanContextReference(s_Instance); }
 	private:
 		void SetupInstance();
 		void SetupPhysicalDevice();
 		void SetupLogicalDevice();
 		void SetupBindless();
-		void SetupFunctions();
 
 		void Destroy();
 	private:
@@ -102,11 +100,7 @@ namespace GraphicsAbstraction {
 		uint32_t m_ReferenceCount = 0;
 
 		VkDescriptorPool m_BindlessPool;
-		VkPipelineCache m_PipelineCache;
 		static VulkanContext* s_Instance;
-
-		std::unordered_map<VulkanGraphicsPipelineKey, VkPipeline> m_GraphicsPipelines;
-		std::unordered_map<VulkanComputePipelineKey, VkPipeline> m_ComputePipelines;
 	};
 
 }

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/Buffer.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
-#include <Platform/GraphicsAPI/Vulkan/VulkanResourceHandle.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanResourceHandle.h>
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>

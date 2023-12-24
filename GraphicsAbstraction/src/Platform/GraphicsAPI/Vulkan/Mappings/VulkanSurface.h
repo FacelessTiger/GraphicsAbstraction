@@ -5,7 +5,7 @@
 #include <GraphicsAbstraction/Renderer/Surface.h>
 #include <GraphicsAbstraction/Core/Window.h>
 
-#include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 
 namespace GraphicsAbstraction {
 

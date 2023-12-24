@@ -1,7 +1,7 @@
 #include "Fence.h"
 
 #ifdef GA_RENDERER_VULKAN
-	#include <Platform/GraphicsAPI/Vulkan/VulkanFence.h>
+	#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanFence.h>
 #endif
 
 namespace GraphicsAbstraction {

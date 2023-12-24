@@ -1,7 +1,7 @@
 #include "GraphicsContext.h"
 
 #ifdef GA_RENDERER_VULKAN
-    #include <Platform/GraphicsAPI/Vulkan/VulkanContext.h>
+    #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 #endif
 
 namespace GraphicsAbstraction {
