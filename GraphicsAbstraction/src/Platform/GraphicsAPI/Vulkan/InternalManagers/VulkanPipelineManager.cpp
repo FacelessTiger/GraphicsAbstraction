@@ -56,7 +56,18 @@ namespace GraphicsAbstraction {
 		if (m_GraphicsPipelines.find(key) != m_GraphicsPipelines.end()) return m_GraphicsPipelines[key];
 
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-		for (uint32_t id : key.Shaders) shaderStages.push_back(VulkanShader::GetShaderByID(id)->StageInfo);
+		shaderStages.reserve(key.Shaders.size());
+		for (uint32_t id : key.Shaders)
+		{
+			if (id) shaderStages.push_back(VulkanShader::GetShaderByID(id)->StageInfo);
+		}
+
+		std::vector<VkFormat> colorAttachmentFormats;
+		colorAttachmentFormats.reserve(key.ColorAttachments.size());
+		for (VkFormat format : key.ColorAttachments)
+		{
+			if (format != VK_FORMAT_UNDEFINED) colorAttachmentFormats.push_back(format);
+		}
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 		VkPipelineViewportStateCreateInfo viewportStateInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
@@ -109,8 +120,8 @@ namespace GraphicsAbstraction {
 
 		VkPipelineRenderingCreateInfo renderingInfo = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-			.colorAttachmentCount = (uint32_t)key.ColorAttachments.size(),
-			.pColorAttachmentFormats = key.ColorAttachments.data(),
+			.colorAttachmentCount = (uint32_t)colorAttachmentFormats.size(),
+			.pColorAttachmentFormats = colorAttachmentFormats.data(),
 			.depthAttachmentFormat = key.DepthAttachment
 		};
 

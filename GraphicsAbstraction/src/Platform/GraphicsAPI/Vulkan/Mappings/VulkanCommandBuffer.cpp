@@ -108,12 +108,11 @@ namespace GraphicsAbstraction {
 		std::vector<VkRenderingAttachmentInfo> vulkanColorAttachments;
 		VkRenderingAttachmentInfo vulkanDepthAttachment = {};
 
-		m_GraphicsPipelineKey.ColorAttachments.clear();
-		for (auto& image : colorAttachments)
+		for (int i = 0; i < colorAttachments.size(); i++)
 		{
-			auto vulkanImage = std::static_pointer_cast<VulkanImage>(image);
+			auto vulkanImage = std::static_pointer_cast<VulkanImage>(colorAttachments[i]);
 			vulkanImage->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-			m_GraphicsPipelineKey.ColorAttachments.push_back(vulkanImage->Format);
+			m_GraphicsPipelineKey.ColorAttachments[i] = vulkanImage->Format;
 
 			vulkanColorAttachments.push_back({
 				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -174,8 +173,9 @@ namespace GraphicsAbstraction {
 
 		std::vector<VkShaderStageFlagBits> stages;
 		std::vector<VkShaderEXT> shaders;
-	
-		m_GraphicsPipelineKey.Shaders.clear();
+		stages.reserve(shaderStages.size());
+		shaders.reserve(shaderStages.size());
+
 		for (auto& shaderStage : shaderStages)
 		{
 			auto vulkanShaderStage = std::static_pointer_cast<VulkanShader>(shaderStage);
@@ -184,27 +184,35 @@ namespace GraphicsAbstraction {
 				stages.push_back(vulkanShaderStage->Stage);
 				shaders.push_back(vulkanShaderStage->ShaderObject);
 			}
-			else
-			{
-				if (vulkanShaderStage->Stage == VK_SHADER_STAGE_COMPUTE_BIT)
-				{
-					m_ComputePipelineKey.Shader = vulkanShaderStage->ID;
-					m_ComputePipelineStateChanged = true;
-				}
-				else
-				{
-					m_GraphicsPipelineKey.Shaders.push_back(vulkanShaderStage->ID);
-					m_GraphicsPipelineStateChanged = true;
-				}
-			}
 
 			uint32_t pushConstantID = vulkanShaderStage->GetPushConstantBufferID();
-			if (vulkanShaderStage->Stage == VK_SHADER_STAGE_VERTEX_BIT)
-				vkCmdPushConstants(CommandBuffer, m_Context->BindlessPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t), &pushConstantID);
-			if (vulkanShaderStage->Stage == VK_SHADER_STAGE_FRAGMENT_BIT)
-				vkCmdPushConstants(CommandBuffer, m_Context->BindlessPipelineLayout, VK_SHADER_STAGE_ALL, 4, sizeof(uint32_t), &pushConstantID);
-			if (vulkanShaderStage->Stage == VK_SHADER_STAGE_COMPUTE_BIT)
-				vkCmdPushConstants(CommandBuffer, m_Context->BindlessPipelineLayout, VK_SHADER_STAGE_ALL, 8, sizeof(uint32_t), &pushConstantID);
+			switch (vulkanShaderStage->Stage)
+			{
+				case VK_SHADER_STAGE_VERTEX_BIT:
+				{
+					vkCmdPushConstants(CommandBuffer, m_Context->BindlessPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t), &pushConstantID);
+
+					m_GraphicsPipelineKey.Shaders[0] = vulkanShaderStage->ID;
+					m_GraphicsPipelineStateChanged = true;
+					break;
+				}
+				case VK_SHADER_STAGE_FRAGMENT_BIT:
+				{
+					vkCmdPushConstants(CommandBuffer, m_Context->BindlessPipelineLayout, VK_SHADER_STAGE_ALL, 4, sizeof(uint32_t), &pushConstantID);
+
+					m_GraphicsPipelineKey.Shaders[4] = vulkanShaderStage->ID;
+					m_GraphicsPipelineStateChanged = true;
+					break;
+				}
+				case VK_SHADER_STAGE_COMPUTE_BIT:
+				{
+					vkCmdPushConstants(CommandBuffer, m_Context->BindlessPipelineLayout, VK_SHADER_STAGE_ALL, 8, sizeof(uint32_t), &pushConstantID);
+
+					m_ComputePipelineKey.Shader = vulkanShaderStage->ID;
+					m_ComputePipelineStateChanged = true;
+					break;
+				}
+			}
 		}
 
 		if (m_Context->ShaderObjectSupported) m_Context->vkCmdBindShadersEXT(CommandBuffer, (uint32_t)shaders.size(), stages.data(), shaders.data());

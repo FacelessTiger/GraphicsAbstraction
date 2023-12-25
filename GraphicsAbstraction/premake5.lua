@@ -9,7 +9,7 @@ project "GraphicsAbstraction"
 	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
 
 	disablewarnings { "4996" }
-	linkoptions { "-IGNORE:4099" }
+	linkoptions { "-IGNORE:4099", "-IGNORE:4006" }
 
 	files
 	{
@@ -18,7 +18,9 @@ project "GraphicsAbstraction"
 		"vendor/stb_image/**.h",
 		"vendor/stb_image/**.cpp",
 		"vendor/glm/glm/**.hpp",
-		"vendor/glm/glm/**.inl"
+		"vendor/glm/glm/**.inl",
+		"vendor/xxHash/**.h",
+		"vendor/xxHash/**.c"
 	}
 
 	defines
@@ -34,7 +36,8 @@ project "GraphicsAbstraction"
 		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.stb_image}",
-		"%{IncludeDir.spdlog}"
+		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.xxHash}"
 	}
 
 	links 

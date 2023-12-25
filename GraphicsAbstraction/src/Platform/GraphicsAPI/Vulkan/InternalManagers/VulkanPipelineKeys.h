@@ -1,53 +1,49 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <xxhash.h>
+
 #include <vector>
+#include <array>
 #include <unordered_map>
+
+#define GA_PIPELINE_EQUALITY(name) bool operator==(const name& other) const = default
+#define GA_PIPELINE_HASH(name)															\
+	template<>																			\
+	struct hash<GraphicsAbstraction::name>												\
+	{																					\
+		std::size_t operator()(const GraphicsAbstraction::name& key) const				\
+		{																				\
+			return (std::size_t)XXH64(&key, sizeof(GraphicsAbstraction::name), 0);		\
+		}																				\
+	}	
 
 namespace GraphicsAbstraction {
 
 	struct VulkanGraphicsPipelineKey
 	{
-		std::vector<uint32_t> Shaders;
-		std::vector<VkFormat> ColorAttachments;
+		std::array<uint32_t, 5> Shaders = {};
+		std::array<VkFormat, 8> ColorAttachments = {};
 		VkFormat DepthAttachment = VK_FORMAT_UNDEFINED;
 
-		bool operator==(const VulkanGraphicsPipelineKey& other) const = default;
+		GA_PIPELINE_EQUALITY(VulkanGraphicsPipelineKey);
 	};
 
 	struct VulkanComputePipelineKey
 	{
 		uint32_t Shader;
 
-		bool operator==(const VulkanComputePipelineKey& other) const = default;
+		GA_PIPELINE_EQUALITY(VulkanComputePipelineKey);
 	};
 
 }
 
 namespace std {
 
-	template<>
-	struct hash<GraphicsAbstraction::VulkanGraphicsPipelineKey>
-	{
-		std::size_t operator()(const GraphicsAbstraction::VulkanGraphicsPipelineKey& key) const
-		{
-			std::size_t ret = 0;
-
-			for (uint32_t shaderID : key.Shaders) ret ^= std::hash<uint32_t>()(shaderID);
-			for (VkFormat format : key.ColorAttachments) ret ^= std::hash<uint32_t>()((uint32_t)format);
-			ret ^= std::hash<uint32_t>()((uint32_t)key.DepthAttachment);
-
-			return ret;
-		}
-	};
-
-	template<>
-	struct hash<GraphicsAbstraction::VulkanComputePipelineKey>
-	{
-		std::size_t operator()(const GraphicsAbstraction::VulkanComputePipelineKey& key) const
-		{
-			return std::hash<uint32_t>()(key.Shader);
-		}
-	};
+	GA_PIPELINE_HASH(VulkanGraphicsPipelineKey);
+	GA_PIPELINE_HASH(VulkanComputePipelineKey);
 
 }
+
+#undef GA_PIPELINE_EQUALITY
+#undef GA_PIPELINE_HASH

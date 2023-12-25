@@ -19,7 +19,7 @@
 
 namespace GraphicsAbstraction {
 
-	static uint32_t s_IDCounter = 0;
+	static uint32_t s_IDCounter = 1;
 	static std::unordered_map<uint32_t, VulkanShader*> s_ShaderList;
 
 	namespace Utils {
