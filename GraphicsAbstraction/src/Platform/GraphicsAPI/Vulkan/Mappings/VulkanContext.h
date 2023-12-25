@@ -70,7 +70,10 @@ namespace GraphicsAbstraction {
 		};
 
 		bool ShaderObjectSupported = false;
+		bool DynamicStateSupported = false;
+		bool DynamicState2Supported = false;
 		bool DynamicState3Supported = false;
+		bool DynamicRenderingSupported = false;
 
 		#define GA_VULKAN_FUNCTION(name) PFN_##name name = (PFN_##name)+[]{ GA_CORE_ASSERT(false, "Function " #name " not loaded"); }
 		#include "../InternalManagers/VulkanFunctions.inl"

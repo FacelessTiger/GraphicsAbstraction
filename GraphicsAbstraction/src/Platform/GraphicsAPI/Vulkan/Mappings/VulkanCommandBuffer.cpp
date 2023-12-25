@@ -159,12 +159,12 @@ namespace GraphicsAbstraction {
 		};
 		
 		m_GraphicsPipelineStateChanged = true;
-		vkCmdBeginRendering(CommandBuffer, &renderInfo);
+		m_Context->vkCmdBeginRenderingKHR(CommandBuffer, &renderInfo);
 	}
 
 	void VulkanCommandBuffer::EndRendering()
 	{
-		vkCmdEndRendering(CommandBuffer);
+		m_Context->vkCmdEndRenderingKHR(CommandBuffer);
 	}
 
 	void VulkanCommandBuffer::BindShaders(const std::vector<std::shared_ptr<Shader>> shaderStages)
@@ -240,7 +240,8 @@ namespace GraphicsAbstraction {
 			.maxDepth = 1.0f
 		};
 
-		vkCmdSetViewportWithCount(CommandBuffer, 1, &viewport);
+		if (m_Context->DynamicStateSupported) m_Context->vkCmdSetViewportWithCountEXT(CommandBuffer, 1, &viewport);
+		else vkCmdSetViewport(CommandBuffer, 0, 1, &viewport);
 	}
 
 	void VulkanCommandBuffer::SetScissor(const glm::vec2& size)
@@ -260,17 +261,28 @@ namespace GraphicsAbstraction {
 			.extent = extent
 		};
 
-		vkCmdSetScissorWithCount(CommandBuffer, 1, &scissor);
+		if (m_Context->DynamicStateSupported) m_Context->vkCmdSetScissorWithCountEXT(CommandBuffer, 1, &scissor);
+		else vkCmdSetScissor(CommandBuffer, 0, 1, &scissor);
 	}
 
 	void VulkanCommandBuffer::SetDepthTest(bool testEnabled, bool writeEnabled, CompareOperation op)
 	{
-		vkCmdSetDepthTestEnable(CommandBuffer, testEnabled);
-		vkCmdSetDepthWriteEnable(CommandBuffer, writeEnabled);
-		vkCmdSetDepthCompareOp(CommandBuffer, Utils::GACompareOpToVulkan(op));
 		vkCmdSetDepthBounds(CommandBuffer, 0.0f, 1.0f);
+		if (m_Context->DynamicStateSupported)
+		{
+			m_Context->vkCmdSetDepthTestEnableEXT(CommandBuffer, testEnabled);
+			m_Context->vkCmdSetDepthWriteEnableEXT(CommandBuffer, writeEnabled);
+			m_Context->vkCmdSetDepthCompareOpEXT(CommandBuffer, Utils::GACompareOpToVulkan(op));
+			m_DepthEnableSet = true;
+		}
+		else
+		{
+			m_GraphicsPipelineKey.DepthTestEnable = testEnabled;
+			m_GraphicsPipelineKey.DepthWriteEnable = writeEnabled;
+			m_GraphicsPipelineKey.DepthCompareOp = Utils::GACompareOpToVulkan(op);
+			m_GraphicsPipelineStateChanged = true;
+		}
 
-		m_DepthEnableSet = true;
 	}
 
 	void VulkanCommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -301,20 +313,29 @@ namespace GraphicsAbstraction {
 		VkColorComponentFlags colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
 		vkCmdSetLineWidth(CommandBuffer, 1.0f);
-		vkCmdSetRasterizerDiscardEnable(CommandBuffer, false);
-		vkCmdSetFrontFace(CommandBuffer, VK_FRONT_FACE_CLOCKWISE);
-		vkCmdSetCullMode(CommandBuffer, VK_CULL_MODE_NONE);
-		vkCmdSetDepthBiasEnable(CommandBuffer, false);
-		vkCmdSetStencilTestEnable(CommandBuffer, false);
-		vkCmdSetPrimitiveRestartEnable(CommandBuffer, false);
-		vkCmdSetDepthBoundsTestEnable(CommandBuffer, false);
-		vkCmdSetStencilOp(CommandBuffer, VK_STENCIL_FACE_FRONT_BIT, {}, {}, {}, {});
-		vkCmdSetPrimitiveTopology(CommandBuffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
-		if (!m_DepthEnableSet)
+		if (m_Context->DynamicStateSupported)
 		{
-			vkCmdSetDepthTestEnable(CommandBuffer, false);
-			vkCmdSetDepthWriteEnable(CommandBuffer, false);
+			m_Context->vkCmdSetCullModeEXT(CommandBuffer, VK_CULL_MODE_NONE);
+			m_Context->vkCmdSetFrontFaceEXT(CommandBuffer, VK_FRONT_FACE_CLOCKWISE);
+			m_Context->vkCmdSetPrimitiveTopologyEXT(CommandBuffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+			if (!m_DepthEnableSet)
+			{
+				m_Context->vkCmdSetDepthTestEnableEXT(CommandBuffer, false);
+				m_Context->vkCmdSetDepthWriteEnableEXT(CommandBuffer, false);
+			}
+
+			m_Context->vkCmdSetDepthBoundsTestEnableEXT(CommandBuffer, false);
+			m_Context->vkCmdSetStencilTestEnableEXT(CommandBuffer, false);
+			m_Context->vkCmdSetStencilOpEXT(CommandBuffer, VK_STENCIL_FACE_FRONT_BIT, {}, {}, {}, {});
+		}
+
+		if (m_Context->DynamicState2Supported)
+		{
+			m_Context->vkCmdSetRasterizerDiscardEnableEXT(CommandBuffer, false);
+			m_Context->vkCmdSetDepthBiasEnableEXT(CommandBuffer, false);
+			m_Context->vkCmdSetPrimitiveRestartEnableEXT(CommandBuffer, false);
 		}
 
 		if (m_Context->DynamicState3Supported)

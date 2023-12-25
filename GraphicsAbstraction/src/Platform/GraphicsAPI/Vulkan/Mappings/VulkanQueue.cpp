@@ -21,27 +21,26 @@ namespace GraphicsAbstraction {
 		if (vulkanSwapchain->Dirty) vulkanSwapchain->Recreate();
 		vkAcquireNextImageKHR(m_Context.Device, vulkanSwapchain->Swapchain, UINT64_MAX, vulkanSwapchain->Semaphores[vulkanSwapchain->SemaphoreIndex], nullptr, &vulkanSwapchain->ImageIndex);
 
-		VkSemaphoreSubmitInfo waitInfo = {
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-			.semaphore = vulkanSwapchain->Semaphores[vulkanSwapchain->SemaphoreIndex]
+		uint64_t signalValue = ++vulkanFence->Value;
+		VkTimelineSemaphoreSubmitInfo timelineInfo = { 
+			.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
+			.signalSemaphoreValueCount = 1,
+			.pSignalSemaphoreValues = &signalValue
+		};
+
+		VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		VkSubmitInfo submitInfo = {
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = &timelineInfo,
+			.waitSemaphoreCount = 1,
+			.pWaitSemaphores = &vulkanSwapchain->Semaphores[vulkanSwapchain->SemaphoreIndex],
+			.pWaitDstStageMask = &stageMask,
+			.signalSemaphoreCount = 1,
+			.pSignalSemaphores = &vulkanFence->TimelineSemaphore
 		};
 		vulkanSwapchain->SemaphoreIndex = (vulkanSwapchain->SemaphoreIndex + 1) % vulkanSwapchain->Semaphores.size();
 
-		VkSemaphoreSubmitInfo signalInfo = {
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-			.semaphore = vulkanFence->TimelineSemaphore,
-			.value = ++vulkanFence->Value,
-			.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT
-		};
-
-		VkSubmitInfo2 submitInfo = {
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-			.waitSemaphoreInfoCount = 1,
-			.pWaitSemaphoreInfos = &waitInfo,
-			.signalSemaphoreInfoCount = 1,
-			.pSignalSemaphoreInfos = &signalInfo
-		};
-		VK_CHECK(vkQueueSubmit2(Queue, 1, &submitInfo, nullptr));
+		VK_CHECK(vkQueueSubmit(Queue, 1, &submitInfo, nullptr));
 	}
 
 	void VulkanQueue::Submit(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<Fence>& wait, const std::shared_ptr<Fence>& signal)
@@ -52,40 +51,42 @@ namespace GraphicsAbstraction {
 		auto vulkanWait = std::static_pointer_cast<VulkanFence>(wait);
 		auto vulkanSignal = std::static_pointer_cast<VulkanFence>(signal);
 
-		VkCommandBufferSubmitInfo bufferInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-			.commandBuffer = vulkanCommandBuffer->CommandBuffer
-		};
 		vkEndCommandBuffer(vulkanCommandBuffer->CommandBuffer);
+		VkTimelineSemaphoreSubmitInfo timelineInfo = { .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
 
-		std::vector<VkSemaphoreSubmitInfo> waitInfos;
+		VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		VkSubmitInfo submitInfo = {
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = &timelineInfo,
+			.commandBufferCount = 1,
+			.pCommandBuffers = &vulkanCommandBuffer->CommandBuffer
+		};
+
+		uint64_t waitValue;
+		uint64_t signalValue;
+
 		if (wait)
 		{
-			waitInfos.push_back({
-				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-				.semaphore = vulkanWait->TimelineSemaphore,
-				.value = vulkanWait->Value,
-				.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT
-			});
+			waitValue = vulkanWait->Value;
+			timelineInfo.waitSemaphoreValueCount = 1;
+			timelineInfo.pWaitSemaphoreValues = &waitValue;
+
+			submitInfo.waitSemaphoreCount = 1;
+			submitInfo.pWaitSemaphores = &vulkanWait->TimelineSemaphore;
+			submitInfo.pWaitDstStageMask = &stageMask;
 		}
 
-		VkSemaphoreSubmitInfo signalInfo = {
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-			.semaphore = vulkanSignal->TimelineSemaphore,
-			.value = ++vulkanSignal->Value,
-			.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT
-		};
+		if (signal)
+		{
+			signalValue = ++vulkanSignal->Value;
+			timelineInfo.signalSemaphoreValueCount = 1;
+			timelineInfo.pSignalSemaphoreValues = &signalValue;
 
-		VkSubmitInfo2 submitInfo = {
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-			.waitSemaphoreInfoCount = (uint32_t)waitInfos.size(),
-			.pWaitSemaphoreInfos = waitInfos.data(),
-			.commandBufferInfoCount = 1,
-			.pCommandBufferInfos = &bufferInfo,
-			.signalSemaphoreInfoCount = 1,
-			.pSignalSemaphoreInfos = &signalInfo
-		};
-		VK_CHECK(vkQueueSubmit2(Queue, 1, &submitInfo, nullptr));
+			submitInfo.signalSemaphoreCount = 1;
+			submitInfo.pSignalSemaphores = &vulkanSignal->TimelineSemaphore;
+		}
+
+		VK_CHECK(vkQueueSubmit(Queue, 1, &submitInfo, nullptr));
 	}
 
 	void VulkanQueue::Present(const std::shared_ptr<Swapchain>& swapchain, const std::shared_ptr<Fence>& wait)
@@ -96,26 +97,23 @@ namespace GraphicsAbstraction {
 		auto vulkanFence = std::static_pointer_cast<VulkanFence>(wait);
 		VkSemaphore* binaryWaits = nullptr;
 
-		VkSemaphoreSubmitInfo waitInfo = {
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-			.semaphore = vulkanFence->TimelineSemaphore,
-			.value = vulkanFence->Value,
-			.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT
+		VkTimelineSemaphoreSubmitInfo timelineInfo = {
+			.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
+			.waitSemaphoreValueCount = 1,
+			.pWaitSemaphoreValues = &vulkanFence->Value
 		};
 
-		VkSemaphoreSubmitInfo signalInfo = {
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-			.semaphore = vulkanSwapchain->Semaphores[vulkanSwapchain->SemaphoreIndex]
+		VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		VkSubmitInfo submitInfo = {
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = &timelineInfo,
+			.waitSemaphoreCount = 1,
+			.pWaitSemaphores = &vulkanFence->TimelineSemaphore,
+			.pWaitDstStageMask = &stageMask,
+			.signalSemaphoreCount = 1,
+			.pSignalSemaphores = &vulkanSwapchain->Semaphores[vulkanSwapchain->SemaphoreIndex]
 		};
-
-		VkSubmitInfo2 submitInfo = {
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-			.waitSemaphoreInfoCount = 1,
-			.pWaitSemaphoreInfos = &waitInfo,
-			.signalSemaphoreInfoCount = 1,
-			.pSignalSemaphoreInfos = &signalInfo
-		};
-		VK_CHECK(vkQueueSubmit2(Queue, 1, &submitInfo, nullptr));
+		VK_CHECK(vkQueueSubmit(Queue, 1, &submitInfo, nullptr));
 
 		binaryWaits = &vulkanSwapchain->Semaphores[vulkanSwapchain->SemaphoreIndex];
 		vulkanSwapchain->SemaphoreIndex = (vulkanSwapchain->SemaphoreIndex + 1) % vulkanSwapchain->Semaphores.size();

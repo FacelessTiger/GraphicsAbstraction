@@ -117,18 +117,13 @@ namespace GraphicsAbstraction {
 		ImGui_ImplVulkan_CreateFontsTexture(cmd);
 		vkEndCommandBuffer(cmd);
 
-		VkCommandBufferSubmitInfo bufferInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-			.commandBuffer = cmd
+		VkSubmitInfo submitInfo = {
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.commandBufferCount = 1,
+			.pCommandBuffers = &cmd
 		};
 
-		VkSubmitInfo2 submitInfo = {
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-			.commandBufferInfoCount = 1,
-			.pCommandBufferInfos = &bufferInfo
-		};
-
-		VK_CHECK(vkQueueSubmit2(s_Data->Context->GraphicsQueue, 1, &submitInfo, fence));
+		VK_CHECK(vkQueueSubmit(s_Data->Context->GraphicsQueue, 1, &submitInfo, fence));
 		VK_CHECK(vkWaitForFences(s_Data->Context->Device, 1, &fence, true, UINT64_MAX));
 		vkDestroyFence(s_Data->Context->Device, fence, nullptr);
 
@@ -190,9 +185,9 @@ namespace GraphicsAbstraction {
 
 		vulkanImage->TransitionLayout(vulkanCommandBuffer->CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-		vkCmdBeginRendering(vulkanCommandBuffer->CommandBuffer, &info);
+		s_Data->Context->vkCmdBeginRenderingKHR(vulkanCommandBuffer->CommandBuffer, &info);
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vulkanCommandBuffer->CommandBuffer);
-		vkCmdEndRendering(vulkanCommandBuffer->CommandBuffer);
+		s_Data->Context->vkCmdEndRenderingKHR(vulkanCommandBuffer->CommandBuffer);
 
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{

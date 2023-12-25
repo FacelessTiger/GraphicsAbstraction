@@ -71,7 +71,7 @@ namespace GraphicsAbstraction {
 		VkApplicationInfo appInfo = {
 			.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 			.pEngineName = "Cobra",
-			.apiVersion = VK_API_VERSION_1_3
+			.apiVersion = VK_API_VERSION_1_2
 		};
 
 		uint32_t glfwExtensionCount;
@@ -150,10 +150,15 @@ namespace GraphicsAbstraction {
 			if (!std::strcmp(property.extensionName, VK_EXT_SHADER_OBJECT_EXTENSION_NAME))
 			{
 				ShaderObjectSupported = true;
+				DynamicStateSupported = true;
+				DynamicState2Supported = true;
 				DynamicState3Supported = true;
 			}
 
+			if (!std::strcmp(property.extensionName, VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME)) DynamicStateSupported = true;
+			if (!std::strcmp(property.extensionName, VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME)) DynamicState2Supported = true;
 			if (!std::strcmp(property.extensionName, VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME)) DynamicState3Supported = true;
+			if (!std::strcmp(property.extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) DynamicRenderingSupported = true;
 		}
 	}
 
@@ -197,12 +202,6 @@ namespace GraphicsAbstraction {
 			.timelineSemaphore = true
 		});
 
-		builder.AddFeature<VkPhysicalDeviceVulkan13Features>({
-			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-			.synchronization2 = true,
-			.dynamicRendering = true
-		});
-
 		builder.AddExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 		if (ShaderObjectSupported)
 		{
@@ -214,6 +213,24 @@ namespace GraphicsAbstraction {
 		}
 		else
 		{
+			if (DynamicStateSupported)
+			{
+				builder.AddFeature<VkPhysicalDeviceExtendedDynamicStateFeaturesEXT>({
+					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
+					.extendedDynamicState = true
+				});
+				builder.AddExtension(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);
+			}
+
+			if (DynamicState2Supported)
+			{
+				builder.AddFeature<VkPhysicalDeviceExtendedDynamicState2FeaturesEXT>({
+					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT,
+					.extendedDynamicState2 = true
+				});
+				builder.AddExtension(VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME);
+			}
+
 			if (DynamicState3Supported)
 			{
 				builder.AddFeature<VkPhysicalDeviceExtendedDynamicState3FeaturesEXT>({
@@ -227,6 +244,15 @@ namespace GraphicsAbstraction {
 				});
 				builder.AddExtension(VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME);
 			}
+		}
+
+		if (DynamicRenderingSupported)
+		{
+			builder.AddFeature<VkPhysicalDeviceDynamicRenderingFeatures>({
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
+				.dynamicRendering = true
+			});
+			builder.AddExtension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 		}
 
 		VkDeviceCreateInfo createInfo = {

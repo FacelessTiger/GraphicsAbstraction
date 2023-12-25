@@ -14,9 +14,9 @@ namespace GraphicsAbstraction {
 		{
 			switch (format)
 			{
-				case ImageFormat::R16G16B16A16_SFLOAT:	return VK_FORMAT_R16G16B16A16_SFLOAT;
-				case ImageFormat::R8G8B8A8_UNORM:		return VK_FORMAT_R8G8B8A8_UNORM;
-				case ImageFormat::D32_SFLOAT:			return VK_FORMAT_D32_SFLOAT;
+			case ImageFormat::R16G16B16A16_SFLOAT:	return VK_FORMAT_R16G16B16A16_SFLOAT;
+			case ImageFormat::R8G8B8A8_UNORM:		return VK_FORMAT_R8G8B8A8_UNORM;
+			case ImageFormat::D32_SFLOAT:			return VK_FORMAT_D32_SFLOAT;
 			}
 
 			GA_CORE_ASSERT(false, "Unknown image format!");
@@ -40,7 +40,7 @@ namespace GraphicsAbstraction {
 	}
 
 	VulkanImage::VulkanImage(const glm::vec2& size, ImageFormat format, ImageUsage usage)
-		: m_Context(VulkanContext::GetReference()), Layout(VK_IMAGE_LAYOUT_UNDEFINED), Width((uint32_t)size.x), Height((uint32_t)size.y), Handle((usage & ImageUsage::Sampled) ? ResourceType::SampledImage : ResourceType::StorageImage)
+		: m_Context(VulkanContext::GetReference()), Layout(VK_IMAGE_LAYOUT_UNDEFINED), Width((uint32_t)size.x), Height((uint32_t)size.y), Handle((usage& ImageUsage::Sampled) ? ResourceType::SampledImage : ResourceType::StorageImage)
 	{
 		Format = Utils::GAImageFormatToVulkan(format);
 		Usage = Utils::GAImageUsageToVulkan(usage);
@@ -51,7 +51,7 @@ namespace GraphicsAbstraction {
 
 	VulkanImage::VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, VkFormat imageFormat, VkImageUsageFlags usage, uint32_t width, uint32_t height)
 		: m_Context(VulkanContext::GetReference()), View(imageView), Layout(imageLayout), Format(imageFormat), Usage(usage), Width(width), Height(height), m_ExternalAllocation(true), Handle(ResourceType::StorageImage)
-	{ 
+	{
 		Image.Image = image;
 	}
 
@@ -70,10 +70,7 @@ namespace GraphicsAbstraction {
 		TransitionLayout(vulkanCommandBuffer->CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 		vulkanImage->TransitionLayout(vulkanCommandBuffer->CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-		VkImageBlit2 blitRegion{};
-		blitRegion.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
-		blitRegion.pNext = nullptr;
-
+		VkImageBlit blitRegion{};
 		blitRegion.srcOffsets[1].x = vulkanImage->Width;
 		blitRegion.srcOffsets[1].y = vulkanImage->Height;
 		blitRegion.srcOffsets[1].z = 1;
@@ -92,18 +89,10 @@ namespace GraphicsAbstraction {
 		blitRegion.dstSubresource.layerCount = 1;
 		blitRegion.dstSubresource.mipLevel = 0;
 
-		VkBlitImageInfo2 blitInfo{};
-		blitInfo.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
-		blitInfo.pNext = nullptr;
-		blitInfo.dstImage = vulkanImage->Image.Image;
-		blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		blitInfo.srcImage = Image.Image;
-		blitInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		blitInfo.filter = VK_FILTER_LINEAR;
-		blitInfo.regionCount = 1;
-		blitInfo.pRegions = &blitRegion;
-
-		vkCmdBlitImage2(vulkanCommandBuffer->CommandBuffer, &blitInfo);
+		vkCmdBlitImage(vulkanCommandBuffer->CommandBuffer, 
+			Image.Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
+			vulkanImage->Image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+			1, &blitRegion, VK_FILTER_LINEAR);
 	}
 
 	void VulkanImage::Resize(const glm::vec2& size)
@@ -209,11 +198,9 @@ namespace GraphicsAbstraction {
 		if (Layout == newLayout) return;
 		VkImageAspectFlags aspectMask = (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
 
-		VkImageMemoryBarrier2 imageBarrier = {
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+		VkImageMemoryBarrier imageBarrier = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 			.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 			.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT,
 
 			.oldLayout = Layout,
@@ -223,13 +210,7 @@ namespace GraphicsAbstraction {
 			.subresourceRange = Utils::ImageSubresourceRange(aspectMask)
 		};
 
-		VkDependencyInfo dependencyInfo = {
-			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-			.imageMemoryBarrierCount = 1,
-			.pImageMemoryBarriers = &imageBarrier
-		};
-
-		vkCmdPipelineBarrier2(cmd, &dependencyInfo);
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 		Layout = newLayout;
 	}
 

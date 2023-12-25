@@ -26,6 +26,10 @@ namespace GraphicsAbstraction {
 		std::array<VkFormat, 8> ColorAttachments = {};
 		VkFormat DepthAttachment = VK_FORMAT_UNDEFINED;
 
+		bool DepthTestEnable = false;
+		bool DepthWriteEnable = false;
+		VkCompareOp DepthCompareOp = VK_COMPARE_OP_NEVER;
+
 		GA_PIPELINE_EQUALITY(VulkanGraphicsPipelineKey);
 	};
 

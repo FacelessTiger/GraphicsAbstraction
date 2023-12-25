@@ -27,9 +27,11 @@ namespace GraphicsAbstraction::Utils {
 	{
 		std::unordered_map<VkStructureType, std::variant<VkPhysicalDeviceFeatures2, 
 														VkPhysicalDeviceVulkan12Features,
-														VkPhysicalDeviceVulkan13Features,
 														VkPhysicalDeviceShaderObjectFeaturesEXT,
-														VkPhysicalDeviceExtendedDynamicState3FeaturesEXT>> deviceFeatures;
+														VkPhysicalDeviceExtendedDynamicStateFeaturesEXT,
+														VkPhysicalDeviceExtendedDynamicState2FeaturesEXT,
+														VkPhysicalDeviceExtendedDynamicState3FeaturesEXT,
+														VkPhysicalDeviceDynamicRenderingFeatures>> deviceFeatures;
 		std::vector<const char*> extensions;
 		void* pNext = nullptr;
 
