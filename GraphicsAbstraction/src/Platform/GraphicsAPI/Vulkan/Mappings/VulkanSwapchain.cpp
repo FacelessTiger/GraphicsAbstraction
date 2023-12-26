@@ -45,6 +45,7 @@ namespace GraphicsAbstraction {
 		}
 
 		Dirty = true;
+		if (!m_Context->DynamicRenderingSupported) m_Context->RenderInfoManager->ClearFramebufferCache();
 	}
 
 	void VulkanSwapchain::SetVsync(bool enabled)
@@ -82,6 +83,9 @@ namespace GraphicsAbstraction {
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_Context->ChosenGPU, m_Surface->Surface, &capabilities);
 
 		VkExtent2D extent = ChooseSwapExtent(capabilities);
+		Width = extent.width;
+		Height = extent.height;
+
 		uint32_t imageCount = capabilities.minImageCount + 1;
 		imageCount = (capabilities.maxImageCount && imageCount > capabilities.maxImageCount) ? capabilities.maxImageCount : imageCount;
 
@@ -110,22 +114,6 @@ namespace GraphicsAbstraction {
 		vkGetSwapchainImagesKHR(m_Context->Device, Swapchain, &imageCount, nullptr);
 		std::vector<VkImage> vulkanImages(imageCount);
 		vkGetSwapchainImagesKHR(m_Context->Device, Swapchain, &imageCount, vulkanImages.data());
-
-		/*vkb::SwapchainBuilder swapchainBuilder(m_Context->ChosenGPU, m_Context->Device, m_Surface->Surface);
-		swapchainBuilder.use_default_format_selection()
-			.set_desired_present_mode(m_EnableVsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR)
-			.set_desired_extent(Width, Height)
-			.add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-
-		if (!firstCreation) swapchainBuilder.set_old_swapchain(Swapchain);
-		auto vkbSwapchain = swapchainBuilder.build().value();
-		if (!firstCreation) vkDestroySwapchainKHR(m_Context->Device, Swapchain, nullptr);
-
-		Swapchain = vkbSwapchain.swapchain;
-		ImageFormat = vkbSwapchain.image_format;
-
-		auto images = vkbSwapchain.get_images().value();
-		auto imageViews = vkbSwapchain.get_image_views().value();*/
 
 		ImageFormat = m_ChosenSufaceFormat.format;
 		Images.clear();

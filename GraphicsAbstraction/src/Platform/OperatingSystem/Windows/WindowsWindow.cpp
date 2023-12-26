@@ -32,16 +32,21 @@ namespace GraphicsAbstraction {
 
 		if (!s_GLFWInitialized)
 		{
-			if (glfwInit() != GLFW_TRUE)
-				GA_CORE_ASSERT(false, "Could not initialize GLFW!");
+			int result = glfwInit();
+			GA_CORE_ASSERT(result == GLFW_TRUE, "Could not initialize GLFW!");	
 
 			glfwSetErrorCallback(GLFWErrorCallback);
 			s_GLFWInitialized = true;
 		}
 
+		// if requested window size is higher than monitor size then set it to monitor size - 10;
+		const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+		if (m_Data.Width > mode->width) m_Data.Width = mode->width - 10;
+		if (m_Data.Height > mode->height) m_Data.Height = mode->height - 10;
+
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		if (props.CustomTitlebar) glfwWindowHint(GLFW_TITLEBAR, false);
-		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
+		m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		s_WindowCount++;
 		
 		glfwSetWindowUserPointer(m_Window, &m_Data);

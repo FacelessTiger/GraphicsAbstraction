@@ -14,9 +14,9 @@ namespace GraphicsAbstraction {
 		{
 			switch (format)
 			{
-			case ImageFormat::R16G16B16A16_SFLOAT:	return VK_FORMAT_R16G16B16A16_SFLOAT;
-			case ImageFormat::R8G8B8A8_UNORM:		return VK_FORMAT_R8G8B8A8_UNORM;
-			case ImageFormat::D32_SFLOAT:			return VK_FORMAT_D32_SFLOAT;
+				case ImageFormat::R16G16B16A16_SFLOAT:	return VK_FORMAT_R16G16B16A16_SFLOAT;
+				case ImageFormat::R8G8B8A8_UNORM:		return VK_FORMAT_R8G8B8A8_UNORM;
+				case ImageFormat::D32_SFLOAT:			return VK_FORMAT_D32_SFLOAT;
 			}
 
 			GA_CORE_ASSERT(false, "Unknown image format!");

@@ -105,66 +105,122 @@ namespace GraphicsAbstraction {
 	{
 		GA_PROFILE_SCOPE();
 
-		std::vector<VkRenderingAttachmentInfo> vulkanColorAttachments;
-		VkRenderingAttachmentInfo vulkanDepthAttachment = {};
-
-		for (int i = 0; i < colorAttachments.size(); i++)
+		if (m_Context->DynamicRenderingSupported)
 		{
-			auto vulkanImage = std::static_pointer_cast<VulkanImage>(colorAttachments[i]);
-			vulkanImage->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-			m_GraphicsPipelineKey.ColorAttachments[i] = vulkanImage->Format;
+			std::vector<VkRenderingAttachmentInfo> vulkanColorAttachments;
+			VkRenderingAttachmentInfo vulkanDepthAttachment = {};
 
-			vulkanColorAttachments.push_back({
-				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-				.imageView = vulkanImage->View,
-				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE
-			});
-		}
+			for (int i = 0; i < colorAttachments.size(); i++)
+			{
+				auto vulkanImage = std::static_pointer_cast<VulkanImage>(colorAttachments[i]);
+				vulkanImage->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+				m_GraphicsPipelineKey.ColorAttachments[i] = vulkanImage->Format;
 
-		m_GraphicsPipelineKey.DepthAttachment = VK_FORMAT_UNDEFINED;
-		if (depthAttachment)
-		{
-			auto vulkanImage = std::static_pointer_cast<VulkanImage>(depthAttachment);
-			vulkanImage->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-			m_GraphicsPipelineKey.DepthAttachment = vulkanImage->Format;
+				vulkanColorAttachments.push_back({
+					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+					.imageView = vulkanImage->View,
+					.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+					.storeOp = VK_ATTACHMENT_STORE_OP_STORE
+				});
+			}
 
-			vulkanDepthAttachment = {
-				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-				.imageView = vulkanImage->View,
-				.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE
+			m_GraphicsPipelineKey.DepthAttachment = VK_FORMAT_UNDEFINED;
+			if (depthAttachment)
+			{
+				auto vulkanImage = std::static_pointer_cast<VulkanImage>(depthAttachment);
+				vulkanImage->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+				m_GraphicsPipelineKey.DepthAttachment = vulkanImage->Format;
+
+				vulkanDepthAttachment = {
+					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+					.imageView = vulkanImage->View,
+					.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+					.storeOp = VK_ATTACHMENT_STORE_OP_STORE
+				};
+				vulkanDepthAttachment.clearValue.depthStencil.depth = 1.0f;
+			}
+
+			VkExtent2D extent = {
+				.width = (uint32_t)region.x,
+				.height = (uint32_t)region.y
 			};
-			vulkanDepthAttachment.clearValue.depthStencil.depth = 1.0f;
+
+			VkRect2D rect = {
+				.extent = extent
+			};
+
+			VkRenderingInfo renderInfo = {
+				.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+				.renderArea = rect,
+				.layerCount = 1,
+				.colorAttachmentCount = (uint32_t)vulkanColorAttachments.size(),
+				.pColorAttachments = vulkanColorAttachments.data(),
+				.pDepthAttachment = depthAttachment ? &vulkanDepthAttachment : nullptr
+			};
+
+			m_GraphicsPipelineStateChanged = true;
+			m_Context->vkCmdBeginRenderingKHR(CommandBuffer, &renderInfo);
 		}
+		else
+		{
+			VulkanRenderInfoKey key;
+			key.Width = (uint32_t)region.x;
+			key.Height = (uint32_t)region.y;
 
-		VkExtent2D extent = {
-			.width = (uint32_t)region.x,
-			.height = (uint32_t)region.y
-		};
+			std::vector<VkImageView> attachmentViews;
+			attachmentViews.reserve(colorAttachments.size());
 
-		VkRect2D rect = {
-			.extent = extent
-		};
+			if (depthAttachment)
+			{
+				auto vulkanImage = std::static_pointer_cast<VulkanImage>(depthAttachment);
+				key.DepthAttachment = { vulkanImage->Format, vulkanImage->Layout, vulkanImage->Usage };
 
-		VkRenderingInfo renderInfo = {
-			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-			.renderArea = rect,
-			.layerCount = 1,
-			.colorAttachmentCount = (uint32_t)vulkanColorAttachments.size(),
-			.pColorAttachments = vulkanColorAttachments.data(),
-			.pDepthAttachment = depthAttachment ? &vulkanDepthAttachment : nullptr
-		};
-		
-		m_GraphicsPipelineStateChanged = true;
-		m_Context->vkCmdBeginRenderingKHR(CommandBuffer, &renderInfo);
+				vulkanImage->Layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				attachmentViews.push_back(vulkanImage->View);
+			}
+
+			for (int i = 0; i < colorAttachments.size(); i++)
+			{
+				auto vulkanImage = std::static_pointer_cast<VulkanImage>(colorAttachments[i]);
+				key.ColorAttachments[i] = { vulkanImage->Format, vulkanImage->Layout, vulkanImage->Usage };
+
+				vulkanImage->Layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+				attachmentViews.push_back(vulkanImage->View);
+			}
+
+			VulkanRenderInfo info = m_Context->RenderInfoManager->GetRenderInfo(key);
+			m_GraphicsPipelineKey.Renderpass = info.renderpass;
+
+			VkRenderPassAttachmentBeginInfo attachmentInfo = {
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO,
+				.attachmentCount = (uint32_t)attachmentViews.size(),
+				.pAttachments = attachmentViews.data()
+			};
+			
+			VkClearValue depthClear = {};
+			depthClear.depthStencil.depth = 1.0f;
+
+			VkRenderPassBeginInfo beginInfo = {
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				.pNext = &attachmentInfo,
+				.renderPass = info.renderpass,
+				.framebuffer = info.framebuffer,
+				.renderArea = { {}, { (uint32_t)region.x, (uint32_t)region.y } },
+				.clearValueCount = 1,
+				.pClearValues = &depthClear
+			};
+
+			m_GraphicsPipelineStateChanged = true;
+			vkCmdBeginRenderPass(CommandBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		}
 	}
 
 	void VulkanCommandBuffer::EndRendering()
 	{
-		m_Context->vkCmdEndRenderingKHR(CommandBuffer);
+		if (m_Context->DynamicRenderingSupported) m_Context->vkCmdEndRenderingKHR(CommandBuffer);
+		else vkCmdEndRenderPass(CommandBuffer);
 	}
 
 	void VulkanCommandBuffer::BindShaders(const std::vector<std::shared_ptr<Shader>> shaderStages)

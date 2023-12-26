@@ -29,6 +29,7 @@ namespace GraphicsAbstraction {
 		inline void Push(VkShaderEXT shader) { m_Shaders.push_back(shader); }
 		inline void Push(VkSampler sampler) { m_Samplers.push_back(sampler); }
 		inline void Push(VkSurfaceKHR surface) { m_Surfaces.push_back(surface); }
+		inline void Push(VkFramebuffer framebuffer) { m_Framebuffers.push_back(framebuffer); }
 
 		void Flush();
 	private:
@@ -44,6 +45,7 @@ namespace GraphicsAbstraction {
 		std::vector<VkShaderEXT> m_Shaders;
 		std::vector<VkSampler> m_Samplers;
 		std::vector<VkSurfaceKHR> m_Surfaces;
+		std::vector<VkFramebuffer> m_Framebuffers;
 	};
 
 }

@@ -4,6 +4,7 @@
 #include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanDeletionQueue.h>
 #include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanPipelineKeys.h>
 #include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanPipelineManager.h>
+#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanRenderInfoManager.h>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -57,6 +58,7 @@ namespace GraphicsAbstraction {
 		VkPipelineLayout BindlessPipelineLayout;
 
 		VulkanPipelineManager* PipelineManager;
+		VulkanRenderInfoManager* RenderInfoManager;
 		std::vector<VulkanDeletionQueue> FrameDeletionQueues;
 		uint32_t FrameInFlight = 0;
 

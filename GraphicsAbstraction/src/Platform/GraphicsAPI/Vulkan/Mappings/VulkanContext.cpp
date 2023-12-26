@@ -53,6 +53,7 @@ namespace GraphicsAbstraction {
 
 		FrameDeletionQueues.resize(frameInFlightCount, *this);
 		if (!ShaderObjectSupported) PipelineManager = new VulkanPipelineManager(*this);
+		if (!DynamicRenderingSupported) RenderInfoManager = new VulkanRenderInfoManager(*this);
 	}
 
 	std::shared_ptr<GraphicsAbstraction::Queue> VulkanContext::GetQueueImpl(QueueType type)
@@ -83,6 +84,19 @@ namespace GraphicsAbstraction {
 		deviceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
+
+		/// temppppp
+		uint32_t propertyCount;
+		vkEnumerateInstanceLayerProperties(&propertyCount, nullptr);
+		std::vector<VkLayerProperties> properties(propertyCount);
+		vkEnumerateInstanceLayerProperties(&propertyCount, properties.data());
+
+		GA_CORE_INFO("Layers");
+		for (auto& property : properties)
+		{
+			GA_CORE_TRACE(property.layerName);
+		}
+		// temppp
 
 		VkInstanceCreateInfo instanceCreateInfo = {
 			.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -134,9 +148,14 @@ namespace GraphicsAbstraction {
 		// Check features and select
 		for (const auto& device : devices)
 		{
-			// for now just select first device
-			ChosenGPU = device;
-			break;
+			VkPhysicalDeviceProperties deviceProperties;
+			vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+			if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+			{
+				ChosenGPU = device;
+				break;
+			}
 		}
 
 		// Check optional extensions
@@ -153,6 +172,7 @@ namespace GraphicsAbstraction {
 				DynamicStateSupported = true;
 				DynamicState2Supported = true;
 				DynamicState3Supported = true;
+				DynamicRenderingSupported = true;
 			}
 
 			if (!std::strcmp(property.extensionName, VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME)) DynamicStateSupported = true;
@@ -199,6 +219,8 @@ namespace GraphicsAbstraction {
 			.descriptorBindingPartiallyBound = true,
 			.descriptorBindingVariableDescriptorCount = true,
 			.runtimeDescriptorArray = true,
+			.imagelessFramebuffer = !DynamicRenderingSupported,
+			.separateDepthStencilLayouts = !DynamicRenderingSupported,
 			.timelineSemaphore = true
 		});
 
@@ -362,6 +384,7 @@ namespace GraphicsAbstraction {
 		for (auto& deletionQueue : FrameDeletionQueues)
 			deletionQueue.Flush();
 		if (!ShaderObjectSupported) delete PipelineManager;
+		if (!DynamicRenderingSupported) delete RenderInfoManager;
 
 		vkDestroyDescriptorPool(Device, m_BindlessPool, nullptr);
 		vkDestroyDescriptorSetLayout(Device, BindlessSetLayout, nullptr);

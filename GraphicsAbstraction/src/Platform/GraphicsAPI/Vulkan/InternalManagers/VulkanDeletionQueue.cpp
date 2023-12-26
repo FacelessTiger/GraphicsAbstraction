@@ -57,6 +57,10 @@ namespace GraphicsAbstraction {
 		for (auto& surface : m_Surfaces)
 			vkDestroySurfaceKHR(m_Context.Instance, surface, nullptr);
 		m_Surfaces.clear();
+
+		for (auto& framebuffer : m_Framebuffers)
+			vkDestroyFramebuffer(m_Context.Device, framebuffer, nullptr);
+		m_Framebuffers.clear();
 	}
 
 }

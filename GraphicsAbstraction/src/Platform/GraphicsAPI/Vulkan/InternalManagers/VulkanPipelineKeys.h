@@ -30,6 +30,8 @@ namespace GraphicsAbstraction {
 		bool DepthWriteEnable = false;
 		VkCompareOp DepthCompareOp = VK_COMPARE_OP_NEVER;
 
+		VkRenderPass Renderpass = 0;
+
 		GA_PIPELINE_EQUALITY(VulkanGraphicsPipelineKey);
 	};
 

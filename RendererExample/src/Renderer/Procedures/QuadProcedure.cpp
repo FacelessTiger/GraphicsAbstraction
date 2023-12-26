@@ -95,7 +95,7 @@ namespace GraphicsAbstraction {
 	void QuadProcedure::UploadQuads(const std::vector<QuadUpload>& quads)
 	{
 		uint32_t firstID = m_QuadCount;
-		m_QuadCount += quads.size();
+		m_QuadCount += (uint32_t)quads.size();
 
 		std::vector<QuadData> data;
 		data.reserve(quads.size());
@@ -111,7 +111,7 @@ namespace GraphicsAbstraction {
 			});
 		}
 
-		auto stagingBuffer = Buffer::Create(sizeof(QuadData) * quads.size(), BufferUsage::TransferSrc, BufferFlags::Mapped);
+		auto stagingBuffer = Buffer::Create((uint32_t)(sizeof(QuadData) * quads.size()), BufferUsage::TransferSrc, BufferFlags::Mapped);
 		stagingBuffer->SetData(data.data());
 
 		QuadChange change = {

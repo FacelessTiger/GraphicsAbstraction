@@ -93,10 +93,28 @@ namespace GraphicsAbstraction {
 			.MinImageCount = 3,
 			.ImageCount = 3,
 			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-			.UseDynamicRendering = true,
-			.ColorAttachmentFormat = vulkanSwapchain->ImageFormat,
 		};
-		ImGui_ImplVulkan_Init(&initInfo, VK_NULL_HANDLE);
+
+		VkRenderPass renderpass = VK_NULL_HANDLE;
+		if (s_Data->Context->DynamicRenderingSupported)
+		{
+			initInfo.UseDynamicRendering = true;
+			initInfo.ColorAttachmentFormat = vulkanSwapchain->ImageFormat;
+		}
+		else
+		{
+			auto image = std::static_pointer_cast<VulkanImage>(vulkanSwapchain->GetCurrent());
+
+			VulkanRenderInfoKey key;
+			key.Width = image->Width;
+			key.Height = image->Height;
+			key.ColorAttachments[0] = { image->Format, VK_IMAGE_LAYOUT_UNDEFINED, image->Usage };
+
+			VulkanRenderInfo info = s_Data->Context->RenderInfoManager->GetRenderInfo(key);
+			renderpass = info.renderpass;
+		}
+
+		ImGui_ImplVulkan_Init(&initInfo, renderpass);
 
 		// TODO: change below, I don't want to make an "immediate submit" system cause it'll be bad for multithreading but this also stinks
 		VkFence fence;
@@ -158,36 +176,56 @@ namespace GraphicsAbstraction {
 
 		ImGui::Render();
 
-		VkRenderingAttachmentInfo colorAttachment = {
-			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-			.imageView = vulkanImage->View,
-			.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-			.storeOp = VK_ATTACHMENT_STORE_OP_STORE
-		};
+		if (s_Data->Context->DynamicRenderingSupported)
+		{
+			VkRenderingAttachmentInfo colorAttachment = {
+				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+				.imageView = vulkanImage->View,
+				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE
+			};
 
-		VkExtent2D extent = {
-			.width = (uint32_t)vulkanImage->Width,
-			.height = (uint32_t)vulkanImage->Height
-		};
+			VkRenderingInfo info = {
+				.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+				.renderArea = { {}, { vulkanImage->Width, vulkanImage->Height } },
+				.layerCount = 1,
+				.colorAttachmentCount = 1,
+				.pColorAttachments = &colorAttachment
+			};
 
-		VkRect2D rect = {
-			.extent = extent
-		};
+			vulkanImage->TransitionLayout(vulkanCommandBuffer->CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			s_Data->Context->vkCmdBeginRenderingKHR(vulkanCommandBuffer->CommandBuffer, &info);
+		}
+		else
+		{
+			VulkanRenderInfoKey key;
+			key.Width = vulkanImage->Width;
+			key.Height = vulkanImage->Height;
+			key.ColorAttachments[0] = { vulkanImage->Format, VK_IMAGE_LAYOUT_UNDEFINED, vulkanImage->Usage };
 
-		VkRenderingInfo info = {
-			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-			.renderArea = rect,
-			.layerCount = 1,
-			.colorAttachmentCount = 1,
-			.pColorAttachments = &colorAttachment
-		};
+			VkRenderPassAttachmentBeginInfo attachmentInfo = {
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO,
+				.attachmentCount = 1,
+				.pAttachments = &vulkanImage->View
+			};
 
-		vulkanImage->TransitionLayout(vulkanCommandBuffer->CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			VulkanRenderInfo info = s_Data->Context->RenderInfoManager->GetRenderInfo(key);
+			VkRenderPassBeginInfo beginInfo = {
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				.pNext = &attachmentInfo,
+				.renderPass = info.renderpass,
+				.framebuffer = info.framebuffer,
+				.renderArea = { {}, { vulkanImage->Width, vulkanImage->Height } }
+			};
 
-		s_Data->Context->vkCmdBeginRenderingKHR(vulkanCommandBuffer->CommandBuffer, &info);
+			vulkanImage->Layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			vkCmdBeginRenderPass(vulkanCommandBuffer->CommandBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		}
+
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vulkanCommandBuffer->CommandBuffer);
-		s_Data->Context->vkCmdEndRenderingKHR(vulkanCommandBuffer->CommandBuffer);
+		if (s_Data->Context->DynamicRenderingSupported) s_Data->Context->vkCmdEndRenderingKHR(vulkanCommandBuffer->CommandBuffer);
+		else vkCmdEndRenderPass(vulkanCommandBuffer->CommandBuffer);
 
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{

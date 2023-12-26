@@ -127,7 +127,7 @@ namespace GraphicsAbstraction {
 			VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT, VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE, VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE, 
 			VK_DYNAMIC_STATE_DEPTH_COMPARE_OP, VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE, VK_DYNAMIC_STATE_STENCIL_OP
 		});
-		else 
+		else
 		{
 			dynamicStates.insert(dynamicStates.end(), { // you can't have both with_count and no with count version activated, so we need an else
 				VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR
@@ -161,7 +161,6 @@ namespace GraphicsAbstraction {
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {
 			.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-			.pNext = &renderingInfo,
 			.stageCount = (uint32_t)shaderStages.size(),
 			.pStages = shaderStages.data(),
 			.pVertexInputState = &vertexInputInfo,
@@ -174,6 +173,8 @@ namespace GraphicsAbstraction {
 			.pDynamicState = &dynamicInfo,
 			.layout = m_Context.BindlessPipelineLayout
 		};
+		if (m_Context.DynamicRenderingSupported) pipelineInfo.pNext = &renderingInfo;
+		else pipelineInfo.renderPass = key.Renderpass;
 
 		VkPipeline pipeline;
 		VK_CHECK(vkCreateGraphicsPipelines(m_Context.Device, m_PipelineCache, 1, &pipelineInfo, nullptr, &pipeline));
