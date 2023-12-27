@@ -28,8 +28,9 @@ namespace GraphicsAbstraction {
 		void PushConstant(const void* data, uint32_t size, uint32_t offset) override;
 
 		void SetViewport(const glm::vec2& size) override;
-		void SetScissor(const glm::vec2& size) override;
+		void SetScissor(const glm::vec2& size, const glm::vec2& offset) override;
 		void SetDepthTest(bool testEnabled, bool writeEnabled, CompareOperation op) override;
+		void EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha) override;
 
 		void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) override;
 		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance) override;
@@ -45,6 +46,7 @@ namespace GraphicsAbstraction {
 
 		bool m_DefaultDynamicStateSet = false;
 		bool m_DepthEnableSet = false;
+		bool m_ColorBlendSet = false;
 	};
 
 }

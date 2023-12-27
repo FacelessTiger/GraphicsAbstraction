@@ -85,19 +85,6 @@ namespace GraphicsAbstraction {
 		enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
 
-		/// temppppp
-		uint32_t propertyCount;
-		vkEnumerateInstanceLayerProperties(&propertyCount, nullptr);
-		std::vector<VkLayerProperties> properties(propertyCount);
-		vkEnumerateInstanceLayerProperties(&propertyCount, properties.data());
-
-		GA_CORE_INFO("Layers");
-		for (auto& property : properties)
-		{
-			GA_CORE_TRACE(property.layerName);
-		}
-		// temppp
-
 		VkInstanceCreateInfo instanceCreateInfo = {
 			.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 			.pApplicationInfo = &appInfo,
@@ -262,6 +249,7 @@ namespace GraphicsAbstraction {
 					.extendedDynamicState3SampleMask = true,
 					.extendedDynamicState3AlphaToCoverageEnable = true,
 					.extendedDynamicState3ColorBlendEnable = true,
+					.extendedDynamicState3ColorBlendEquation = true,
 					.extendedDynamicState3ColorWriteMask = true
 				});
 				builder.AddExtension(VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME);

@@ -10,10 +10,11 @@ struct ArrayBuffer
 	RenderResourceHandle handle;
 
 	template <typename ReadStructure>
-	ReadStructure Load(uint index)
+	ReadStructure Load(uint index, uint size = 0)
 	{
+		uint byteSize = size ? size : sizeof(ReadStructure);
 		ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.handle.index);
-		ReadStructure result = buffer.Load<ReadStructure>(sizeof(ReadStructure) * index);
+		ReadStructure result = buffer.Load<ReadStructure>(byteSize * index);
 
 		return result;
 	}

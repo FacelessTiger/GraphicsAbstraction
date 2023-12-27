@@ -22,13 +22,24 @@ namespace GraphicsAbstraction {
 
 	struct VulkanGraphicsPipelineKey
 	{
+		// attachments/shaders
 		std::array<uint32_t, 5> Shaders = {};
 		std::array<VkFormat, 8> ColorAttachments = {};
 		VkFormat DepthAttachment = VK_FORMAT_UNDEFINED;
 
+		// depth test
 		bool DepthTestEnable = false;
 		bool DepthWriteEnable = false;
 		VkCompareOp DepthCompareOp = VK_COMPARE_OP_NEVER;
+
+		// color blending
+		bool BlendEnable = false;
+		VkBlendFactor SrcBlend = VK_BLEND_FACTOR_ZERO;
+		VkBlendFactor DstBlend = VK_BLEND_FACTOR_ZERO;
+		VkBlendFactor SrcBlendAlpha = VK_BLEND_FACTOR_ZERO;
+		VkBlendFactor DstBlendAlpha = VK_BLEND_FACTOR_ZERO;
+		VkBlendOp BlendOp = VK_BLEND_OP_ADD;
+		VkBlendOp BlendOpAlpha = VK_BLEND_OP_ADD;
 
 		VkRenderPass Renderpass = 0;
 

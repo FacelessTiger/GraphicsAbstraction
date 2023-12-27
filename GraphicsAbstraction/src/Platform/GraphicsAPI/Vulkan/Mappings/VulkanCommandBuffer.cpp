@@ -21,6 +21,31 @@ namespace GraphicsAbstraction {
 			return (VkCompareOp)0;
 		}
 
+		VkBlendFactor GABlendToVulkan(Blend blend)
+		{
+			switch (blend)
+			{
+				case Blend::Zero:				return VK_BLEND_FACTOR_ZERO;
+				case Blend::One:				return VK_BLEND_FACTOR_ONE;
+				case Blend::SrcAlpha:			return VK_BLEND_FACTOR_SRC_ALPHA;
+				case Blend::OneMinusSrcAlpha:	return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+			}
+
+			GA_CORE_ASSERT(false, "Unknown blend factor!");
+			return (VkBlendFactor)0;
+		}
+
+		VkBlendOp GABlendOpToVulkan(BlendOp blendOp)
+		{
+			switch (blendOp)
+			{
+				case BlendOp::Add: return VK_BLEND_OP_ADD;
+			}
+
+			GA_CORE_ASSERT(false, "Unknown blend operation!");
+			return (VkBlendOp)0;
+		}
+
 	}
 
 	VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBuffer buffer)
@@ -139,7 +164,7 @@ namespace GraphicsAbstraction {
 					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 					.storeOp = VK_ATTACHMENT_STORE_OP_STORE
 				};
-				vulkanDepthAttachment.clearValue.depthStencil.depth = 1.0f;
+				vulkanDepthAttachment.clearValue.depthStencil.depth = 0.0f;
 			}
 
 			VkExtent2D extent = {
@@ -200,7 +225,7 @@ namespace GraphicsAbstraction {
 			};
 			
 			VkClearValue depthClear = {};
-			depthClear.depthStencil.depth = 1.0f;
+			depthClear.depthStencil.depth = 0.0f;
 
 			VkRenderPassBeginInfo beginInfo = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -277,7 +302,7 @@ namespace GraphicsAbstraction {
 	void VulkanCommandBuffer::BindIndexBuffer(const std::shared_ptr<Buffer>& buffer)
 	{
 		auto vulkanBuffer = std::static_pointer_cast<VulkanBuffer>(buffer);
-		vkCmdBindIndexBuffer(CommandBuffer, vulkanBuffer->Buffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(CommandBuffer, vulkanBuffer->Buffer.Buffer, 0, VK_INDEX_TYPE_UINT16);
 	}
 
 	void VulkanCommandBuffer::PushConstant(const void* data, uint32_t size, uint32_t offset)
@@ -287,9 +312,10 @@ namespace GraphicsAbstraction {
 
 	void VulkanCommandBuffer::SetViewport(const glm::vec2& size)
 	{
+		float yOffset = (size.y < 0) ? 0 : size.y;
 		VkViewport viewport = {
 			.x = 0,
-			.y = size.y,
+			.y = yOffset,
 			.width = size.x,
 			.height = -size.y,
 			.minDepth = 0.0f,
@@ -300,11 +326,11 @@ namespace GraphicsAbstraction {
 		else vkCmdSetViewport(CommandBuffer, 0, 1, &viewport);
 	}
 
-	void VulkanCommandBuffer::SetScissor(const glm::vec2& size)
+	void VulkanCommandBuffer::SetScissor(const glm::vec2& size, const glm::vec2& offset)
 	{
-		VkOffset2D offset = {
-			.x = 0,
-			.y = 0
+		VkOffset2D offset2D = {
+			.x = (int32_t)offset.x,
+			.y = (int32_t)offset.y
 		};
 
 		VkExtent2D extent = {
@@ -313,7 +339,7 @@ namespace GraphicsAbstraction {
 		};
 
 		VkRect2D scissor = {
-			.offset = offset,
+			.offset = offset2D,
 			.extent = extent
 		};
 
@@ -339,6 +365,37 @@ namespace GraphicsAbstraction {
 			m_GraphicsPipelineStateChanged = true;
 		}
 
+	}
+
+	void VulkanCommandBuffer::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
+	{
+		if (m_Context->DynamicState3Supported)
+		{
+			VkBool32 enable = true;
+			VkColorBlendEquationEXT equation = {
+				.srcColorBlendFactor = Utils::GABlendToVulkan(srcBlend),
+				.dstColorBlendFactor = Utils::GABlendToVulkan(dstBlend),
+				.colorBlendOp = Utils::GABlendOpToVulkan(blendOp),
+				.srcAlphaBlendFactor = Utils::GABlendToVulkan(srcBlendAlpha),
+				.dstAlphaBlendFactor = Utils::GABlendToVulkan(dstBlendAlpha),
+				.alphaBlendOp = Utils::GABlendOpToVulkan(blendAlpha)
+			};
+
+			m_Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, 0, 1, &enable);
+			m_Context->vkCmdSetColorBlendEquationEXT(CommandBuffer, 0, 1, &equation);
+			m_ColorBlendSet = true;
+		}
+		else
+		{
+			m_GraphicsPipelineKey.BlendEnable = true;
+			m_GraphicsPipelineKey.SrcBlend = Utils::GABlendToVulkan(srcBlend);
+			m_GraphicsPipelineKey.DstBlend = Utils::GABlendToVulkan(dstBlend);
+			m_GraphicsPipelineKey.BlendOp = Utils::GABlendOpToVulkan(blendOp);
+			m_GraphicsPipelineKey.SrcBlendAlpha = Utils::GABlendToVulkan(srcBlendAlpha);
+			m_GraphicsPipelineKey.DstBlendAlpha = Utils::GABlendToVulkan(dstBlendAlpha);
+			m_GraphicsPipelineKey.BlendOpAlpha = Utils::GABlendOpToVulkan(blendAlpha);
+			m_GraphicsPipelineStateChanged = true;
+		}
 	}
 
 	void VulkanCommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -367,6 +424,14 @@ namespace GraphicsAbstraction {
 		VkSampleMask mask = ~0;
 		VkBool32 colorBlendEnable = false;
 		VkColorComponentFlags colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		VkColorBlendEquationEXT colorBlendEquation = {
+			.srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+			.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+			.colorBlendOp = VK_BLEND_OP_ADD,
+			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+			.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+			.alphaBlendOp = VK_BLEND_OP_ADD
+		};
 
 		vkCmdSetLineWidth(CommandBuffer, 1.0f);
 
@@ -400,7 +465,13 @@ namespace GraphicsAbstraction {
 			m_Context->vkCmdSetRasterizationSamplesEXT(CommandBuffer, VK_SAMPLE_COUNT_1_BIT); 
 			m_Context->vkCmdSetSampleMaskEXT(CommandBuffer, VK_SAMPLE_COUNT_1_BIT, &mask);
 			m_Context->vkCmdSetAlphaToCoverageEnableEXT(CommandBuffer, false);
-			m_Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, 0, 1, &colorBlendEnable);
+
+			if (!m_ColorBlendSet)
+			{
+				m_Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, 0, 1, &colorBlendEnable);
+				m_Context->vkCmdSetColorBlendEquationEXT(CommandBuffer, 0, 1, &colorBlendEquation);
+			}
+
 			m_Context->vkCmdSetColorWriteMaskEXT(CommandBuffer, 0, 1, &colorWriteMask);
 		}
 

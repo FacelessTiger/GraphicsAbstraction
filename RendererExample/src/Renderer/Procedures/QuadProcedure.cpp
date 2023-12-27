@@ -38,7 +38,7 @@ namespace GraphicsAbstraction {
 		m_QuadChanges.clear();
 
 		cmd->BindShaders({ m_Vertex, m_Pixel });
-		cmd->SetDepthTest(true, true, CompareOperation::LesserEqual);
+		cmd->SetDepthTest(true, true, CompareOperation::GreaterEqual);
 
 		uint32_t handle = m_Sampler->GetHandle();
 		cmd->PushConstant(&payload.ViewProjection, sizeof(glm::mat4), 16);

@@ -57,7 +57,7 @@ namespace GraphicsAbstraction {
 		for (int i = 0; i < RendererData::FrameOverlap; i++)
 			s_RendererData->CommandPools[i] = CommandPool::Create(s_RendererData->GraphicsQueue);
 
-		ImGuiLayer::Init(s_RendererData->CommandPools[0], s_RendererData->Swapchain, window);
+		ImGuiLayer::Init(s_RendererData->CommandPools[0], s_RendererData->Swapchain, window, s_RendererData->GraphicsQueue, s_RendererData->Fence);
 	}
 
 	void Renderer::Shutdown()

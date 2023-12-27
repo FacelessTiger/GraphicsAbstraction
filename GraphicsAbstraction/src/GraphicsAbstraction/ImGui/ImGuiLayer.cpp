@@ -2,14 +2,20 @@
 
 #include <array>
 #include <vulkan/vulkan.h>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <imgui.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_glfw.h>
 
+#include <GraphicsAbstraction/Renderer/CommandPool.h>
+#include <GraphicsAbstraction/Renderer/Fence.h>
+#include <GraphicsAbstraction/Renderer/Buffer.h>
+#include <GraphicsAbstraction/Renderer/Sampler.h>
+#include <GraphicsAbstraction/Renderer/Shader.h>
+
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSwapchain.h>
-#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandPool.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandBuffer.h>
 #include <GraphicsAbstraction/Core/Window.h>
 
@@ -17,8 +23,14 @@ namespace GraphicsAbstraction {
 
 	struct ImGuiLayerData
 	{
-		VkDescriptorPool Pool;
 		VulkanContextReference Context;
+
+		// custom backend stuff
+		std::shared_ptr<Shader> VertexShader;
+		std::shared_ptr<Shader> PixelShader;
+		std::shared_ptr<Sampler> Sampler;
+		std::shared_ptr<Buffer> IndexBuffer, VertexBuffer;
+		std::shared_ptr<Image> FontImage;
 
 		ImGuiLayerData(const VulkanContextReference& context)
 			: Context(context) { }
@@ -26,36 +38,9 @@ namespace GraphicsAbstraction {
 
 	static ImGuiLayerData* s_Data;
 
-	void ImGuiLayer::Init(const std::shared_ptr<CommandPool>& commandPool, const std::shared_ptr<Swapchain>& swapchain, const std::shared_ptr<Window>& window)
+	void ImGuiLayer::Init(const std::shared_ptr<CommandPool>& commandPool, const std::shared_ptr<Swapchain>& swapchain, const std::shared_ptr<Window>& window, const std::shared_ptr<Queue>& queue, const std::shared_ptr<Fence>& fence)
 	{
 		s_Data = new ImGuiLayerData(VulkanContext::GetReference());
-
-		auto vulkanSwapchain = std::static_pointer_cast<VulkanSwapchain>(swapchain);
-		auto vulkanCommandPool = std::static_pointer_cast<VulkanCommandPool>(commandPool);
-
-		constexpr auto poolSizes = std::array { 
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-		};
-
-		VkDescriptorPoolCreateInfo poolInfo = {
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-			.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-			.maxSets = 1000,
-			.poolSizeCount = (uint32_t)poolSizes.size(),
-			.pPoolSizes = poolSizes.data()
-		};
-
-		VK_CHECK(vkCreateDescriptorPool(s_Data->Context->Device, &poolInfo, nullptr, &s_Data->Pool));
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -63,7 +48,7 @@ namespace GraphicsAbstraction {
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
 		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoTaskBarIcons;
 		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
 
@@ -84,85 +69,31 @@ namespace GraphicsAbstraction {
 		GLFWwindow* glfwWindow = static_cast<GLFWwindow*>(window->GetNativeWindow());
 		ImGui_ImplGlfw_InitForVulkan(glfwWindow, true);
 
-		ImGui_ImplVulkan_InitInfo initInfo = {
-			.Instance = s_Data->Context->Instance,
-			.PhysicalDevice = s_Data->Context->ChosenGPU,
-			.Device = s_Data->Context->Device,
-			.Queue = s_Data->Context->GraphicsQueue,
-			.DescriptorPool = s_Data->Pool,
-			.MinImageCount = 3,
-			.ImageCount = 3,
-			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-		};
+		// do init
+		GA_CORE_ASSERT(!io.BackendRendererUserData, "Imgui already has a backend!");
+		io.BackendRendererUserData = s_Data;
+		io.BackendRendererName = "GraphicsAbstraction";
+		io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+		io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
-		VkRenderPass renderpass = VK_NULL_HANDLE;
-		if (s_Data->Context->DynamicRenderingSupported)
-		{
-			initInfo.UseDynamicRendering = true;
-			initInfo.ColorAttachmentFormat = vulkanSwapchain->ImageFormat;
-		}
-		else
-		{
-			auto image = std::static_pointer_cast<VulkanImage>(vulkanSwapchain->GetCurrent());
+		s_Data->VertexShader = Shader::Create("Assets/shaders/imguiVertex.hlsl", ShaderStage::Vertex);
+		s_Data->PixelShader = Shader::Create("Assets/shaders/imguiPixel.hlsl", ShaderStage::Pixel);
+		s_Data->Sampler = Sampler::Create(Filter::Linear, Filter::Linear);
 
-			VulkanRenderInfoKey key;
-			key.Width = image->Width;
-			key.Height = image->Height;
-			key.ColorAttachments[0] = { image->Format, VK_IMAGE_LAYOUT_UNDEFINED, image->Usage };
+		s_Data->IndexBuffer = Buffer::Create(sizeof(uint32_t), BufferUsage::IndexBuffer, BufferFlags::Mapped);
+		s_Data->VertexBuffer = Buffer::Create(sizeof(ImDrawVert), BufferUsage::StorageBuffer, BufferFlags::Mapped);
 
-			VulkanRenderInfo info = s_Data->Context->RenderInfoManager->GetRenderInfo(key);
-			renderpass = info.renderpass;
-		}
-
-		ImGui_ImplVulkan_Init(&initInfo, renderpass);
-
-		// TODO: change below, I don't want to make an "immediate submit" system cause it'll be bad for multithreading but this also stinks
-		VkFence fence;
-		VkFenceCreateInfo fenceInfo = {
-			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
-		};
-		vkCreateFence(s_Data->Context->Device, &fenceInfo, nullptr, &fence);
-
-		VkCommandBuffer cmd = vulkanCommandPool->MainCommandBuffer;
-
-		VkCommandBufferBeginInfo info = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.pNext = nullptr,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-		};
-
-		vkBeginCommandBuffer(cmd, &info);
-		ImGui_ImplVulkan_CreateFontsTexture(cmd);
-		vkEndCommandBuffer(cmd);
-
-		VkSubmitInfo submitInfo = {
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.commandBufferCount = 1,
-			.pCommandBuffers = &cmd
-		};
-
-		VK_CHECK(vkQueueSubmit(s_Data->Context->GraphicsQueue, 1, &submitInfo, fence));
-		VK_CHECK(vkWaitForFences(s_Data->Context->Device, 1, &fence, true, UINT64_MAX));
-		vkDestroyFence(s_Data->Context->Device, fence, nullptr);
-
-		// clear font textures from cpu
-		ImGui_ImplVulkan_DestroyFontUploadObjects();
+		CreateFontTexture(commandPool, queue, fence);
 	}
 
 	void ImGuiLayer::Shutdown()
 	{
-		vkDeviceWaitIdle(s_Data->Context->Device);
-
-		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
-
-		vkDestroyDescriptorPool(s_Data->Context->Device, s_Data->Pool, nullptr);
 		delete s_Data;
 	}
 
 	void ImGuiLayer::BeginFrame()
 	{
-		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 	}
@@ -170,62 +101,87 @@ namespace GraphicsAbstraction {
 	void ImGuiLayer::DrawFrame(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<Image>& image)
 	{
 		auto vulkanCommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(cmd);
-		auto vulkanImage = std::static_pointer_cast<VulkanImage>(image);
 
 		ImGuiIO& io = ImGui::GetIO();
-
 		ImGui::Render();
+		ImDrawData* drawData = ImGui::GetDrawData();
 
-		if (s_Data->Context->DynamicRenderingSupported)
+		int framebufferWidth = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+		int framebufferHeight = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+		if (framebufferWidth <= 0 || framebufferHeight <= 0)
+			return;
+
+		if (drawData->TotalVtxCount > 0)
 		{
-			VkRenderingAttachmentInfo colorAttachment = {
-				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-				.imageView = vulkanImage->View,
-				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE
-			};
+			uint32_t indexSize = drawData->TotalIdxCount * sizeof(ImDrawIdx);
+			uint32_t vertexSize = drawData->TotalVtxCount * (sizeof(ImDrawVert) + 12);
+			if (s_Data->IndexBuffer->GetSize() < indexSize) s_Data->IndexBuffer = Buffer::Create(indexSize, BufferUsage::IndexBuffer, BufferFlags::Mapped);
+			if (s_Data->VertexBuffer->GetSize() < vertexSize) s_Data->VertexBuffer = Buffer::Create(vertexSize, BufferUsage::StorageBuffer, BufferFlags::Mapped);
 
-			VkRenderingInfo info = {
-				.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-				.renderArea = { {}, { vulkanImage->Width, vulkanImage->Height } },
-				.layerCount = 1,
-				.colorAttachmentCount = 1,
-				.pColorAttachments = &colorAttachment
-			};
+			uint32_t indexOffset = 0;
+			uint32_t vertexOffset = 0;
+			for (int i = 0; i < drawData->CmdListsCount; i++)
+			{
+				const ImDrawList* drawList = drawData->CmdLists[i];
+				uint32_t indexByteSize = drawList->IdxBuffer.Size * sizeof(ImDrawIdx);
+				uint32_t vertexByteSize = drawList->VtxBuffer.Size * sizeof(ImDrawVert);
 
-			vulkanImage->TransitionLayout(vulkanCommandBuffer->CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-			s_Data->Context->vkCmdBeginRenderingKHR(vulkanCommandBuffer->CommandBuffer, &info);
-		}
-		else
-		{
-			VulkanRenderInfoKey key;
-			key.Width = vulkanImage->Width;
-			key.Height = vulkanImage->Height;
-			key.ColorAttachments[0] = { vulkanImage->Format, VK_IMAGE_LAYOUT_UNDEFINED, vulkanImage->Usage };
+				s_Data->IndexBuffer->SetData(drawList->IdxBuffer.Data, indexByteSize, indexOffset);
+				s_Data->VertexBuffer->SetData(drawList->VtxBuffer.Data, vertexByteSize, vertexOffset);
 
-			VkRenderPassAttachmentBeginInfo attachmentInfo = {
-				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO,
-				.attachmentCount = 1,
-				.pAttachments = &vulkanImage->View
-			};
-
-			VulkanRenderInfo info = s_Data->Context->RenderInfoManager->GetRenderInfo(key);
-			VkRenderPassBeginInfo beginInfo = {
-				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-				.pNext = &attachmentInfo,
-				.renderPass = info.renderpass,
-				.framebuffer = info.framebuffer,
-				.renderArea = { {}, { vulkanImage->Width, vulkanImage->Height } }
-			};
-
-			vulkanImage->Layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			vkCmdBeginRenderPass(vulkanCommandBuffer->CommandBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				indexOffset += indexByteSize;
+				vertexOffset += vertexByteSize;
+			}
 		}
 
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vulkanCommandBuffer->CommandBuffer);
-		if (s_Data->Context->DynamicRenderingSupported) s_Data->Context->vkCmdEndRenderingKHR(vulkanCommandBuffer->CommandBuffer);
-		else vkCmdEndRenderPass(vulkanCommandBuffer->CommandBuffer);
+		// Will project scissor/clipping rectangles into framebuffer space
+		glm::vec2 clipOffset = { drawData->DisplayPos.x, drawData->DisplayPos.y };         // (0,0) unless using multi-viewports
+		glm::vec2 clipScale = { drawData->FramebufferScale.x, drawData->FramebufferScale.y }; // (1,1) unless using retina display which are often (2,2)
+
+		cmd->BeginRendering({ framebufferWidth, framebufferHeight }, { image });
+		cmd->BindShaders({ s_Data->VertexShader, s_Data->PixelShader });
+		cmd->EnableColorBlend(Blend::SrcAlpha, Blend::OneMinusSrcAlpha, BlendOp::Add, Blend::One, Blend::Zero, BlendOp::Add);
+		cmd->SetViewport({ framebufferWidth, -framebufferHeight });
+
+		glm::vec2 scale = { 2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y };
+		glm::vec2 offset = { -1.0f - drawData->DisplayPos.x * scale.x, -1.0f - drawData->DisplayPos.x * scale.y };
+		uint32_t samplerHandle = s_Data->Sampler->GetHandle();
+		cmd->PushConstant(glm::value_ptr(scale), sizeof(glm::vec2), 16);
+		cmd->PushConstant(glm::value_ptr(offset), sizeof(glm::vec2), 24);
+		cmd->PushConstant(&samplerHandle, sizeof(uint32_t), 36);
+
+		cmd->BindIndexBuffer(s_Data->IndexBuffer);
+		s_Data->VertexShader->WriteBuffer(s_Data->VertexBuffer, 0);
+
+		int vertexOffset = 0;
+		int indexOffset = 0;
+		for (int i = 0; i < drawData->CmdListsCount; i++)
+		{
+			const ImDrawList* drawList = drawData->CmdLists[i];
+			for (int j = 0; j < drawList->CmdBuffer.Size; j++)
+			{
+				const ImDrawCmd& drawCmd = drawList->CmdBuffer[j];
+
+				glm::vec2 clipMin = { (drawCmd.ClipRect.x - clipOffset.x) * clipScale.x, (drawCmd.ClipRect.y - clipOffset.y) * clipScale.y };
+				glm::vec2 clipMax = { (drawCmd.ClipRect.z - clipOffset.x) * clipScale.x, (drawCmd.ClipRect.w - clipOffset.y) * clipScale.y };
+
+				// Clamp to viewport as vkCmdSetScissor() won't accept values that are off bounds
+				if (clipMin.x < 0.0f) { clipMin.x = 0.0f; }
+				if (clipMin.y < 0.0f) { clipMin.y = 0.0f; }
+				if (clipMax.x > framebufferWidth) { clipMax.x = (float)framebufferWidth; }
+				if (clipMax.y > framebufferHeight) { clipMax.y = (float)framebufferHeight; }
+				if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y) continue;
+
+				uint32_t id = (uint32_t)drawCmd.TextureId;
+				cmd->SetScissor({ clipMax.x - clipMin.x, clipMax.y - clipMin.y }, { clipMin.x, clipMin.y });
+				cmd->PushConstant(&id, sizeof(uint32_t), 32);
+				cmd->DrawIndexed(drawCmd.ElemCount, 1, drawCmd.IdxOffset + indexOffset, drawCmd.VtxOffset + vertexOffset, 0);
+			}
+
+			vertexOffset += drawList->VtxBuffer.Size;
+			indexOffset += drawList->IdxBuffer.Size;
+		}
+		cmd->EndRendering();
 
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{
@@ -265,6 +221,27 @@ namespace GraphicsAbstraction {
 		colors[ImGuiCol_TitleBg] = { 0.15f, 0.1505f, 0.151f, 1.0f };
 		colors[ImGuiCol_TitleBgActive] = { 0.15f, 0.1505f, 0.151f, 1.0f };
 		colors[ImGuiCol_TitleBgCollapsed] = { 0.15f, 0.1505f, 0.151f, 1.0f };
+	}
+
+	void ImGuiLayer::CreateFontTexture(const std::shared_ptr<CommandPool>& commandPool, const std::shared_ptr<Queue>& queue, const std::shared_ptr<Fence>& fence)
+	{
+		ImGuiIO& io = ImGui::GetIO();
+
+		unsigned char* pixels;
+		int width, height;
+		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+
+		s_Data->FontImage = Image::Create({ width, height }, ImageFormat::R8G8B8A8_UNORM, ImageUsage::Sampled | ImageUsage::TransferDst);
+		auto buffer = Buffer::Create(width * height * 4, BufferUsage::TransferSrc, BufferFlags::Mapped);
+		buffer->SetData(pixels);
+
+		commandPool->Reset();
+		auto cmd = commandPool->Begin();
+		cmd->CopyToImage(buffer, s_Data->FontImage);
+		queue->Submit(cmd, nullptr, fence);
+		fence->Wait();
+
+		io.Fonts->SetTexID((ImTextureID)s_Data->FontImage->GetHandle());
 	}
 
 }

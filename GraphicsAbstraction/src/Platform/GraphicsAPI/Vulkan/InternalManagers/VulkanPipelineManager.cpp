@@ -97,7 +97,13 @@ namespace GraphicsAbstraction {
 		};
 
 		VkPipelineColorBlendAttachmentState colorAttachment = {
-			.blendEnable = VK_FALSE,
+			.blendEnable = key.BlendEnable,
+			.srcColorBlendFactor = key.SrcBlend,
+			.dstColorBlendFactor = key.DstBlend,
+			.colorBlendOp = key.BlendOp,
+			.srcAlphaBlendFactor = key.SrcBlendAlpha,
+			.dstAlphaBlendFactor = key.DstBlendAlpha,
+			.alphaBlendOp = key.BlendOpAlpha,
 			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
 		};
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo = {
@@ -125,7 +131,7 @@ namespace GraphicsAbstraction {
 		if (m_Context.DynamicStateSupported) dynamicStates.insert(dynamicStates.end(), {
 			VK_DYNAMIC_STATE_CULL_MODE, VK_DYNAMIC_STATE_FRONT_FACE, VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY, VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT, 
 			VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT, VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE, VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE, 
-			VK_DYNAMIC_STATE_DEPTH_COMPARE_OP, VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE, VK_DYNAMIC_STATE_STENCIL_OP
+			VK_DYNAMIC_STATE_DEPTH_COMPARE_OP, VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE, VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE, VK_DYNAMIC_STATE_STENCIL_OP
 		});
 		else
 		{
@@ -143,7 +149,7 @@ namespace GraphicsAbstraction {
 
 		if (m_Context.DynamicState3Supported) dynamicStates.insert(dynamicStates.end(), {
 			VK_DYNAMIC_STATE_POLYGON_MODE_EXT, VK_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT, VK_DYNAMIC_STATE_SAMPLE_MASK_EXT, VK_DYNAMIC_STATE_ALPHA_TO_COVERAGE_ENABLE_EXT,
-			VK_DYNAMIC_STATE_COLOR_BLEND_ENABLE_EXT, VK_DYNAMIC_STATE_COLOR_WRITE_MASK_EXT, VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE
+			VK_DYNAMIC_STATE_COLOR_BLEND_ENABLE_EXT, VK_DYNAMIC_STATE_COLOR_BLEND_EQUATION_EXT , VK_DYNAMIC_STATE_COLOR_WRITE_MASK_EXT
 		});
 
 		VkPipelineDynamicStateCreateInfo dynamicInfo = {

@@ -33,6 +33,7 @@ namespace GraphicsAbstraction {
 		void Resize(const glm::vec2& size) override;
 
 		inline uint32_t GetHandle() const override { return Handle.GetValue(); }
+		inline glm::vec2 GetSize() const { return { (float)Width, (float)Height }; };
 
 		void TransitionLayout(VkCommandBuffer cmd, VkImageLayout newLayout);
 	private:
