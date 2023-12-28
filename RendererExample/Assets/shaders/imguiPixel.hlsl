@@ -1,8 +1,14 @@
-#define PushConstants	[[vk::offset(16)]] float2 scale; \
-						[[vk::offset(24)]] float2 offset; \
-						[[vk::offset(32)]] Texture texture; \
-						[[vk::offset(36)]] Sampler sampler;
 #include "bindless.hlsl"
+
+struct PushConstant
+{
+	float2 scale;
+	float2 offset;
+	ArrayBuffer vertices;
+	Texture texture;
+	Sampler sampler;
+};
+PushConstant(PushConstant, pushConstants);
 
 struct VertexInput
 {
@@ -12,5 +18,5 @@ struct VertexInput
 
 float4 main(VertexInput input): SV_Target
 {
-	return input.color * g_PushConstants.texture.Sample2D<float4>(g_PushConstants.sampler, input.uv);
+	return input.color * pushConstants.texture.Sample2D<float4>(pushConstants.sampler, input.uv);
 }

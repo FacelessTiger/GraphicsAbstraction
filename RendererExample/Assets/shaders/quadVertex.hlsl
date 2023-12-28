@@ -1,4 +1,3 @@
-#define PushConstants float4x4 projection;
 #include "bindless.hlsl"
 
 struct QuadData
@@ -10,10 +9,13 @@ struct QuadData
 	float rotation;
 };
 
-struct Bindings
+struct PushConstant
 {
+	float4x4 projection;
 	ArrayBuffer quadData;
+	Sampler sampler;
 };
+PushConstant(PushConstant, pushConstants);
 
 struct VertexOutput
 {
@@ -43,11 +45,10 @@ VertexOutput main(uint vertexID: SV_VertexID)
 		float2(0, 1)
 	};
 
-	Bindings bnd = loadBindings<Bindings>();
 	int quadID = vertexID / 6;
 	int relativeVertexID = vertexID % 6;
 
-	QuadData quad = bnd.quadData.Load<QuadData>(quadID);
+	QuadData quad = pushConstants.quadData.Load<QuadData>(quadID);
 	float2 pos = vertices[relativeVertexID];
 
 	float2 cossin = float2(cos(quad.rotation), sin(quad.rotation));
@@ -55,7 +56,7 @@ VertexOutput main(uint vertexID: SV_VertexID)
 	float2 relativePos = rotatedPos * quad.scale + quad.position.xy;
 
 	VertexOutput output;
-	output.position = mul(g_PushConstants.projection, float4(relativePos, quad.position.z, 1.0f));
+	output.position = mul(pushConstants.projection, float4(relativePos, quad.position.z, 1.0f));
 	output.color = UnpackUnorm4x8(quad.color);
 	output.texture = quad.texture;
 	output.uv = uvs[relativeVertexID];

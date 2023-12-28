@@ -18,6 +18,12 @@ namespace GraphicsAbstraction {
 		glm::vec3 Position;
 	};
 
+	struct ComputePushConstant
+	{
+		uint32_t image;
+		uint32_t buffer;
+	};
+
 	class GradientProcedure : public RenderProcedure
 	{
 	public:
@@ -30,6 +36,7 @@ namespace GraphicsAbstraction {
 		void OnImGui();
 	private:
 		Data m_Data;
+		ComputePushConstant m_ComputePC;
 
 		std::shared_ptr<Buffer> m_Buffer, m_VertexBuffer, m_IndexBuffer;
 		std::shared_ptr<Shader> m_GradientShader, m_TriangleVertex, m_TrianglePixel;

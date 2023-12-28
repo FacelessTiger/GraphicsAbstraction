@@ -10,8 +10,8 @@
 
 namespace GraphicsAbstraction {
 
-	EditorCamera::EditorCamera(float fov, float aspectRatio, float nearClip, float farClip)
-		: m_FOV(fov), m_AspectRatio(aspectRatio), m_NearClip(nearClip), m_FarClip(farClip), Camera(glm::perspective(glm::radians(fov), aspectRatio, nearClip, farClip))
+	EditorCamera::EditorCamera(float fov, float aspectRatio, float nearClip)
+		: m_FOV(fov), m_AspectRatio(aspectRatio), m_NearClip(nearClip), Camera(InfReversedZProj(glm::radians(fov), aspectRatio, nearClip))
 	{
 		UpdateView();
 	}
@@ -19,7 +19,7 @@ namespace GraphicsAbstraction {
 	void EditorCamera::UpdateProjection()
 	{
 		m_AspectRatio = m_ViewportWidth / m_ViewportHeight;
-		m_Projection = glm::perspective(glm::radians(m_FOV), m_AspectRatio, m_NearClip, m_FarClip);
+		InfReversedZProj(glm::radians(m_FOV), m_AspectRatio, m_NearClip);
 	}
 
 	void EditorCamera::UpdateView()
@@ -30,6 +30,16 @@ namespace GraphicsAbstraction {
 		glm::quat orientation = GetOrientation();
 		m_ViewMatrix = glm::translate(glm::mat4(1.0f), m_Position) * glm::toMat4(orientation);
 		m_ViewMatrix = glm::inverse(m_ViewMatrix);
+	}
+
+	glm::mat4 EditorCamera::InfReversedZProj(float fov, float aspectRatio, float nearClip)
+	{
+		float f = 1.0f / std::tan(fov / 2.0f);
+		return glm::mat4(
+			f / aspectRatio, 0.0f, 0.0f, 0.0f,
+			0.0f, f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, -1.0f,
+			0.0f, 0.0f, nearClip, 0.0f);
 	}
 
 	std::pair<float, float> EditorCamera::PanSpeed() const

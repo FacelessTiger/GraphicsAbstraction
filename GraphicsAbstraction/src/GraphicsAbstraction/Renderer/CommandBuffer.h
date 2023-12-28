@@ -47,11 +47,13 @@ namespace GraphicsAbstraction {
 		virtual void BindShaders(const std::vector<std::shared_ptr<Shader>> shaderStages) = 0;
 		virtual void BindIndexBuffer(const std::shared_ptr<Buffer>& buffer) = 0;
 		virtual void PushConstant(const void* data, uint32_t size, uint32_t offset) = 0;
+		template<typename T> void PushConstant(const T& data, uint32_t offset = 0) { PushConstant(&data, sizeof(T), offset); };
 
 		virtual void SetViewport(const glm::vec2& size) = 0;
 		virtual void SetScissor(const glm::vec2& size, const glm::vec2& offset = { 0, 0 }) = 0;
 		virtual void SetDepthTest(bool testEnabled, bool writeEnabled, CompareOperation op) = 0;
 		virtual void EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha) = 0;
+		virtual void DisableColorBlend() = 0;
 
 		virtual void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) = 0;
 		virtual void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance) = 0;

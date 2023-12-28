@@ -1,6 +1,12 @@
-#define PushConstants	float4x4 projection; \
-						Sampler sampler;
 #include "bindless.hlsl"
+
+struct PushConstant
+{
+	float4x4 projection;
+	ArrayBuffer quadData;
+	Sampler sampler;
+};
+PushConstant(PushConstant, pushConstants);
 
 struct VertexInput
 {
@@ -11,5 +17,5 @@ struct VertexInput
 
 float4 main(VertexInput input): SV_Target
 {
-	return input.color * input.texture.Sample2D<float4>(g_PushConstants.sampler, input.uv);
+	return input.color * input.texture.Sample2D<float4>(pushConstants.sampler, input.uv);
 }

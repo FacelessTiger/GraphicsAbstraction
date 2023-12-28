@@ -38,6 +38,7 @@ namespace GraphicsAbstraction {
 		virtual void SetData(const std::shared_ptr<Buffer>& buffer) = 0;
 
 		virtual void GetData(void* data, uint32_t size, uint32_t offset) = 0;
+		virtual uint32_t GetHandle() const = 0;
 		virtual uint32_t GetSize() const = 0;
 
 		static std::shared_ptr<Buffer> Create(uint32_t size, BufferUsage usage, BufferFlags flags = BufferFlags::None);

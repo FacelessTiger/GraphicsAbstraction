@@ -27,6 +27,7 @@ namespace GraphicsAbstraction {
 
 		void GetData(void* data, uint32_t size, uint32_t offset) override;
 		inline uint32_t GetSize() const override { return Size; }
+		inline uint32_t GetHandle() const override { return Handle.GetValue(); }
 	private:
 		void UpdateDescriptor();
 	private:

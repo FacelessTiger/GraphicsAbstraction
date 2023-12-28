@@ -25,21 +25,21 @@ namespace GraphicsAbstraction::Utils {
 
 	struct VulkanFeatureBuilder
 	{
-		std::unordered_map<VkStructureType, std::variant<VkPhysicalDeviceFeatures2, 
-														VkPhysicalDeviceVulkan12Features,
-														VkPhysicalDeviceShaderObjectFeaturesEXT,
-														VkPhysicalDeviceExtendedDynamicStateFeaturesEXT,
-														VkPhysicalDeviceExtendedDynamicState2FeaturesEXT,
-														VkPhysicalDeviceExtendedDynamicState3FeaturesEXT,
-														VkPhysicalDeviceDynamicRenderingFeatures>> deviceFeatures;
+		std::unordered_map<VkStructureType, VkBaseInStructure*> deviceFeatures;
 		std::vector<const char*> extensions;
-		void* pNext = nullptr;
+		VkBaseInStructure* pNext = nullptr;
 
 		VulkanFeatureBuilder()
 		{
-			auto& feature = deviceFeatures[VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2];
-			auto& f = feature.emplace<VkPhysicalDeviceFeatures2>();
-			f.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			auto& features = deviceFeatures[VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2];
+			features = (VkBaseInStructure*)malloc(sizeof(VkPhysicalDeviceFeatures2));
+			new(features) VkPhysicalDeviceFeatures2 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+		}
+
+		~VulkanFeatureBuilder()
+		{
+			for (auto& [type, feature] : deviceFeatures)
+				free(feature);
 		}
 
 		void AddExtension(const char* name)
@@ -48,21 +48,22 @@ namespace GraphicsAbstraction::Utils {
 		}
 
 		template<class T>
-		void AddFeature(const T& feature)
+		void AddFeature(T&& feature)
 		{
-			auto& loc = deviceFeatures[feature.sType];
+			auto& f = deviceFeatures[feature.sType];
+			f = (VkBaseInStructure*)malloc(sizeof(T));
+			*(T*)f = std::move(feature);
+			f->pNext = pNext;
 
-			auto& f = loc.emplace<T>(feature);
-			f.pNext = pNext;
-			pNext = &f;
+			pNext = f;
 		}
 
 		const void* Build()
 		{
-			auto& f2 = std::get<VkPhysicalDeviceFeatures2>(deviceFeatures[VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2]);
-			f2.pNext = pNext;
+			auto* f2 = deviceFeatures[VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2];
+			f2->pNext = pNext;
 
-			return &f2;
+			return f2;
 		}
 	};
 

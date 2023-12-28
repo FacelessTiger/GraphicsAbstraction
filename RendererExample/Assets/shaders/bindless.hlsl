@@ -4,6 +4,7 @@ struct RenderResourceHandle
 };
 
 #include "descriptorHeap.hlsl"
+#define PushConstant(structName, variableName) [[vk::push_constant]] ConstantBuffer<structName> variableName
 
 struct ArrayBuffer
 {
@@ -79,29 +80,4 @@ float4 UnpackUnorm4x8(uint value)
 {
     uint4 Packed = uint4(value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, value >> 24);
     return float4(Packed) / 255.0;
-}
-
-struct PushConstantStruct
-{
-#if __SHADER_TARGET_STAGE == __SHADER_STAGE_VERTEX
-	[[vk::offset(0)]]
-#elif __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL
-	[[vk::offset(4)]]
-#elif __SHADER_TARGET_STAGE == __SHADER_STAGE_COMPUTE
-	[[vk::offset(8)]]
-#endif
-	RenderResourceHandle handle;
-#ifdef PushConstants
-	PushConstants
-#endif
-};
-
-[[vk::push_constant]] ConstantBuffer<PushConstantStruct> g_PushConstants;
-
-template <typename T>
-T loadBindings()
-{
-	ByteAddressBuffer b = g_ByteAddressBuffer[g_PushConstants.handle.index];
-	T result = b.Load<T>(0);
-	return result;
 }

@@ -48,7 +48,7 @@ namespace GraphicsAbstraction {
 
 	struct VulkanComputePipelineKey
 	{
-		uint32_t Shader;
+		uint32_t Shader = 0;
 
 		GA_PIPELINE_EQUALITY(VulkanComputePipelineKey);
 	};

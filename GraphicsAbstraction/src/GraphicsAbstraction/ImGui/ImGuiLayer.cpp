@@ -9,38 +9,40 @@
 #include <backends/imgui_impl_glfw.h>
 
 #include <GraphicsAbstraction/Renderer/CommandPool.h>
+#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
 #include <GraphicsAbstraction/Renderer/Fence.h>
 #include <GraphicsAbstraction/Renderer/Buffer.h>
 #include <GraphicsAbstraction/Renderer/Sampler.h>
+#include <GraphicsAbstraction/Renderer/Image.h>
 #include <GraphicsAbstraction/Renderer/Shader.h>
-
-#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
-#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSwapchain.h>
-#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandBuffer.h>
+#include <GraphicsAbstraction/Renderer/Queue.h>
 #include <GraphicsAbstraction/Core/Window.h>
 
 namespace GraphicsAbstraction {
 
 	struct ImGuiLayerData
 	{
-		VulkanContextReference Context;
-
-		// custom backend stuff
 		std::shared_ptr<Shader> VertexShader;
 		std::shared_ptr<Shader> PixelShader;
 		std::shared_ptr<Sampler> Sampler;
 		std::shared_ptr<Buffer> IndexBuffer, VertexBuffer;
 		std::shared_ptr<Image> FontImage;
+	};
 
-		ImGuiLayerData(const VulkanContextReference& context)
-			: Context(context) { }
+	struct PushConstant
+	{
+		glm::vec2 scale;
+		glm::vec2 offset;
+		uint32_t vertices;
+		uint32_t texture;
+		uint32_t sampler;
 	};
 
 	static ImGuiLayerData* s_Data;
 
 	void ImGuiLayer::Init(const std::shared_ptr<CommandPool>& commandPool, const std::shared_ptr<Swapchain>& swapchain, const std::shared_ptr<Window>& window, const std::shared_ptr<Queue>& queue, const std::shared_ptr<Fence>& fence)
 	{
-		s_Data = new ImGuiLayerData(VulkanContext::GetReference());
+		s_Data = new ImGuiLayerData();
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -100,16 +102,13 @@ namespace GraphicsAbstraction {
 
 	void ImGuiLayer::DrawFrame(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<Image>& image)
 	{
-		auto vulkanCommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(cmd);
-
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::Render();
 		ImDrawData* drawData = ImGui::GetDrawData();
 
 		int framebufferWidth = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
 		int framebufferHeight = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
-		if (framebufferWidth <= 0 || framebufferHeight <= 0)
-			return;
+		if (framebufferWidth <= 0 || framebufferHeight <= 0) return;
 
 		if (drawData->TotalVtxCount > 0)
 		{
@@ -141,17 +140,14 @@ namespace GraphicsAbstraction {
 		cmd->BeginRendering({ framebufferWidth, framebufferHeight }, { image });
 		cmd->BindShaders({ s_Data->VertexShader, s_Data->PixelShader });
 		cmd->EnableColorBlend(Blend::SrcAlpha, Blend::OneMinusSrcAlpha, BlendOp::Add, Blend::One, Blend::Zero, BlendOp::Add);
-		cmd->SetViewport({ framebufferWidth, -framebufferHeight });
-
-		glm::vec2 scale = { 2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y };
-		glm::vec2 offset = { -1.0f - drawData->DisplayPos.x * scale.x, -1.0f - drawData->DisplayPos.x * scale.y };
-		uint32_t samplerHandle = s_Data->Sampler->GetHandle();
-		cmd->PushConstant(glm::value_ptr(scale), sizeof(glm::vec2), 16);
-		cmd->PushConstant(glm::value_ptr(offset), sizeof(glm::vec2), 24);
-		cmd->PushConstant(&samplerHandle, sizeof(uint32_t), 36);
-
+		cmd->SetViewport({ framebufferWidth, framebufferHeight });
 		cmd->BindIndexBuffer(s_Data->IndexBuffer);
-		s_Data->VertexShader->WriteBuffer(s_Data->VertexBuffer, 0);
+
+		PushConstant pc;
+		pc.scale = { 2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y };
+		pc.offset = { -1.0f - drawData->DisplayPos.x * pc.scale.x, -1.0f - drawData->DisplayPos.y * pc.scale.y };
+		pc.vertices = s_Data->VertexBuffer->GetHandle();
+		pc.sampler = s_Data->Sampler->GetHandle();
 
 		int vertexOffset = 0;
 		int indexOffset = 0;
@@ -172,9 +168,10 @@ namespace GraphicsAbstraction {
 				if (clipMax.y > framebufferHeight) { clipMax.y = (float)framebufferHeight; }
 				if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y) continue;
 
-				uint32_t id = (uint32_t)drawCmd.TextureId;
+				pc.texture = (uint32_t)drawCmd.TextureId;
+				cmd->PushConstant(pc);
+
 				cmd->SetScissor({ clipMax.x - clipMin.x, clipMax.y - clipMin.y }, { clipMin.x, clipMin.y });
-				cmd->PushConstant(&id, sizeof(uint32_t), 32);
 				cmd->DrawIndexed(drawCmd.ElemCount, 1, drawCmd.IdxOffset + indexOffset, drawCmd.VtxOffset + vertexOffset, 0);
 			}
 

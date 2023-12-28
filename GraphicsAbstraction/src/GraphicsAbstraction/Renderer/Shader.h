@@ -23,9 +23,6 @@ namespace GraphicsAbstraction {
 	public:
 		virtual ~Shader() = default;
 
-		virtual void WriteImage(const std::shared_ptr<Image> image, uint32_t index) = 0;
-		virtual void WriteBuffer(const std::shared_ptr<Buffer> buffer, uint32_t index) = 0;
-
 		static std::shared_ptr<Shader> Create(const std::string& path, ShaderStage stage);
 	};
 

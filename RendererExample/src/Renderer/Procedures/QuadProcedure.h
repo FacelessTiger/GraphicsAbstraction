@@ -9,6 +9,8 @@
 #include <Renderer/Texture.h>
 #include <glm/glm.hpp>
 
+#include <queue>
+
 namespace GraphicsAbstraction {
 
 	struct QuadData
@@ -20,17 +22,18 @@ namespace GraphicsAbstraction {
 		float rotation;
 	};
 
-	struct QuadUpload
-	{
-		glm::vec2 scale;
-		glm::vec3 position;
-		glm::vec4 color;
-	};
-
 	struct QuadChange
 	{
-		std::shared_ptr<Buffer> stagingBuffer;
-		uint32_t offset;
+		uint32_t SrcOffset;
+		uint32_t DstOffset;
+		uint32_t Size;
+		uint32_t BufferIndex;
+	};
+
+	struct RingBuffer
+	{
+		std::shared_ptr<Buffer> Buffer;
+		uint32_t Offset = 0;
 	};
 
 	class QuadProcedure : public RenderProcedure
@@ -43,7 +46,6 @@ namespace GraphicsAbstraction {
 		void Process(const RenderProcedurePayload& payload) override;
 
 		uint32_t UploadQuad(const glm::vec3& position, const glm::vec2& scale, const glm::vec4& color, const std::shared_ptr<Texture>& texture);
-		void UploadQuads(const std::vector<QuadUpload>& quads);
 		void UpdateQuadPosition(uint32_t id, const glm::vec3& position);
 		void UpdateQuadScale(uint32_t id, const glm::vec2& scale);
 		void UpdateQuadColor(uint32_t id, const glm::vec4& color);
@@ -51,15 +53,22 @@ namespace GraphicsAbstraction {
 
 		inline uint32_t GetQuadCount() const { return m_QuadCount; }
 	private:
+		void Upload(const void* data, uint32_t id, uint32_t size, uint32_t offset = 0);
+	private:
 		std::shared_ptr<Shader> m_Vertex, m_Pixel;
 		std::shared_ptr<Buffer> m_QuadBuffer;
 		std::shared_ptr<Image> m_WhiteImage;
 		std::shared_ptr<Sampler> m_Sampler;
 
-		std::vector<QuadChange> m_QuadChanges;
+		std::vector<RingBuffer> m_RingBuffers;
+		std::queue<QuadChange> m_QuadChanges;
 
 		uint32_t m_QuadCount = 0;
+		uint32_t m_TotalUploadSize = 0;
+		uint32_t m_BufferIndex = 0;
+
 		uint32_t m_BufferSize = 2'000'000 * sizeof(QuadData);
+		static const uint32_t m_RingBufferSize = 1'000'000 * sizeof(QuadData);
 	};
 
 }

@@ -98,7 +98,6 @@ namespace GraphicsAbstraction {
 
 		auto spirv = CompileOrGetVulkanBinaries();
 		CreatePipelineShaderStage(spirv);
-		CreateDescriptorBuffer();
 
 		s_ShaderList[ID] = this;
 	}
@@ -109,39 +108,6 @@ namespace GraphicsAbstraction {
 		else m_Context->GetFrameDeletionQueue().Push(Module);
 
 		s_ShaderList.erase(ID);
-	}
-
-	void VulkanShader::WriteImage(const std::shared_ptr<Image> image, uint32_t index)
-	{
-		auto vulkanImage = std::static_pointer_cast<VulkanImage>(image);
-
-		uint32_t handle = vulkanImage->Handle.GetValue();
-		if ((m_PushConstants.size() - 1) < index || m_PushConstants.empty()) m_PushConstants.push_back(handle);
-		else m_PushConstants[index] = handle;
-
-		m_PushConstantsDirty = true;
-	}
-
-	void VulkanShader::WriteBuffer(const std::shared_ptr<Buffer> buffer, uint32_t index)
-	{
-		auto vulkanBuffer = std::static_pointer_cast<VulkanBuffer>(buffer);
-
-		uint32_t handle = vulkanBuffer->Handle.GetValue();
-		if ((m_PushConstants.size() - 1) < index || m_PushConstants.empty()) m_PushConstants.push_back(handle);
-		else m_PushConstants[index] = handle;
-
-		m_PushConstantsDirty = true;
-	}
-
-	uint32_t VulkanShader::GetPushConstantBufferID()
-	{
-		if (m_PushConstantsDirty)
-		{
-			m_PushConstantBuffer->SetData(m_PushConstants.data(), (uint32_t)(m_PushConstants.size() * sizeof(uint32_t)));
-			m_PushConstantsDirty = false;
-		}
-
-		return m_PushConstantBuffer->Handle.GetValue();
 	}
 
 	VulkanShader* VulkanShader::GetShaderByID(uint32_t id)
@@ -294,11 +260,6 @@ namespace GraphicsAbstraction {
 				.pName = "main" // hard coding entry point to main
 			};
 		}
-	}
-
-	void VulkanShader::CreateDescriptorBuffer()
-	{
-		m_PushConstantBuffer = std::make_shared<VulkanBuffer>((uint32_t)(10 * sizeof(uint32_t)), BufferUsage::StorageBuffer, BufferFlags::Mapped); // for now we're hard coding 10 max bindings per shader
 	}
 
 	void VulkanShader::Reflect(const std::vector<uint32_t>& data)

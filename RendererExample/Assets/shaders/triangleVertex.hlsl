@@ -5,15 +5,16 @@ struct Vertex
 	float3 position;
 };
 
-struct Bindings
+struct PushConstant
 {
+	float4x4 projection;
 	ArrayBuffer vertices;
 };
+PushConstant(PushConstant, pushConstants);
 
 float4 main(uint vertexID: SV_VertexID): SV_Position
 {
-	Bindings bnd = loadBindings<Bindings>();
-	Vertex vertex = bnd.vertices.Load<Vertex>(vertexID);
+	Vertex vertex = pushConstants.vertices.Load<Vertex>(vertexID);
 
-	return float4(vertex.position, 1.0f);
+	return mul(pushConstants.projection, float4(vertex.position, 1.0f));
 }

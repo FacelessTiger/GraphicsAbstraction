@@ -12,7 +12,7 @@ namespace GraphicsAbstraction {
 	{
 	public:
 		EditorCamera() = default;
-		EditorCamera(float fov, float aspectRatio, float nearClip, float farClip);
+		EditorCamera(float fov, float aspectRatio, float nearClip);
 
 		void OnUpdate();
 		void OnEvent(Event& e);
@@ -36,6 +36,7 @@ namespace GraphicsAbstraction {
 	private:
 		void UpdateProjection();
 		void UpdateView();
+		glm::mat4 InfReversedZProj(float fov, float aspectRatio, float nearClip);
 
 		bool OnMouseScroll(MouseScrolledEvent& e);
 
@@ -49,7 +50,7 @@ namespace GraphicsAbstraction {
 		float RotationSpeed() const;
 		float ZoomSpeed() const;
 	private:
-		float m_FOV = 45.0f, m_AspectRatio = 1.778f, m_NearClip = 0.1f, m_FarClip = 1000.0f;
+		float m_FOV = 45.0f, m_AspectRatio = 1.778f, m_NearClip = 0.1f;
 
 		glm::mat4 m_ViewMatrix;
 		glm::vec3 m_Position = { 0.0f, 0.0f, 0.0f };

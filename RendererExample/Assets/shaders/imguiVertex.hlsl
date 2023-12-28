@@ -1,5 +1,3 @@
-#define PushConstants	[[vk::offset(16)]] float2 scale; \
-						[[vk::offset(24)]] float2 offset;
 #include "bindless.hlsl"
 
 struct ImDrawVert
@@ -9,10 +7,15 @@ struct ImDrawVert
 	uint color;
 };
 
-struct Bindings
+struct PushConstant
 {
+	float2 scale;
+	float2 offset;
 	ArrayBuffer vertices;
+	Texture texture;
+	Sampler sampler;
 };
+PushConstant(PushConstant, pushConstants);
 
 struct VertexOutput
 {
@@ -23,11 +26,11 @@ struct VertexOutput
 
 VertexOutput main(uint vertexID: SV_VertexID)
 {
-	Bindings bnd = loadBindings<Bindings>();
-	ImDrawVert vertex = bnd.vertices.Load<ImDrawVert>(vertexID, 20);
+	ImDrawVert vertex = pushConstants.vertices.Load<ImDrawVert>(vertexID, 20);
 
 	VertexOutput output;
-	output.position = float4((vertex.pos * g_PushConstants.scale) + g_PushConstants.offset, 0, 1);
+	output.position = float4((vertex.pos * pushConstants.scale) + pushConstants.offset, 0, 1);
+	output.position.y *= -1;
 	output.color = UnpackUnorm4x8(vertex.color);
 	output.uv = vertex.uv;
 	return output;

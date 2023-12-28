@@ -265,33 +265,28 @@ namespace GraphicsAbstraction {
 				stages.push_back(vulkanShaderStage->Stage);
 				shaders.push_back(vulkanShaderStage->ShaderObject);
 			}
-
-			uint32_t pushConstantID = vulkanShaderStage->GetPushConstantBufferID();
-			switch (vulkanShaderStage->Stage)
+			else
 			{
-				case VK_SHADER_STAGE_VERTEX_BIT:
+				switch (vulkanShaderStage->Stage)
 				{
-					vkCmdPushConstants(CommandBuffer, m_Context->BindlessPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t), &pushConstantID);
-
-					m_GraphicsPipelineKey.Shaders[0] = vulkanShaderStage->ID;
-					m_GraphicsPipelineStateChanged = true;
-					break;
-				}
-				case VK_SHADER_STAGE_FRAGMENT_BIT:
-				{
-					vkCmdPushConstants(CommandBuffer, m_Context->BindlessPipelineLayout, VK_SHADER_STAGE_ALL, 4, sizeof(uint32_t), &pushConstantID);
-
-					m_GraphicsPipelineKey.Shaders[4] = vulkanShaderStage->ID;
-					m_GraphicsPipelineStateChanged = true;
-					break;
-				}
-				case VK_SHADER_STAGE_COMPUTE_BIT:
-				{
-					vkCmdPushConstants(CommandBuffer, m_Context->BindlessPipelineLayout, VK_SHADER_STAGE_ALL, 8, sizeof(uint32_t), &pushConstantID);
-
-					m_ComputePipelineKey.Shader = vulkanShaderStage->ID;
-					m_ComputePipelineStateChanged = true;
-					break;
+					case VK_SHADER_STAGE_VERTEX_BIT:
+					{
+						m_GraphicsPipelineKey.Shaders[0] = vulkanShaderStage->ID;
+						m_GraphicsPipelineStateChanged = true;
+						break;
+					}
+					case VK_SHADER_STAGE_FRAGMENT_BIT:
+					{
+						m_GraphicsPipelineKey.Shaders[4] = vulkanShaderStage->ID;
+						m_GraphicsPipelineStateChanged = true;
+						break;
+					}
+					case VK_SHADER_STAGE_COMPUTE_BIT:
+					{
+						m_ComputePipelineKey.Shader = vulkanShaderStage->ID;
+						m_ComputePipelineStateChanged = true;
+						break;
+					}
 				}
 			}
 		}
@@ -369,33 +364,14 @@ namespace GraphicsAbstraction {
 
 	void VulkanCommandBuffer::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
 	{
-		if (m_Context->DynamicState3Supported)
-		{
-			VkBool32 enable = true;
-			VkColorBlendEquationEXT equation = {
-				.srcColorBlendFactor = Utils::GABlendToVulkan(srcBlend),
-				.dstColorBlendFactor = Utils::GABlendToVulkan(dstBlend),
-				.colorBlendOp = Utils::GABlendOpToVulkan(blendOp),
-				.srcAlphaBlendFactor = Utils::GABlendToVulkan(srcBlendAlpha),
-				.dstAlphaBlendFactor = Utils::GABlendToVulkan(dstBlendAlpha),
-				.alphaBlendOp = Utils::GABlendOpToVulkan(blendAlpha)
-			};
+		SetColorBlend(true,		Utils::GABlendToVulkan(srcBlend), Utils::GABlendToVulkan(dstBlend), Utils::GABlendOpToVulkan(blendOp), 
+								Utils::GABlendToVulkan(srcBlendAlpha), Utils::GABlendToVulkan(dstBlendAlpha), Utils::GABlendOpToVulkan(blendAlpha));
+	}
 
-			m_Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, 0, 1, &enable);
-			m_Context->vkCmdSetColorBlendEquationEXT(CommandBuffer, 0, 1, &equation);
-			m_ColorBlendSet = true;
-		}
-		else
-		{
-			m_GraphicsPipelineKey.BlendEnable = true;
-			m_GraphicsPipelineKey.SrcBlend = Utils::GABlendToVulkan(srcBlend);
-			m_GraphicsPipelineKey.DstBlend = Utils::GABlendToVulkan(dstBlend);
-			m_GraphicsPipelineKey.BlendOp = Utils::GABlendOpToVulkan(blendOp);
-			m_GraphicsPipelineKey.SrcBlendAlpha = Utils::GABlendToVulkan(srcBlendAlpha);
-			m_GraphicsPipelineKey.DstBlendAlpha = Utils::GABlendToVulkan(dstBlendAlpha);
-			m_GraphicsPipelineKey.BlendOpAlpha = Utils::GABlendOpToVulkan(blendAlpha);
-			m_GraphicsPipelineStateChanged = true;
-		}
+	void VulkanCommandBuffer::DisableColorBlend()
+	{
+		SetColorBlend(false,	VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
+								VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD);
 	}
 
 	void VulkanCommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -408,6 +384,37 @@ namespace GraphicsAbstraction {
 	{
 		SetDynamicState();
 		vkCmdDrawIndexed(CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+	}
+
+	void VulkanCommandBuffer::SetColorBlend(bool enabled, VkBlendFactor srcBlend, VkBlendFactor dstBlend, VkBlendOp blendOp, VkBlendFactor srcBlendAlpha, VkBlendFactor dstBlendAlpha, VkBlendOp blendAlpha)
+	{
+		if (m_Context->DynamicState3Supported)
+		{
+			VkBool32 enable = enabled;
+			VkColorBlendEquationEXT equation = {
+				.srcColorBlendFactor = srcBlend,
+				.dstColorBlendFactor = dstBlend,
+				.colorBlendOp = blendOp,
+				.srcAlphaBlendFactor = srcBlendAlpha,
+				.dstAlphaBlendFactor = dstBlendAlpha,
+				.alphaBlendOp = blendAlpha
+			};
+
+			m_Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, 0, 1, &enable);
+			m_Context->vkCmdSetColorBlendEquationEXT(CommandBuffer, 0, 1, &equation);
+			m_ColorBlendSet = true;
+		}
+		else
+		{
+			m_GraphicsPipelineKey.BlendEnable = enabled;
+			m_GraphicsPipelineKey.SrcBlend = srcBlend;
+			m_GraphicsPipelineKey.DstBlend = dstBlend;
+			m_GraphicsPipelineKey.BlendOp = blendOp;
+			m_GraphicsPipelineKey.SrcBlendAlpha = srcBlendAlpha;
+			m_GraphicsPipelineKey.DstBlendAlpha = dstBlendAlpha;
+			m_GraphicsPipelineKey.BlendOpAlpha = blendAlpha;
+			m_GraphicsPipelineStateChanged = true;
+		}
 	}
 
 	void VulkanCommandBuffer::SetDynamicState()

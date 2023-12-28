@@ -31,10 +31,12 @@ namespace GraphicsAbstraction {
 		void SetScissor(const glm::vec2& size, const glm::vec2& offset) override;
 		void SetDepthTest(bool testEnabled, bool writeEnabled, CompareOperation op) override;
 		void EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha) override;
+		void DisableColorBlend() override;
 
 		void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) override;
 		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance) override;
 	private:
+		void SetColorBlend(bool enabled, VkBlendFactor srcBlend, VkBlendFactor dstBlend, VkBlendOp blendOp, VkBlendFactor srcBlendAlpha, VkBlendFactor dstBlendAlpha, VkBlendOp blendAlpha);
 		void SetDynamicState();
 	private:
 		VulkanContextReference m_Context;

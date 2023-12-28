@@ -7,13 +7,20 @@
 
 namespace GraphicsAbstraction {
 
+	struct PushConstant
+	{
+		glm::mat4 projection;
+		uint32_t quadData;
+		uint32_t sampler;
+	};
+
 	void QuadProcedure::PreProcess(const RenderProcedurePrePayload& payload)
 	{
 		m_Vertex = Shader::Create("Assets/shaders/quadVertex.hlsl", ShaderStage::Vertex);
 		m_Pixel = Shader::Create("Assets/shaders/quadPixel.hlsl", ShaderStage::Pixel);
 
 		m_QuadBuffer = Buffer::Create(m_BufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DedicatedMemory);
-		m_Vertex->WriteBuffer(m_QuadBuffer, 0);
+		m_RingBuffers.push_back({ Buffer::Create(m_RingBufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped) });
 
 		m_WhiteImage = Image::Create({ 1, 1 }, ImageFormat::R8G8B8A8_UNORM, ImageUsage::Sampled | ImageUsage::TransferDst);
 		m_Sampler = Sampler::Create(Filter::Nearest, Filter::Nearest);
@@ -33,16 +40,19 @@ namespace GraphicsAbstraction {
 	{
 		auto cmd = payload.CommandBuffer;
 
-		for (auto& change : m_QuadChanges)
-			cmd->CopyToBuffer(change.stagingBuffer, m_QuadBuffer, change.stagingBuffer->GetSize(), 0, change.offset);
-		m_QuadChanges.clear();
+		for (; !m_QuadChanges.empty(); m_QuadChanges.pop())
+		{
+			auto& change = m_QuadChanges.front();
+			cmd->CopyToBuffer(m_RingBuffers[change.BufferIndex].Buffer, m_QuadBuffer, change.Size, change.SrcOffset, change.DstOffset);
+		}
+		m_TotalUploadSize = 0;
+		m_BufferIndex = 0;
 
 		cmd->BindShaders({ m_Vertex, m_Pixel });
 		cmd->SetDepthTest(true, true, CompareOperation::GreaterEqual);
 
-		uint32_t handle = m_Sampler->GetHandle();
-		cmd->PushConstant(&payload.ViewProjection, sizeof(glm::mat4), 16);
-		cmd->PushConstant(&handle, sizeof(uint32_t), 80);
+		PushConstant pc = { payload.ViewProjection, m_QuadBuffer->GetHandle(), m_Sampler->GetHandle() };
+		cmd->PushConstant(pc);
 		cmd->BeginRendering(payload.Size, { payload.DrawImage }, payload.DepthImage);
 
 		cmd->Draw(m_QuadCount * 6, 1, 0, 0);
@@ -61,114 +71,58 @@ namespace GraphicsAbstraction {
 			.textureBinding = texureBinding,
 			.color = packedColor,
 			.position = position,
-			.rotation = 0.0f,
+			.rotation = 0.0f
 		};
 
 		// TODO: need to dynamically change m_Quadbuffer size
-		/*uint32_t neededSize = ++m_QuadCount * sizeof(QuadData);
-		if (neededSize >= m_BufferSize)
-		{
-			m_BufferSize = m_BufferSize + m_BufferSize / 2;
-
-			auto oldBuffer = m_StagingBuffer;
-			m_StagingBuffer = Buffer::Create(m_BufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
-			m_StagingBuffer->SetData(oldBuffer);
-
-			auto stagingBuffer = Buffer::Create(m_BufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
-			stagingBuffer->SetData(m_QuadBuffer);
-			m_QuadBuffer = Buffer::Create(m_BufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst);
-			m_Vertex->WriteBuffer(m_QuadBuffer, 0);
-		}*/
-
-		auto stagingBuffer = Buffer::Create(sizeof(QuadData), BufferUsage::TransferSrc, BufferFlags::Mapped);
-		stagingBuffer->SetData(&data);
-
-		QuadChange change = {
-			.stagingBuffer = stagingBuffer,
-			.offset = id * sizeof(QuadData)
-		};
-		m_QuadChanges.push_back(change);
-
+		Upload(&data, id, sizeof(QuadData));
 		return id;
-	}
-
-	void QuadProcedure::UploadQuads(const std::vector<QuadUpload>& quads)
-	{
-		uint32_t firstID = m_QuadCount;
-		m_QuadCount += (uint32_t)quads.size();
-
-		std::vector<QuadData> data;
-		data.reserve(quads.size());
-
-		for (const auto& quad : quads)
-		{
-			data.push_back({
-				.scale = quad.scale,
-				.textureBinding = m_WhiteImage->GetHandle(),
-				.color = glm::packUnorm4x8(quad.color),
-				.position = quad.position,
-				.rotation = 0.0f
-			});
-		}
-
-		auto stagingBuffer = Buffer::Create((uint32_t)(sizeof(QuadData) * quads.size()), BufferUsage::TransferSrc, BufferFlags::Mapped);
-		stagingBuffer->SetData(data.data());
-
-		QuadChange change = {
-			.stagingBuffer = stagingBuffer,
-			.offset = firstID * sizeof(QuadData)
-		};
-		m_QuadChanges.push_back(change);
 	}
 
 	void QuadProcedure::UpdateQuadPosition(uint32_t id, const glm::vec3& position)
 	{
-		auto stagingBuffer = Buffer::Create(sizeof(glm::vec3), BufferUsage::TransferSrc, BufferFlags::Mapped);
-		stagingBuffer->SetData(glm::value_ptr(position));
-
-		QuadChange change = {
-			.stagingBuffer = stagingBuffer,
-			.offset = (id * sizeof(QuadData)) + offsetof(QuadData, position)
-		};
-		m_QuadChanges.push_back(change);
+		Upload(glm::value_ptr(position), id, sizeof(glm::vec3), offsetof(QuadData, position));
 	}
 
 	void QuadProcedure::UpdateQuadScale(uint32_t id, const glm::vec2& scale)
 	{
-		auto stagingBuffer = Buffer::Create(sizeof(glm::vec2), BufferUsage::TransferSrc, BufferFlags::Mapped);
-		stagingBuffer->SetData(glm::value_ptr(scale));
-
-		QuadChange change = {
-			.stagingBuffer = stagingBuffer,
-			.offset = (id * sizeof(QuadData)) + offsetof(QuadData, scale)
-		};
-		m_QuadChanges.push_back(change);
+		Upload(glm::value_ptr(scale), id, sizeof(glm::vec2), offsetof(QuadData, scale));
 	}
 
 	void QuadProcedure::UpdateQuadColor(uint32_t id, const glm::vec4& color)
 	{
 		uint32_t packedColor = glm::packUnorm4x8(color);
-
-		auto stagingBuffer = Buffer::Create(sizeof(uint32_t), BufferUsage::TransferSrc, BufferFlags::Mapped);
-		stagingBuffer->SetData(&packedColor);
-
-		QuadChange change = {
-			.stagingBuffer = stagingBuffer,
-			.offset = (id * sizeof(QuadData)) + offsetof(QuadData, color)
-		};
-		m_QuadChanges.push_back(change);
+		Upload(&packedColor, id, sizeof(uint32_t), offsetof(QuadData, color));
 	}
 
 	void QuadProcedure::UpdateQuadRotation(uint32_t id, float rotation)
 	{
-		auto stagingBuffer = Buffer::Create(sizeof(float), BufferUsage::TransferSrc, BufferFlags::Mapped);
-		stagingBuffer->SetData(&rotation);
+		Upload(&rotation, id, sizeof(float), offsetof(QuadData, rotation));
+	}
+
+	void QuadProcedure::Upload(const void* data, uint32_t id, uint32_t size, uint32_t offset)
+	{
+		m_TotalUploadSize += size;
+		if (m_TotalUploadSize >= m_RingBufferSize)
+		{
+			m_BufferIndex++;
+			m_TotalUploadSize = 0;
+
+			if (m_BufferIndex > (m_RingBuffers.size() - 1)) m_RingBuffers.push_back({ Buffer::Create(m_RingBufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped) });
+		}
+
+		uint32_t srcOffset = m_RingBuffers[m_BufferIndex].Offset;
+		m_RingBuffers[m_BufferIndex].Offset = (m_RingBuffers[m_BufferIndex].Offset + size) % m_RingBufferSize;
 
 		QuadChange change = {
-			.stagingBuffer = stagingBuffer,
-			.offset = (id * sizeof(QuadData)) + offsetof(QuadData, rotation)
+			.SrcOffset = srcOffset,
+			.DstOffset = (id * sizeof(QuadData)) + offset,
+			.Size = size,
+			.BufferIndex = m_BufferIndex
 		};
-		m_QuadChanges.push_back(change);
+
+		m_RingBuffers[m_BufferIndex].Buffer->SetData(data, change.Size, change.SrcOffset);
+		m_QuadChanges.push(change);
 	}
 
 }

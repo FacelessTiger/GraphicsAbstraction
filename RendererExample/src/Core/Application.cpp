@@ -21,7 +21,7 @@ namespace GraphicsAbstraction {
 	Application* Application::s_Instance = nullptr;
 
 	Application::Application()
-		: m_EditorCamera(30.0f, 16.0f / 9.0f, 0.1f, 10000.0f)
+		: m_EditorCamera(70.0f, 16.0f / 9.0f, 0.1f)
 	{
 		GA_PROFILE_SCOPE();
 
@@ -34,10 +34,10 @@ namespace GraphicsAbstraction {
 		Renderer::Init(m_Window);
 		m_TestTexure = std::make_shared<Texture>("Assets/textures/Trickery.png");
 
-		m_QuadProcedure = new QuadProcedure();
-		//Renderer::AddProcedure(new GradientProcedure());
-		Renderer::AddProcedure(m_QuadProcedure);
-		#define DoQuad
+		//m_QuadProcedure = new QuadProcedure();
+		Renderer::AddProcedure(new GradientProcedure());
+		//Renderer::AddProcedure(m_QuadProcedure);
+		//#define DoQuad
 
 		Renderer::PreProcess();
 		Renderer::SetImGuiCallback([this]() {
@@ -71,29 +71,22 @@ namespace GraphicsAbstraction {
 
 				ImGui::PopID();
 			}
+
+			ImGui::Image((ImTextureID)m_TestTexure->GetImage()->GetHandle(), { 500, 500 }, { 0, 1 }, { 1, 0 });
 #endif
 
 			ImGui::End();
 		});
 
 #ifdef DoQuad
-		std::vector<QuadUpload> quads;
-		quads.reserve(1000 * 1000);
-
 		for (int x = 0; x < 1000; x++)
 		{
 			for (int y = 0; y < 1000; y++)
 			{
 				glm::vec3 position(x * 0.075f, y * 0.075f, 0.0f);
-				quads.push_back({
-					.scale = { 0.05f, 0.05f },
-					.position = position,
-					.color = { 0.0f, 1.0f, 0.0f, 1.0f }
-				});
+				m_QuadProcedure->UploadQuad(position, { 0.05f, 0.05f }, { 0.0f, 1.0f, 0.0f, 1.0f }, nullptr);
 			}
 		}
-
-		m_QuadProcedure->UploadQuads(quads);
 #endif
 	}
 
