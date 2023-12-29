@@ -9,9 +9,9 @@ namespace GraphicsAbstraction {
 	public:
 		Texture(const char* filename);
 
-		inline const std::shared_ptr<Image>& GetImage() const { return m_Image; }
+		inline const Ref<Image>& GetImage() const { return m_Image; }
 	private:
-		std::shared_ptr<Image> m_Image;
+		Ref<Image> m_Image;
 	};
 
 }

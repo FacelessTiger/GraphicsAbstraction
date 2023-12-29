@@ -3,6 +3,10 @@
 struct Vertex
 {
 	float3 position;
+	float uvX;
+	float3 normal;
+	float uvY;
+	float4 color;
 };
 
 struct PushConstant
@@ -12,9 +16,20 @@ struct PushConstant
 };
 PushConstant(PushConstant, pushConstants);
 
-float4 main(uint vertexID: SV_VertexID): SV_Position
+struct VertexOutput
+{
+	float4 position: SV_Position;
+	float3 color: COLOR0;
+	float2 uv: TEXCOORD0;
+};
+
+VertexOutput main(uint vertexID: SV_VertexID)
 {
 	Vertex vertex = pushConstants.vertices.Load<Vertex>(vertexID);
 
-	return mul(pushConstants.projection, float4(vertex.position, 1.0f));
+	VertexOutput output;
+	output.position = mul(pushConstants.projection, float4(vertex.position, 1.0f));
+	output.color = vertex.color.xyz;
+	output.uv = float2(vertex.uvX, vertex.uvY);
+	return output;
 }

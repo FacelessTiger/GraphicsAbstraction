@@ -31,52 +31,16 @@ namespace GraphicsAbstraction {
 		m_Window = Window::Create();
 		m_Window->SetEventCallback(GA_BIND_EVENT_FN(Application::OnEvent));
 
-		Renderer::Init(m_Window);
+		Renderer::Init(m_Window, true);
 		m_TestTexure = std::make_shared<Texture>("Assets/textures/Trickery.png");
 
-		//m_QuadProcedure = new QuadProcedure();
-		Renderer::AddProcedure(new GradientProcedure());
-		//Renderer::AddProcedure(m_QuadProcedure);
-		//#define DoQuad
+		m_QuadProcedure = new QuadProcedure();
+		//Renderer::AddProcedure(new GradientProcedure());
+		Renderer::AddProcedure(m_QuadProcedure);
+		#define DoQuad
 
 		Renderer::PreProcess();
-		Renderer::SetImGuiCallback([this]() {
-			ImGui::Begin("Settings");
-
-			ImGui::Text("%.3fms %ifps", m_FrameTime, (int)(1.0 / m_FrameTime * 1000.0));
-			if (ImGui::Checkbox("Vsync", &m_Vsync))
-				Renderer::SetVsync(m_Vsync);
-
-#ifdef DoQuad
-			if (ImGui::Button("Add quad"))
-			{
-				Quad data = {
-					.scale = { 3.0f, 3.0f },
-					.position = { -2.0f, 0.0f, 0.0f },
-					.rotation = 0.0f,
-					.color = { 1.0f, 0.0f, 0.0f, 1.0f }
-				};
-
-				m_QuadData[m_QuadProcedure->UploadQuad(data.position, data.scale, data.color, m_TestTexure)] = data;
-			}
-
-			for (auto& [id, data] : m_QuadData)
-			{
-				ImGui::PushID(id);
-
-				if (ImGui::DragFloat3("Position", glm::value_ptr(data.position))) m_QuadProcedure->UpdateQuadPosition(id, data.position);
-				if (ImGui::DragFloat2("Scale", glm::value_ptr(data.scale))) m_QuadProcedure->UpdateQuadScale(id, data.scale);
-				if (ImGui::ColorEdit4("Color", glm::value_ptr(data.color))) m_QuadProcedure->UpdateQuadColor(id, data.color);
-				if (ImGui::DragFloat("Rotation", &data.rotation)) m_QuadProcedure->UpdateQuadRotation(id, glm::radians(data.rotation));
-
-				ImGui::PopID();
-			}
-
-			ImGui::Image((ImTextureID)m_TestTexure->GetImage()->GetHandle(), { 500, 500 }, { 0, 1 }, { 1, 0 });
-#endif
-
-			ImGui::End();
-		});
+		Renderer::SetImGuiCallback(GA_BIND_EVENT_FN(Application::OnImGuiRender));
 
 #ifdef DoQuad
 		for (int x = 0; x < 1000; x++)
@@ -93,7 +57,6 @@ namespace GraphicsAbstraction {
 	Application::~Application()
 	{
 		GA_PROFILE_SCOPE();
-
 		Renderer::Shutdown();
 	}
 
@@ -145,6 +108,56 @@ namespace GraphicsAbstraction {
 		Renderer::Resize(e.GetWidth(), e.GetHeight());
 
 		return true;
+	}
+
+	void Application::OnImGuiRender()
+	{
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
+		const ImGuiViewport* viewport = ImGui::GetMainViewport();
+
+		ImGui::SetNextWindowPos(viewport->Pos);
+		ImGui::SetNextWindowSize(viewport->Size);
+		ImGui::SetNextWindowViewport(viewport->ID);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(1.0f, 1.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 3.0f);
+
+		ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f });
+		ImGui::Begin("DockSpace Demo", nullptr, window_flags);
+		ImGui::PopStyleColor();
+
+		ImGui::PopStyleVar(4);
+
+		// Submit the DockSpace
+		ImGuiIO& io = ImGui::GetIO();
+		ImGuiStyle& style = ImGui::GetStyle();
+		float minWinSizeX = style.WindowMinSize.x;
+		style.WindowMinSize.x = 400.0f;
+		ImGui::DockSpace(ImGui::GetID("MyDockspace"));
+		style.WindowMinSize.x = minWinSizeX;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
+		ImGui::Begin("Viewport");
+
+		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
+		m_EditorCamera.SetViewportSize(viewportPanelSize.x, viewportPanelSize.y);
+		ImGui::Image((ImTextureID)Renderer::GetDrawImage()->GetHandle(), { viewportPanelSize.x, viewportPanelSize.y });
+
+		ImGui::End();
+		ImGui::PopStyleVar();
+
+		ImGui::Begin("Settings");
+		ImGui::Text("%.3fms %ifps", m_FrameTime, (int)(1.0 / m_FrameTime * 1000.0));
+		if (ImGui::Checkbox("Vsync", &m_Vsync))
+			Renderer::SetVsync(m_Vsync);
+
+		ImGui::End();
+
+		ImGui::End();
 	}
 
 }

@@ -1,6 +1,7 @@
 #include "VulkanBuffer.h"
 
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanImage.h>
 
 namespace GraphicsAbstraction {
 
@@ -18,22 +19,19 @@ namespace GraphicsAbstraction {
 			return ret;
 		}
 
-		static VmaAllocationCreateFlags GABufferFlagsToVMA(BufferFlags flags)
-		{
-			VmaAllocationCreateFlags ret = 0;
-
-			// if its mapped, we're enforcing host access since no reason to map for gpu-only memory
-			if (flags & BufferFlags::Mapped)			ret |= (VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
-			if (flags & BufferFlags::DedicatedMemory)	ret |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-
-			return ret;
-		}
-
 	}
 
 	VulkanBuffer::VulkanBuffer(uint32_t size, BufferUsage usage, BufferFlags flags)
 		: m_Context(VulkanContext::GetReference()), Size(size)
 	{
+		VmaAllocationCreateFlags vmaFlags = {};
+		if (flags & BufferFlags::Mapped)
+		{
+			vmaFlags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			if (flags & BufferFlags::DeviceLocal) vmaFlags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+			else vmaFlags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+		}
+
 		VkBufferCreateInfo bufferInfo = {
 			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 			.size = (VkDeviceSize)Size,
@@ -41,8 +39,9 @@ namespace GraphicsAbstraction {
 		};
 
 		VmaAllocationCreateInfo vmaAllocInfo = {
-			.flags = Utils::GABufferFlagsToVMA(flags),
-			.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE
+			.flags = vmaFlags,
+			.usage = VMA_MEMORY_USAGE_AUTO,
+			.requiredFlags = (flags & BufferFlags::DeviceLocal) ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT : (VkMemoryPropertyFlags)0
 		};
 
 		vmaCreateBuffer(m_Context->Allocator, &bufferInfo, &vmaAllocInfo, &Buffer.Buffer, &Buffer.Allocation, &Buffer.Info);
@@ -60,10 +59,10 @@ namespace GraphicsAbstraction {
 		memcpy((char*)Buffer.Info.pMappedData + offset, data, bufferSize);
 	}
 
-	void VulkanBuffer::SetData(const std::shared_ptr<GraphicsAbstraction::Buffer>& buffer)
+	void VulkanBuffer::SetData(const Ref<GraphicsAbstraction::Buffer>& buffer)
 	{
-		auto vulkanBuffer = std::static_pointer_cast<VulkanBuffer>(buffer);
-		memcpy(Buffer.Info.pMappedData, vulkanBuffer->Buffer.Info.pMappedData, vulkanBuffer->Size);
+		auto& vulkanBuffer = (VulkanBuffer&)*buffer;
+		memcpy(Buffer.Info.pMappedData, vulkanBuffer.Buffer.Info.pMappedData, vulkanBuffer.Size);
 	}
 
 	void VulkanBuffer::GetData(void* data, uint32_t size, uint32_t offset)

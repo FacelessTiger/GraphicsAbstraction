@@ -8,8 +8,8 @@
 
 namespace GraphicsAbstraction {
 
-	VulkanSwapchain::VulkanSwapchain(const std::shared_ptr<Surface>& surface, const glm::vec2& size, bool enableVSync)
-		: m_Context(VulkanContext::GetReference()), m_Surface(std::static_pointer_cast<VulkanSurface>(surface)), Width((uint32_t)size.x), Height((uint32_t)size.y), m_EnableVsync(enableVSync)
+	VulkanSwapchain::VulkanSwapchain(Ref<Surface>& surface, const glm::vec2& size, bool enableVSync)
+		: m_Context(VulkanContext::GetReference()), m_Surface(&(VulkanSurface&)(*surface)), Width((uint32_t)size.x), Height((uint32_t)size.y), m_EnableVsync(enableVSync)
 	{
 		CreateSwapchain(true);
 
@@ -138,7 +138,7 @@ namespace GraphicsAbstraction {
 			VkImageView view;
 			VK_CHECK(vkCreateImageView(m_Context->Device, &imageViewInfo, nullptr, &view));
 
-			Images.push_back(std::make_shared<VulkanImage>(vulkanImages[i], view, VK_IMAGE_LAYOUT_UNDEFINED, ImageFormat, usageFlags, Width, Height));
+			Images.push_back(CreateRef<VulkanImage>(vulkanImages[i], view, VK_IMAGE_LAYOUT_UNDEFINED, ImageFormat, usageFlags, Width, Height));
 		}
 	}
 

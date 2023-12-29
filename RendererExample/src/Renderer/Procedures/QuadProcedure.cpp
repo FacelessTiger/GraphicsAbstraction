@@ -14,12 +14,13 @@ namespace GraphicsAbstraction {
 		uint32_t sampler;
 	};
 
-	void QuadProcedure::PreProcess(const RenderProcedurePrePayload& payload)
+	void QuadProcedure::PreProcess(RenderProcedurePrePayload& payload)
 	{
 		m_Vertex = Shader::Create("Assets/shaders/quadVertex.hlsl", ShaderStage::Vertex);
 		m_Pixel = Shader::Create("Assets/shaders/quadPixel.hlsl", ShaderStage::Pixel);
+		m_RingBuffers.reserve(10); // TODO: TEMP SOLUTION, BAD!!!!!!!
 
-		m_QuadBuffer = Buffer::Create(m_BufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DedicatedMemory);
+		m_QuadBuffer = Buffer::Create(m_BufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
 		m_RingBuffers.push_back({ Buffer::Create(m_RingBufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped) });
 
 		m_WhiteImage = Image::Create({ 1, 1 }, ImageFormat::R8G8B8A8_UNORM, ImageUsage::Sampled | ImageUsage::TransferDst);
@@ -36,13 +37,13 @@ namespace GraphicsAbstraction {
 		payload.Fence->Wait();
 	}
 
-	void QuadProcedure::Process(const RenderProcedurePayload& payload)
+	void QuadProcedure::Process(RenderProcedurePayload& payload)
 	{
 		auto cmd = payload.CommandBuffer;
 
-		for (; !m_QuadChanges.empty(); m_QuadChanges.pop())
+		while (!m_QuadChanges.Empty())
 		{
-			auto& change = m_QuadChanges.front();
+			auto change = m_QuadChanges.Pop();
 			cmd->CopyToBuffer(m_RingBuffers[change.BufferIndex].Buffer, m_QuadBuffer, change.Size, change.SrcOffset, change.DstOffset);
 		}
 		m_TotalUploadSize = 0;
@@ -122,7 +123,7 @@ namespace GraphicsAbstraction {
 		};
 
 		m_RingBuffers[m_BufferIndex].Buffer->SetData(data, change.Size, change.SrcOffset);
-		m_QuadChanges.push(change);
+		m_QuadChanges.Push(change);
 	}
 
 }

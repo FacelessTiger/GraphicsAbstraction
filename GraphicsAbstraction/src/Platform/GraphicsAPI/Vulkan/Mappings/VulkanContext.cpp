@@ -56,11 +56,11 @@ namespace GraphicsAbstraction {
 		if (!DynamicRenderingSupported) RenderInfoManager = new VulkanRenderInfoManager(*this);
 	}
 
-	std::shared_ptr<GraphicsAbstraction::Queue> VulkanContext::GetQueueImpl(QueueType type)
+	Ref<GraphicsAbstraction::Queue> VulkanContext::GetQueueImpl(QueueType type)
 	{
 		switch (type)
 		{
-			case QueueType::Graphics: return std::make_shared<VulkanQueue>(*this, GraphicsQueue, GraphicsQueueFamily);
+			case QueueType::Graphics: return CreateRef<VulkanQueue>(*this, GraphicsQueue, GraphicsQueueFamily);
 		}
 
 		GA_CORE_ASSERT(false, "Unknown queue type!"); 

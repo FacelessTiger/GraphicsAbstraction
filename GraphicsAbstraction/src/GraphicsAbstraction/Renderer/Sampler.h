@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <GraphicsAbstraction/Core/Log.h>
+#include <GraphicsAbstraction/Core/Core.h>
 
 namespace GraphicsAbstraction {
 
@@ -12,14 +13,14 @@ namespace GraphicsAbstraction {
 		Linear
 	};
 
-	class Sampler
+	class Sampler : public RefCounted
 	{
 	public:
 		virtual ~Sampler() = default;
 
 		virtual uint32_t GetHandle() const = 0;
 
-		static std::shared_ptr<Sampler> Create(Filter min, Filter mag);
+		static Ref<Sampler> Create(Filter min, Filter mag);
 	};
 
 }

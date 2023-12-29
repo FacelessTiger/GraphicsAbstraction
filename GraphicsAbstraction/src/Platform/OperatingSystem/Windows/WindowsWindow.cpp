@@ -17,9 +17,9 @@ namespace GraphicsAbstraction {
 		GA_CORE_ERROR("GLFW Eror ({0}): {1}", error, description);
 	}
 
-	std::shared_ptr<Window> Window::Create(const WindowProps& props)
+	Ref<Window> Window::Create(const WindowProps& props)
 	{
-		return std::make_shared<WindowsWindow>(props);
+		return CreateRef<WindowsWindow>(props);
 	}
 
 	WindowsWindow::WindowsWindow(const WindowProps& props)

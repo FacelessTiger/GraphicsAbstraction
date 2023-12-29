@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include <GraphicsAbstraction/Core/Core.h>
+#include <GraphicsAbstraction/Renderer/Image.h>
 #include <glm/glm.hpp>
 
 namespace GraphicsAbstraction {
@@ -31,21 +33,21 @@ namespace GraphicsAbstraction {
 		Add
 	};
 
-	class CommandBuffer
+	class CommandBuffer : public RefCounted
 	{
 	public:
 		virtual ~CommandBuffer() = default;
 
-		virtual void Clear(const std::shared_ptr<Image>& image, const glm::vec4& color) = 0;
-		virtual void Present(const std::shared_ptr<Swapchain>& swapchain) = 0;
+		virtual void Clear(const Ref<Image>& image, const glm::vec4& color) = 0;
+		virtual void Present(const Ref<Swapchain>& swapchain) = 0;
 		virtual void Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ) = 0;
-		virtual void CopyToBuffer(const std::shared_ptr<Buffer>& src, const std::shared_ptr<Buffer>& dst, uint32_t size, uint32_t srcOffset = 0, uint32_t dstOffset = 0) = 0;
-		virtual void CopyToImage(const std::shared_ptr<Buffer>& src, const std::shared_ptr<Image>& dst, uint32_t srcOffset = 0) = 0;
-		virtual void BeginRendering(const glm::vec2& region, const std::vector<std::shared_ptr<Image>>& colorAttachments, const std::shared_ptr<Image>& depthAttachment = nullptr) = 0;
+		virtual void CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset = 0, uint32_t dstOffset = 0) = 0;
+		virtual void CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset = 0) = 0;
+		virtual void BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment = nullptr) = 0;
 		virtual void EndRendering() = 0;
 
-		virtual void BindShaders(const std::vector<std::shared_ptr<Shader>> shaderStages) = 0;
-		virtual void BindIndexBuffer(const std::shared_ptr<Buffer>& buffer) = 0;
+		virtual void BindShaders(const std::vector<Ref<Shader>> shaderStages) = 0;
+		virtual void BindIndexBuffer(const Ref<Buffer>& buffer) = 0;
 		virtual void PushConstant(const void* data, uint32_t size, uint32_t offset) = 0;
 		template<typename T> void PushConstant(const T& data, uint32_t offset = 0) { PushConstant(&data, sizeof(T), offset); };
 

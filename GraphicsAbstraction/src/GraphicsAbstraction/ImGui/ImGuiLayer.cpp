@@ -13,7 +13,6 @@
 #include <GraphicsAbstraction/Renderer/Fence.h>
 #include <GraphicsAbstraction/Renderer/Buffer.h>
 #include <GraphicsAbstraction/Renderer/Sampler.h>
-#include <GraphicsAbstraction/Renderer/Image.h>
 #include <GraphicsAbstraction/Renderer/Shader.h>
 #include <GraphicsAbstraction/Renderer/Queue.h>
 #include <GraphicsAbstraction/Core/Window.h>
@@ -22,11 +21,11 @@ namespace GraphicsAbstraction {
 
 	struct ImGuiLayerData
 	{
-		std::shared_ptr<Shader> VertexShader;
-		std::shared_ptr<Shader> PixelShader;
-		std::shared_ptr<Sampler> Sampler;
-		std::shared_ptr<Buffer> IndexBuffer, VertexBuffer;
-		std::shared_ptr<Image> FontImage;
+		Ref<Shader> VertexShader;
+		Ref<Shader> PixelShader;
+		Ref<Sampler> Sampler;
+		Ref<Buffer> IndexBuffer, VertexBuffer;
+		Ref<Image> FontImage;
 	};
 
 	struct PushConstant
@@ -40,7 +39,7 @@ namespace GraphicsAbstraction {
 
 	static ImGuiLayerData* s_Data;
 
-	void ImGuiLayer::Init(const std::shared_ptr<CommandPool>& commandPool, const std::shared_ptr<Swapchain>& swapchain, const std::shared_ptr<Window>& window, const std::shared_ptr<Queue>& queue, const std::shared_ptr<Fence>& fence)
+	void ImGuiLayer::Init(Ref<CommandPool>& commandPool, Ref<Swapchain>& swapchain, Ref<Window>& window, Ref<Queue>& queue, Ref<Fence>& fence)
 	{
 		s_Data = new ImGuiLayerData();
 
@@ -100,7 +99,7 @@ namespace GraphicsAbstraction {
 		ImGui::NewFrame();
 	}
 
-	void ImGuiLayer::DrawFrame(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<Image>& image)
+	void ImGuiLayer::DrawFrame(Ref<CommandBuffer>& cmd, Ref<Image> image)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::Render();
@@ -220,7 +219,7 @@ namespace GraphicsAbstraction {
 		colors[ImGuiCol_TitleBgCollapsed] = { 0.15f, 0.1505f, 0.151f, 1.0f };
 	}
 
-	void ImGuiLayer::CreateFontTexture(const std::shared_ptr<CommandPool>& commandPool, const std::shared_ptr<Queue>& queue, const std::shared_ptr<Fence>& fence)
+	void ImGuiLayer::CreateFontTexture(Ref<CommandPool>& commandPool, Ref<Queue>& queue, Ref<Fence>& fence)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 

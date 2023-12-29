@@ -15,7 +15,7 @@ namespace GraphicsAbstraction {
 	class Renderer
 	{
 	public:
-		static void Init(const std::shared_ptr<Window>& window);
+		static void Init(Ref<Window>& window, bool seperateDisplayImage);
 		static void Shutdown();
 
 		static void AddProcedure(RenderProcedure* procedure);
@@ -26,7 +26,8 @@ namespace GraphicsAbstraction {
 		static void Resize(uint32_t width, uint32_t height);
 		static void SetVsync(bool vsync);
 
-		static void CopyNextFrame(const std::shared_ptr<Buffer>& srcBuffer, const std::shared_ptr<Image>& dstImage);
+		static void CopyNextFrame(const Ref<Buffer>& srcBuffer, const Ref<Image>& dstImage);
+		static Ref<Image> GetDrawImage();
 	};
 
 }

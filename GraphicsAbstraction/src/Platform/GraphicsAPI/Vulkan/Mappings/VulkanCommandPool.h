@@ -13,11 +13,11 @@ namespace GraphicsAbstraction {
 		VkCommandPool CommandPool;
 		VkCommandBuffer MainCommandBuffer;
 	public:
-		VulkanCommandPool(const std::shared_ptr<Queue>& queue);
+		VulkanCommandPool(const Ref<Queue>& queue);
 		virtual ~VulkanCommandPool();
 
 		void Reset() override;
-		std::shared_ptr<CommandBuffer> Begin() override;
+		Ref<CommandBuffer> Begin() const override;
 	private:
 		VulkanContextReference m_Context;
 	};

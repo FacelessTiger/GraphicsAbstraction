@@ -7,6 +7,7 @@
 #include <GraphicsAbstraction/Renderer/Sampler.h>
 #include <Renderer/EditorCamera.h>
 #include <Renderer/Texture.h>
+#include <Utils/TSQueue.h>
 #include <glm/glm.hpp>
 
 #include <queue>
@@ -32,7 +33,7 @@ namespace GraphicsAbstraction {
 
 	struct RingBuffer
 	{
-		std::shared_ptr<Buffer> Buffer;
+		Ref<Buffer> Buffer;
 		uint32_t Offset = 0;
 	};
 
@@ -42,8 +43,8 @@ namespace GraphicsAbstraction {
 		QuadProcedure() = default;
 		virtual ~QuadProcedure() = default;
 
-		void PreProcess(const RenderProcedurePrePayload& payload) override;
-		void Process(const RenderProcedurePayload& payload) override;
+		void PreProcess(RenderProcedurePrePayload& payload) override;
+		void Process(RenderProcedurePayload& payload) override;
 
 		uint32_t UploadQuad(const glm::vec3& position, const glm::vec2& scale, const glm::vec4& color, const std::shared_ptr<Texture>& texture);
 		void UpdateQuadPosition(uint32_t id, const glm::vec3& position);
@@ -55,17 +56,17 @@ namespace GraphicsAbstraction {
 	private:
 		void Upload(const void* data, uint32_t id, uint32_t size, uint32_t offset = 0);
 	private:
-		std::shared_ptr<Shader> m_Vertex, m_Pixel;
-		std::shared_ptr<Buffer> m_QuadBuffer;
-		std::shared_ptr<Image> m_WhiteImage;
-		std::shared_ptr<Sampler> m_Sampler;
+		Ref<Shader> m_Vertex, m_Pixel;
+		Ref<Buffer> m_QuadBuffer;
+		Ref<Image> m_WhiteImage;
+		Ref<Sampler> m_Sampler;
 
 		std::vector<RingBuffer> m_RingBuffers;
-		std::queue<QuadChange> m_QuadChanges;
+		TSQueue<QuadChange> m_QuadChanges;
 
-		uint32_t m_QuadCount = 0;
-		uint32_t m_TotalUploadSize = 0;
-		uint32_t m_BufferIndex = 0;
+		std::atomic_uint32_t m_QuadCount = 0;
+		std::atomic_uint32_t m_TotalUploadSize = 0;
+		std::atomic_uint32_t m_BufferIndex = 0;
 
 		uint32_t m_BufferSize = 2'000'000 * sizeof(QuadData);
 		static const uint32_t m_RingBufferSize = 1'000'000 * sizeof(QuadData);

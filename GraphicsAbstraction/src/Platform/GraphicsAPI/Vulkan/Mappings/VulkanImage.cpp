@@ -46,7 +46,6 @@ namespace GraphicsAbstraction {
 		Usage = Utils::GAImageUsageToVulkan(usage);
 
 		Create();
-		UpdateDescriptor();
 	}
 
 	VulkanImage::VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, VkFormat imageFormat, VkImageUsageFlags usage, uint32_t width, uint32_t height)
@@ -60,23 +59,23 @@ namespace GraphicsAbstraction {
 		Destroy();
 	}
 
-	void VulkanImage::CopyTo(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<GraphicsAbstraction::Image>& other)
+	void VulkanImage::CopyTo(const Ref<CommandBuffer>& cmd, const Ref<GraphicsAbstraction::Image>& other)
 	{
 		GA_PROFILE_SCOPE();
 
-		auto vulkanCommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(cmd);
-		auto vulkanImage = std::static_pointer_cast<VulkanImage>(other);
+		auto& vulkanCommandBuffer = (VulkanCommandBuffer&)(*cmd);
+		auto& vulkanImage = (VulkanImage&)(*other);
 
-		TransitionLayout(vulkanCommandBuffer->CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-		vulkanImage->TransitionLayout(vulkanCommandBuffer->CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		TransitionLayout(vulkanCommandBuffer.CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		vulkanImage.TransitionLayout(vulkanCommandBuffer.CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		VkImageBlit blitRegion{};
-		blitRegion.srcOffsets[1].x = vulkanImage->Width;
-		blitRegion.srcOffsets[1].y = vulkanImage->Height;
+		blitRegion.srcOffsets[1].x = vulkanImage.Width;
+		blitRegion.srcOffsets[1].y = vulkanImage.Height;
 		blitRegion.srcOffsets[1].z = 1;
 
-		blitRegion.dstOffsets[1].x = vulkanImage->Width;
-		blitRegion.dstOffsets[1].y = vulkanImage->Height;
+		blitRegion.dstOffsets[1].x = vulkanImage.Width;
+		blitRegion.dstOffsets[1].y = vulkanImage.Height;
 		blitRegion.dstOffsets[1].z = 1;
 
 		blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -89,9 +88,9 @@ namespace GraphicsAbstraction {
 		blitRegion.dstSubresource.layerCount = 1;
 		blitRegion.dstSubresource.mipLevel = 0;
 
-		vkCmdBlitImage(vulkanCommandBuffer->CommandBuffer, 
+		vkCmdBlitImage(vulkanCommandBuffer.CommandBuffer, 
 			Image.Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
-			vulkanImage->Image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+			vulkanImage.Image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
 			1, &blitRegion, VK_FILTER_LINEAR);
 	}
 
@@ -142,6 +141,8 @@ namespace GraphicsAbstraction {
 			.subresourceRange = range
 		};
 		VK_CHECK(vkCreateImageView(m_Context->Device, &imageViewInfo, nullptr, &View));
+
+		UpdateDescriptor();
 	}
 
 	void VulkanImage::Destroy()

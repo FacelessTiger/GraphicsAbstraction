@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <GraphicsAbstraction/Renderer/Image.h>
 
 namespace GraphicsAbstraction {
 
@@ -15,14 +16,14 @@ namespace GraphicsAbstraction {
 	class ImGuiLayer
 	{
 	public:
-		static void Init(const std::shared_ptr<CommandPool>& commandPool, const std::shared_ptr<Swapchain>& swapchain, const std::shared_ptr<Window>& window, const std::shared_ptr<Queue>& queue, const std::shared_ptr<Fence>& fence);
+		static void Init(Ref<CommandPool>& commandPool, Ref<Swapchain>& swapchain, Ref<Window>& window, Ref<Queue>& queue, Ref<Fence>& fence);
 		static void Shutdown();
 
 		static void BeginFrame();
-		static void DrawFrame(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<Image>& image);
+		static void DrawFrame(Ref<CommandBuffer>& cmd, Ref<Image> image);
 	private:
 		static void SetDarkThemeColors();
-		static void CreateFontTexture(const std::shared_ptr<CommandPool>& commandPool, const std::shared_ptr<Queue>& queue, const std::shared_ptr<Fence>& fence);
+		static void CreateFontTexture(Ref<CommandPool>& commandPool, Ref<Queue>& queue, Ref<Fence>& fence);
 	};
 
 }

@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <GraphicsAbstraction/Core/Log.h>
+#include <GraphicsAbstraction/Core/Core.h>
 
 namespace GraphicsAbstraction {
 
@@ -10,15 +11,15 @@ namespace GraphicsAbstraction {
 	class CommandBuffer;
 	class Queue;
 
-	class CommandPool
+	class CommandPool : public RefCounted
 	{
 	public:
 		virtual ~CommandPool() = default;
 
 		virtual void Reset() = 0;
-		virtual std::shared_ptr<CommandBuffer> Begin() = 0;
+		virtual Ref<CommandBuffer> Begin() const = 0;
 
-		static std::shared_ptr<CommandPool> Create(const std::shared_ptr<Queue>& queue);
+		static Ref<CommandPool> Create(const Ref<Queue>& queue);
 	};
 
 }

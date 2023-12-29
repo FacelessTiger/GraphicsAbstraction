@@ -14,7 +14,7 @@ namespace GraphicsAbstraction {
 	public:
 		VkSurfaceKHR Surface;
 	public:
-		VulkanSurface(const std::shared_ptr<Window>& window);
+		VulkanSurface(const Ref<Window>& window);
 		virtual ~VulkanSurface();
 	private:
 		VulkanContextReference m_Context;

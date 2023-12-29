@@ -14,7 +14,16 @@ namespace GraphicsAbstraction {
 		uint32_t vertices;
 	};
 
-	void GradientProcedure::PreProcess(const RenderProcedurePrePayload& payload)
+	struct Vertex
+	{
+		glm::vec3 position;
+		float uvX;
+		glm::vec3 normal;
+		float uvY;
+		glm::vec4 color;
+	};
+
+	void GradientProcedure::PreProcess(RenderProcedurePrePayload& payload)
 	{
 		m_Data.data1 = { 0.0f, 1.0f, 1.0f, 1.0f };
 		m_Data.data2 = { 1.0f, 0.0f, 0.0f, 1.0f };
@@ -29,17 +38,17 @@ namespace GraphicsAbstraction {
 		m_TrianglePixel = Shader::Create("Assets/shaders/trianglePixel.hlsl", ShaderStage::Pixel);
 
 		std::vector<Vertex> vertices = {
-			{ {  0.5f, -0.5f, 0.0f } },
-			{ {  0.5f,  0.5f, 0.0f } },
-			{ { -0.5f, -0.5f, 0.0f } },
-			{ { -0.5f,  0.5f, 0.0f } }
+			{ .position = {  0.5f, -0.5f, 0.0f }, .color = { 0.0f, 0.0f, 0.0f, 1.0f } },
+			{ .position = {  0.5f,  0.5f, 0.0f }, .color = { 0.5f, 0.5f, 0.5f, 1.0f } },
+			{ .position = { -0.5f, -0.5f, 0.0f }, .color = { 1.0f, 0.0f, 0.0f, 1.0f } },
+			{ .position = { -0.5f,  0.5f, 0.0f }, .color = { 0.0f, 1.0f, 0.0f, 1.0f } }
 		};
 		uint32_t vertexBufferSize = (uint32_t)(vertices.size() * sizeof(Vertex));
-		m_VertexBuffer = Buffer::Create(vertexBufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst);
+		m_VertexBuffer = Buffer::Create(vertexBufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
 
 		std::vector<uint16_t> indices = { 0, 1, 2, 2, 1, 3 };
 		uint32_t indexBufferSize = (uint16_t)(indices.size() * sizeof(uint16_t));
-		m_IndexBuffer = Buffer::Create(indexBufferSize, BufferUsage::IndexBuffer | BufferUsage::TransferDst);
+		m_IndexBuffer = Buffer::Create(indexBufferSize, BufferUsage::IndexBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
 
 		auto staging = Buffer::Create(vertexBufferSize + indexBufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
 		staging->SetData(vertices.data(), vertexBufferSize);
@@ -53,7 +62,7 @@ namespace GraphicsAbstraction {
 		payload.Fence->Wait();
 	}
 
-	void GradientProcedure::Process(const RenderProcedurePayload& payload)
+	void GradientProcedure::Process(RenderProcedurePayload& payload)
 	{
 		auto cmd = payload.CommandBuffer;
 

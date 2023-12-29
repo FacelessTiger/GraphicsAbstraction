@@ -10,16 +10,16 @@ namespace GraphicsAbstraction {
 
 	struct RenderProcedurePrePayload
 	{
-		std::shared_ptr<Queue> GraphicsQueue;
-		std::shared_ptr<Image> DrawImage;
-		std::shared_ptr<CommandPool> Pool;
-		std::shared_ptr<Fence> Fence;
+		Ref<Queue> GraphicsQueue;
+		Ref<Image> DrawImage;
+		Ref<CommandPool> Pool;
+		Ref<Fence> Fence;
 	};
 
 	struct RenderProcedurePayload
 	{
-		std::shared_ptr<Image> DrawImage, DepthImage;
-		std::shared_ptr<CommandBuffer> CommandBuffer;
+		Ref<Image> DrawImage, DepthImage;
+		Ref<CommandBuffer> CommandBuffer;
 		const glm::vec2& Size;
 		const glm::mat4& ViewProjection;
 	};
@@ -29,8 +29,8 @@ namespace GraphicsAbstraction {
 	public:
 		virtual ~RenderProcedure() = default;
 
-		virtual void PreProcess(const RenderProcedurePrePayload& payload) = 0;
-		virtual void Process(const RenderProcedurePayload& payload) = 0;
+		virtual void PreProcess(RenderProcedurePrePayload& payload) = 0;
+		virtual void Process(RenderProcedurePayload& payload) = 0;
 	};
 
 }

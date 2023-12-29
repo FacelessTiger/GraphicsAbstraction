@@ -15,9 +15,9 @@ namespace GraphicsAbstraction {
 		VulkanQueue(VulkanContext& context, VkQueue queue, uint32_t queueFamily);
 		virtual ~VulkanQueue() = default;
 
-		void Acquire(const std::shared_ptr<Swapchain>& swapchain, const std::shared_ptr<Fence>& fence) override;
-		void Submit(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<Fence>& wait, const std::shared_ptr<Fence>& signal) override;
-		void Present(const std::shared_ptr<Swapchain>& swapchain, const std::shared_ptr<Fence>& wait) override;
+		void Acquire(const Ref<Swapchain>& swapchain, const Ref<Fence>& fence) override;
+		void Submit(const Ref<CommandBuffer>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal) override;
+		void Present(const Ref<Swapchain>& swapchain, const Ref<Fence>& wait) override;
 	private:
 		VulkanContext& m_Context;
 	};

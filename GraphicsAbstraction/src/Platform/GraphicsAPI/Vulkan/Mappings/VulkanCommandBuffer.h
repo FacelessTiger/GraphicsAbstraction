@@ -15,16 +15,16 @@ namespace GraphicsAbstraction {
 		VulkanCommandBuffer(VkCommandBuffer buffer);
 		virtual ~VulkanCommandBuffer();
 
-		void Clear(const std::shared_ptr<Image>& image, const glm::vec4& color) override;
-		void Present(const std::shared_ptr<Swapchain>& swapchain) override;
+		void Clear(const Ref<Image>& image, const glm::vec4& color) override;
+		void Present(const Ref<Swapchain>& swapchain) override;
 		void Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ) override;
-		void CopyToBuffer(const std::shared_ptr<Buffer>& src, const std::shared_ptr<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset) override;
-		void CopyToImage(const std::shared_ptr<Buffer>& src, const std::shared_ptr<Image>& dst, uint32_t srcOffset) override;
-		void BeginRendering(const glm::vec2& region, const std::vector<std::shared_ptr<Image>>& colorAttachments, const std::shared_ptr<Image>& depthAttachment) override;
+		void CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset) override;
+		void CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset) override;
+		void BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment) override;
 		void EndRendering() override;
 
-		void BindShaders(const std::vector<std::shared_ptr<Shader>> shaderStages) override;
-		void BindIndexBuffer(const std::shared_ptr<Buffer>& buffer) override;
+		void BindShaders(const std::vector<Ref<Shader>> shaderStages) override;
+		void BindIndexBuffer(const Ref<Buffer>& buffer) override;
 		void PushConstant(const void* data, uint32_t size, uint32_t offset) override;
 
 		void SetViewport(const glm::vec2& size) override;

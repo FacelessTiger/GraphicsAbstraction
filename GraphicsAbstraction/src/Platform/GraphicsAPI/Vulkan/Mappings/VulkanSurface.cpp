@@ -6,7 +6,7 @@
 
 namespace GraphicsAbstraction {
 
-	VulkanSurface::VulkanSurface(const std::shared_ptr<Window>& window)
+	VulkanSurface::VulkanSurface(const Ref<Window>& window)
 		: m_Context(VulkanContext::GetReference())
 	{
 		glfwCreateWindowSurface(m_Context->Instance, (GLFWwindow*)window->GetNativeWindow(), nullptr, &Surface);

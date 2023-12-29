@@ -46,7 +46,7 @@ namespace GraphicsAbstraction {
 
 		void OnEvent(Event& e);
 
-		inline const std::shared_ptr<Window> GetWindow() const { return m_Window; }
+		inline const Ref<Window> GetWindow() const { return m_Window; }
 
 		inline static Application& Get() { return *s_Instance; }
 	private:
@@ -54,6 +54,7 @@ namespace GraphicsAbstraction {
 
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
+		void OnImGuiRender();
 	private:
 		static Application* s_Instance;
 
@@ -62,7 +63,7 @@ namespace GraphicsAbstraction {
 		bool m_Vsync = true;
 		double m_FrameTime = 0.0;
 
-		std::shared_ptr<Window> m_Window;
+		Ref<Window> m_Window;
 		EditorCamera m_EditorCamera;
 
 		QuadProcedure* m_QuadProcedure;

@@ -3,17 +3,18 @@
 #include <memory>
 
 #include <GraphicsAbstraction/Core/Log.h>
+#include <GraphicsAbstraction/Core/Core.h>
 
 namespace GraphicsAbstraction {
 
-	class Fence
+	class Fence : public RefCounted
 	{
 	public:
 		virtual ~Fence() = default;
 
 		virtual void Wait() = 0;
 
-		static std::shared_ptr<Fence> Create();
+		static Ref<Fence> Create();
 	};
 
 }

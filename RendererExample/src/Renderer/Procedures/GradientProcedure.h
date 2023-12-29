@@ -13,11 +13,6 @@ namespace GraphicsAbstraction {
 		glm::vec4 data2;
 	};
 
-	struct Vertex
-	{
-		glm::vec3 Position;
-	};
-
 	struct ComputePushConstant
 	{
 		uint32_t image;
@@ -30,16 +25,16 @@ namespace GraphicsAbstraction {
 		GradientProcedure() = default;
 		virtual ~GradientProcedure() = default;
 
-		void PreProcess(const RenderProcedurePrePayload& payload) override;
-		void Process(const RenderProcedurePayload& payload) override;
+		void PreProcess(RenderProcedurePrePayload& payload) override;
+		void Process(RenderProcedurePayload& payload) override;
 
 		void OnImGui();
 	private:
 		Data m_Data;
 		ComputePushConstant m_ComputePC;
 
-		std::shared_ptr<Buffer> m_Buffer, m_VertexBuffer, m_IndexBuffer;
-		std::shared_ptr<Shader> m_GradientShader, m_TriangleVertex, m_TrianglePixel;
+		Ref<Buffer> m_Buffer, m_VertexBuffer, m_IndexBuffer;
+		Ref<Shader> m_GradientShader, m_TriangleVertex, m_TrianglePixel;
 	};
 
 }

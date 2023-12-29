@@ -4,6 +4,7 @@
 #include <string>
 
 #include <GraphicsAbstraction/Core/Log.h>
+#include <GraphicsAbstraction/Core/Core.h>
 
 namespace GraphicsAbstraction {
 
@@ -18,12 +19,12 @@ namespace GraphicsAbstraction {
 		Compute
 	};
 
-	class Shader
+	class Shader : public RefCounted
 	{
 	public:
 		virtual ~Shader() = default;
 
-		static std::shared_ptr<Shader> Create(const std::string& path, ShaderStage stage);
+		static Ref<Shader> Create(const std::string& path, ShaderStage stage);
 	};
 
 }

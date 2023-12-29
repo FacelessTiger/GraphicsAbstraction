@@ -35,6 +35,7 @@ namespace GraphicsAbstraction {
 		~VulkanContextReference();
 
 		VulkanContext* operator->() { return m_Context; }
+		const VulkanContext* operator->() const { return m_Context; }
 	private:
 		VulkanContext* m_Context;
 	};
@@ -83,7 +84,7 @@ namespace GraphicsAbstraction {
 		VulkanContext(uint32_t frameInFlightCount);
 		inline void ShutdownImpl() override { m_ShutdownImplCalled = true; Destroy(); };
 
-		std::shared_ptr<Queue> GetQueueImpl(QueueType type) override;
+		Ref<Queue> GetQueueImpl(QueueType type) override;
 		inline void SetFrameInFlightImpl(uint32_t fif) override { FrameInFlight = fif; FrameDeletionQueues[FrameInFlight].Flush(); }
 
 		inline VulkanDeletionQueue& GetFrameDeletionQueue() { return FrameDeletionQueues[FrameInFlight]; }

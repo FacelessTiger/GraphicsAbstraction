@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GraphicsAbstraction/Events/Event.h>
+#include <GraphicsAbstraction/Core/Core.h>
 
 #include <string>
 #include <memory>
@@ -24,7 +25,7 @@ namespace GraphicsAbstraction {
 		{ }
 	};
 
-	class Window
+	class Window : public RefCounted
 	{
 	public:
 		using EventCallbackFn = std::function<void(Event&)>;
@@ -41,7 +42,7 @@ namespace GraphicsAbstraction {
 
 		virtual void* GetNativeWindow() const = 0;
 
-		static std::shared_ptr<Window> Create(const WindowProps& props = WindowProps());
+		static Ref<Window> Create(const WindowProps& props = WindowProps());
 	};
 
 }

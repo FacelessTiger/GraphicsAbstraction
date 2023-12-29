@@ -29,7 +29,7 @@ namespace GraphicsAbstraction {
 		VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, VkFormat imageFormat, VkImageUsageFlags usage, uint32_t width, uint32_t height);
 		virtual ~VulkanImage();
 
-		void CopyTo(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<GraphicsAbstraction::Image>& other) override;
+		void CopyTo(const Ref<CommandBuffer>& cmd, const Ref<GraphicsAbstraction::Image>& other) override;
 		void Resize(const glm::vec2& size) override;
 
 		inline uint32_t GetHandle() const override { return Handle.GetValue(); }

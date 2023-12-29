@@ -3,6 +3,7 @@
 #include <memory>
 #include <glm/glm.hpp>
 
+#include <GraphicsAbstraction/Core/Core.h>
 #include <GraphicsAbstraction/Core/Log.h>
 
 namespace GraphicsAbstraction {
@@ -30,18 +31,18 @@ namespace GraphicsAbstraction {
 	inline ImageUsage operator|(ImageUsage a, ImageUsage b) { return (ImageUsage)((int)a | (int)b); };
 	inline bool operator&(ImageUsage a, ImageUsage b) { return (int)a & (int)b; };
 
-	class Image
+	class Image : public RefCounted
 	{
 	public:
 		virtual ~Image() = default;
 
-		virtual void CopyTo(const std::shared_ptr<CommandBuffer>& cmd, const std::shared_ptr<Image>& other) = 0;
+		virtual void CopyTo(const Ref<CommandBuffer>& cmd, const Ref<Image>& other) = 0;
 		virtual void Resize(const glm::vec2& size) = 0;
 
 		virtual uint32_t GetHandle() const = 0;
 		virtual glm::vec2 GetSize() const = 0;
 
-		static std::shared_ptr<Image> Create(const glm::vec2& size, ImageFormat format, ImageUsage usage);
+		static Ref<Image> Create(const glm::vec2& size, ImageFormat format, ImageUsage usage);
 	};
 
 }

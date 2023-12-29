@@ -2,6 +2,7 @@
 
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSwapchain.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanShader.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanImage.h>
 #include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanUtils.h>
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
@@ -59,22 +60,21 @@ namespace GraphicsAbstraction {
 
 	}
 
-	void VulkanCommandBuffer::Clear(const std::shared_ptr<Image>& image, const glm::vec4& color)
+	void VulkanCommandBuffer::Clear(const Ref<Image>& image, const glm::vec4& color)
 	{
-		auto vulkanImage = std::static_pointer_cast<VulkanImage>(image);
-
-		vulkanImage->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_GENERAL);
+		auto& vulkanImage = (VulkanImage&)(*image);
+		vulkanImage.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_GENERAL);
 
 		VkClearColorValue clearValue = { { color.x, color.y, color.z, color.w } };
 		VkImageSubresourceRange clearRange = Utils::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
 
-		vkCmdClearColorImage(CommandBuffer, vulkanImage->Image.Image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+		vkCmdClearColorImage(CommandBuffer, vulkanImage.Image.Image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
 	}
 
-	void VulkanCommandBuffer::Present(const std::shared_ptr<Swapchain>& swapchain)
+	void VulkanCommandBuffer::Present(const Ref<Swapchain>& swapchain)
 	{
-		auto vulkanSwapchain = std::static_pointer_cast<VulkanSwapchain>(swapchain);
-		auto image = vulkanSwapchain->Images[vulkanSwapchain->ImageIndex];
+		auto& vulkanSwapchain = (VulkanSwapchain&)(*swapchain);
+		auto image = vulkanSwapchain.Images[vulkanSwapchain.ImageIndex];
 
 		image->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
@@ -90,25 +90,25 @@ namespace GraphicsAbstraction {
 		vkCmdDispatch(CommandBuffer, workX, workY, workZ);
 	}
 
-	void VulkanCommandBuffer::CopyToBuffer(const std::shared_ptr<Buffer>& src, const std::shared_ptr<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset)
+	void VulkanCommandBuffer::CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset)
 	{
-		auto vulkanSrc = std::static_pointer_cast<VulkanBuffer>(src);
-		auto vulkanDst = std::static_pointer_cast<VulkanBuffer>(dst);
+		auto& vulkanSrc = (VulkanBuffer&)(*src);
+		auto& vulkanDst = (VulkanBuffer&)(*dst);
 
 		VkBufferCopy copy = {
 			.srcOffset = srcOffset,
 			.dstOffset = dstOffset,
 			.size = size
 		};
-		vkCmdCopyBuffer(CommandBuffer, vulkanSrc->Buffer.Buffer, vulkanDst->Buffer.Buffer, 1, &copy);
+		vkCmdCopyBuffer(CommandBuffer, vulkanSrc.Buffer.Buffer, vulkanDst.Buffer.Buffer, 1, &copy);
 	}
 
-	void VulkanCommandBuffer::CopyToImage(const std::shared_ptr<Buffer>& src, const std::shared_ptr<Image>& dst, uint32_t srcOffset)
+	void VulkanCommandBuffer::CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset)
 	{
-		auto vulkanSrc = std::static_pointer_cast<VulkanBuffer>(src);
-		auto vulkanDst = std::static_pointer_cast<VulkanImage>(dst);
+		auto& vulkanSrc = (VulkanBuffer&)(*src);
+		auto& vulkanDst = (VulkanImage&)(*dst);
 
-		vulkanDst->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		vulkanDst.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		VkBufferImageCopy copy = {
 			.bufferOffset = srcOffset,
@@ -120,13 +120,13 @@ namespace GraphicsAbstraction {
 		copy.imageSubresource.mipLevel = 0;
 		copy.imageSubresource.baseArrayLayer = 0;
 		copy.imageSubresource.layerCount = 1;
-		copy.imageExtent = { vulkanDst->Width, vulkanDst->Height, 1 };
+		copy.imageExtent = { vulkanDst.Width, vulkanDst.Height, 1 };
 
-		vkCmdCopyBufferToImage(CommandBuffer, vulkanSrc->Buffer.Buffer, vulkanDst->Image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
-		vulkanDst->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		vkCmdCopyBufferToImage(CommandBuffer, vulkanSrc.Buffer.Buffer, vulkanDst.Image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+		vulkanDst.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
-	void VulkanCommandBuffer::BeginRendering(const glm::vec2& region, const std::vector<std::shared_ptr<Image>>& colorAttachments, const std::shared_ptr<Image>& depthAttachment)
+	void VulkanCommandBuffer::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
 	{
 		GA_PROFILE_SCOPE();
 
@@ -137,13 +137,13 @@ namespace GraphicsAbstraction {
 
 			for (int i = 0; i < colorAttachments.size(); i++)
 			{
-				auto vulkanImage = std::static_pointer_cast<VulkanImage>(colorAttachments[i]);
-				vulkanImage->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-				m_GraphicsPipelineKey.ColorAttachments[i] = vulkanImage->Format;
+				auto& vulkanImage = (VulkanImage&)(*colorAttachments[i]);
+				vulkanImage.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+				m_GraphicsPipelineKey.ColorAttachments[i] = vulkanImage.Format;
 
 				vulkanColorAttachments.push_back({
 					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-					.imageView = vulkanImage->View,
+					.imageView = vulkanImage.View,
 					.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 					.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
 					.storeOp = VK_ATTACHMENT_STORE_OP_STORE
@@ -153,13 +153,13 @@ namespace GraphicsAbstraction {
 			m_GraphicsPipelineKey.DepthAttachment = VK_FORMAT_UNDEFINED;
 			if (depthAttachment)
 			{
-				auto vulkanImage = std::static_pointer_cast<VulkanImage>(depthAttachment);
-				vulkanImage->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-				m_GraphicsPipelineKey.DepthAttachment = vulkanImage->Format;
+				auto& vulkanImage = (VulkanImage&)(*depthAttachment);
+				vulkanImage.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+				m_GraphicsPipelineKey.DepthAttachment = vulkanImage.Format;
 
 				vulkanDepthAttachment = {
 					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-					.imageView = vulkanImage->View,
+					.imageView = vulkanImage.View,
 					.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 					.storeOp = VK_ATTACHMENT_STORE_OP_STORE
@@ -199,20 +199,20 @@ namespace GraphicsAbstraction {
 
 			if (depthAttachment)
 			{
-				auto vulkanImage = std::static_pointer_cast<VulkanImage>(depthAttachment);
-				key.DepthAttachment = { vulkanImage->Format, vulkanImage->Layout, vulkanImage->Usage };
+				auto& vulkanImage = (VulkanImage&)(*depthAttachment);
+				key.DepthAttachment = { vulkanImage.Format, vulkanImage.Layout, vulkanImage.Usage };
 
-				vulkanImage->Layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-				attachmentViews.push_back(vulkanImage->View);
+				vulkanImage.Layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				attachmentViews.push_back(vulkanImage.View);
 			}
 
 			for (int i = 0; i < colorAttachments.size(); i++)
 			{
-				auto vulkanImage = std::static_pointer_cast<VulkanImage>(colorAttachments[i]);
-				key.ColorAttachments[i] = { vulkanImage->Format, vulkanImage->Layout, vulkanImage->Usage };
+				auto& vulkanImage = (VulkanImage&)(*colorAttachments[i]);
+				key.ColorAttachments[i] = { vulkanImage.Format, vulkanImage.Layout, vulkanImage.Usage };
 
-				vulkanImage->Layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-				attachmentViews.push_back(vulkanImage->View);
+				vulkanImage.Layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+				attachmentViews.push_back(vulkanImage.View);
 			}
 
 			VulkanRenderInfo info = m_Context->RenderInfoManager->GetRenderInfo(key);
@@ -248,7 +248,7 @@ namespace GraphicsAbstraction {
 		else vkCmdEndRenderPass(CommandBuffer);
 	}
 
-	void VulkanCommandBuffer::BindShaders(const std::vector<std::shared_ptr<Shader>> shaderStages)
+	void VulkanCommandBuffer::BindShaders(const std::vector<Ref<Shader>> shaderStages)
 	{
 		GA_PROFILE_SCOPE();
 
@@ -259,31 +259,31 @@ namespace GraphicsAbstraction {
 
 		for (auto& shaderStage : shaderStages)
 		{
-			auto vulkanShaderStage = std::static_pointer_cast<VulkanShader>(shaderStage);
+			auto& vulkanShaderStage = (VulkanShader&)(*shaderStage);
 			if (m_Context->ShaderObjectSupported)
 			{
-				stages.push_back(vulkanShaderStage->Stage);
-				shaders.push_back(vulkanShaderStage->ShaderObject);
+				stages.push_back(vulkanShaderStage.Stage);
+				shaders.push_back(vulkanShaderStage.ShaderObject);
 			}
 			else
 			{
-				switch (vulkanShaderStage->Stage)
+				switch (vulkanShaderStage.Stage)
 				{
 					case VK_SHADER_STAGE_VERTEX_BIT:
 					{
-						m_GraphicsPipelineKey.Shaders[0] = vulkanShaderStage->ID;
+						m_GraphicsPipelineKey.Shaders[0] = vulkanShaderStage.ID;
 						m_GraphicsPipelineStateChanged = true;
 						break;
 					}
 					case VK_SHADER_STAGE_FRAGMENT_BIT:
 					{
-						m_GraphicsPipelineKey.Shaders[4] = vulkanShaderStage->ID;
+						m_GraphicsPipelineKey.Shaders[4] = vulkanShaderStage.ID;
 						m_GraphicsPipelineStateChanged = true;
 						break;
 					}
 					case VK_SHADER_STAGE_COMPUTE_BIT:
 					{
-						m_ComputePipelineKey.Shader = vulkanShaderStage->ID;
+						m_ComputePipelineKey.Shader = vulkanShaderStage.ID;
 						m_ComputePipelineStateChanged = true;
 						break;
 					}
@@ -294,10 +294,10 @@ namespace GraphicsAbstraction {
 		if (m_Context->ShaderObjectSupported) m_Context->vkCmdBindShadersEXT(CommandBuffer, (uint32_t)shaders.size(), stages.data(), shaders.data());
 	}
 
-	void VulkanCommandBuffer::BindIndexBuffer(const std::shared_ptr<Buffer>& buffer)
+	void VulkanCommandBuffer::BindIndexBuffer(const Ref<Buffer>& buffer)
 	{
-		auto vulkanBuffer = std::static_pointer_cast<VulkanBuffer>(buffer);
-		vkCmdBindIndexBuffer(CommandBuffer, vulkanBuffer->Buffer.Buffer, 0, VK_INDEX_TYPE_UINT16);
+		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
+		vkCmdBindIndexBuffer(CommandBuffer, vulkanBuffer.Buffer.Buffer, 0, VK_INDEX_TYPE_UINT16);
 	}
 
 	void VulkanCommandBuffer::PushConstant(const void* data, uint32_t size, uint32_t offset)

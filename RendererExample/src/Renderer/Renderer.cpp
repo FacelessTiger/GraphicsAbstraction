@@ -15,8 +15,8 @@ namespace GraphicsAbstraction {
 
 	struct ImageUpload
 	{
-		std::shared_ptr<Buffer> src;
-		std::shared_ptr<Image> dst;
+		Ref<Buffer> src;
+		Ref<Image> dst;
 	};
 
 	struct RendererData
@@ -24,13 +24,14 @@ namespace GraphicsAbstraction {
 		static constexpr uint32_t FrameOverlap = 2;
 		uint32_t FrameNumber = 0;
 		glm::vec2 Size;
+		bool SeperateDisplayImage;
 
-		std::shared_ptr<Queue> GraphicsQueue;
-		std::shared_ptr<Surface> Surface;
-		std::shared_ptr<Swapchain> Swapchain;
-		std::shared_ptr<Fence> Fence;
-		std::shared_ptr<Image> DrawImage, DepthImage;
-		std::shared_ptr<CommandPool> CommandPools[FrameOverlap];
+		Ref<Queue> GraphicsQueue;
+		Ref<Surface> Surface;
+		Ref<Swapchain> Swapchain;
+		Ref<Fence> Fence;
+		Ref<Image> DrawImage, DepthImage, DisplayImage;
+		Ref<CommandPool> CommandPools[FrameOverlap];
 
 		std::vector<RenderProcedure*> RenderProcedures;
 		std::function<void()> ImGuiCallback;
@@ -40,10 +41,11 @@ namespace GraphicsAbstraction {
 
 	static RendererData* s_RendererData;
 
-	void Renderer::Init(const std::shared_ptr<Window>& window)
+	void Renderer::Init(Ref<Window>& window, bool seperateDisplayImage)
 	{
 		s_RendererData = new RendererData();
 		s_RendererData->Size = window->GetSize();
+		s_RendererData->SeperateDisplayImage = seperateDisplayImage;
 
 		GraphicsContext::Init(RendererData::FrameOverlap);
 
@@ -53,6 +55,7 @@ namespace GraphicsAbstraction {
 		s_RendererData->Fence = Fence::Create();
 		s_RendererData->DrawImage = Image::Create(s_RendererData->Size, ImageFormat::R16G16B16A16_SFLOAT, ImageUsage::Storage | ImageUsage::ColorAttachment | ImageUsage::TransferSrc | ImageUsage::TransferDst);
 		s_RendererData->DepthImage = Image::Create(s_RendererData->Size, ImageFormat::D32_SFLOAT, ImageUsage::DepthStencilAttachment);
+		if (seperateDisplayImage) s_RendererData->DisplayImage = Image::Create(s_RendererData->Size, ImageFormat::R8G8B8A8_UNORM, ImageUsage::Sampled | ImageUsage::TransferDst);
 
 		for (int i = 0; i < RendererData::FrameOverlap; i++)
 			s_RendererData->CommandPools[i] = CommandPool::Create(s_RendererData->GraphicsQueue);
@@ -82,6 +85,7 @@ namespace GraphicsAbstraction {
 
 		s_RendererData->DrawImage->Resize(s_RendererData->Size);
 		s_RendererData->DepthImage->Resize(s_RendererData->Size);
+		if (s_RendererData->SeperateDisplayImage) s_RendererData->DisplayImage->Resize(s_RendererData->Size);
 	}
 
 	void Renderer::SetVsync(bool vsync)
@@ -89,9 +93,14 @@ namespace GraphicsAbstraction {
 		s_RendererData->Swapchain->SetVsync(vsync);
 	}
 
-	void Renderer::CopyNextFrame(const std::shared_ptr<Buffer>& srcBuffer, const std::shared_ptr<Image>& dstImage)
+	void Renderer::CopyNextFrame(const Ref<Buffer>& srcBuffer, const Ref<Image>& dstImage)
 	{
 		s_RendererData->ImageUploads.push_back({ srcBuffer, dstImage });
+	}
+
+	Ref<Image> Renderer::GetDrawImage()
+	{
+		return s_RendererData->DisplayImage;
 	}
 
 	void Renderer::AddProcedure(RenderProcedure* procedure)
@@ -149,7 +158,8 @@ namespace GraphicsAbstraction {
 		for (auto* procedure : data.RenderProcedures)
 			procedure->Process(payload);
 
-		data.DrawImage->CopyTo(cmd, data.Swapchain->GetCurrent());
+		auto copyDst = data.SeperateDisplayImage ? data.DisplayImage : data.Swapchain->GetCurrent();
+		data.DrawImage->CopyTo(cmd, copyDst);
 		ImGuiLayer::DrawFrame(cmd, data.Swapchain->GetCurrent());
 
 		cmd->Present(data.Swapchain);
