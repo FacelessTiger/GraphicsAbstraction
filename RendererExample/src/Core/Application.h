@@ -61,6 +61,7 @@ namespace GraphicsAbstraction {
 		bool m_Running = true;
 		bool m_Minimized = false;
 		bool m_Vsync = true;
+		glm::vec2 m_ViewportSize;
 		double m_FrameTime = 0.0;
 
 		Ref<Window> m_Window;

@@ -25,6 +25,7 @@ namespace GraphicsAbstraction {
 		Zero,
 		One,
 		SrcAlpha,
+		DstAlpha,
 		OneMinusSrcAlpha
 	};
 

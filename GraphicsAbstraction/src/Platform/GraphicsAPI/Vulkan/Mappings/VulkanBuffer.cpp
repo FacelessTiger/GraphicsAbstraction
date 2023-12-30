@@ -21,6 +21,11 @@ namespace GraphicsAbstraction {
 
 	}
 
+	Ref<Buffer> Buffer::Create(uint32_t size, BufferUsage usage, BufferFlags flags)
+	{
+		return CreateRef<VulkanBuffer>(size, usage, flags);
+	}
+
 	VulkanBuffer::VulkanBuffer(uint32_t size, BufferUsage usage, BufferFlags flags)
 		: m_Context(VulkanContext::GetReference()), Size(size)
 	{

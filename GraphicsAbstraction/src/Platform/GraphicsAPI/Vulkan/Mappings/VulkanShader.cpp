@@ -15,7 +15,7 @@
 #include <wrl/client.h>
 #include <dxc/dxcapi.h>
 #include <spirv_cross/spirv_cross.hpp>
-#include <spirv_cross/spirv_glsl.hpp>
+#include <spirv_cross/spirv_hlsl.hpp>
 
 namespace GraphicsAbstraction {
 
@@ -88,6 +88,11 @@ namespace GraphicsAbstraction {
 			return "";
 		}
 
+	}
+
+	Ref<Shader> Shader::Create(const std::string& path, ShaderStage stage)
+	{
+		return CreateRef<VulkanShader>(path, stage);
 	}
 
 	VulkanShader::VulkanShader(const std::string& path, ShaderStage stage)

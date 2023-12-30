@@ -26,13 +26,15 @@ project "RendererExample"
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.spdlog}",
 		"%{IncludeDir.stb_image}",
-		"%{IncludeDir.glm}"
+		"%{IncludeDir.glm}",
+		"%{IncludeDir.fastgltf}"
 	}
 
 	links
 	{
 		"GLFW",
-		"GraphicsAbstraction"
+		"GraphicsAbstraction",
+		"fastgltf"
 	}
 
 	filter "configurations:Debug"

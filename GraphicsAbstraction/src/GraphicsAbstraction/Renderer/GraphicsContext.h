@@ -25,7 +25,7 @@ namespace GraphicsAbstraction {
 
 		virtual Ref<Queue> GetQueueImpl(QueueType type) = 0;
 		virtual void SetFrameInFlightImpl(uint32_t fif) = 0;
-	private:
-		static std::unique_ptr<GraphicsContext> s_Instance;
+	protected:
+		static Scope<GraphicsContext> s_Instance;
 	};
 }

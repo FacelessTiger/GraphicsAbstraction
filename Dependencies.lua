@@ -12,6 +12,7 @@ IncludeDir["tracy"] = "%{wks.location}/GraphicsAbstraction/vendor/tracy/public"
 IncludeDir["vma"] = "%{wks.location}/GraphicsAbstraction/vendor/vma/include"
 IncludeDir["DXC"] = "%{wks.location}/GraphicsAbstraction/vendor/DXC/include"
 IncludeDir["xxHash"] = "%{wks.location}/GraphicsAbstraction/vendor/xxHash"
+IncludeDir["fastgltf"] = "%{wks.location}/GraphicsAbstraction/vendor/fastgltf/include"
 
 LibraryDir = {}
 

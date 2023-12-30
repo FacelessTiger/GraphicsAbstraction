@@ -29,6 +29,7 @@ group "Dependencies"
 	include "GraphicsAbstraction/vendor/GLFW"
 	include "GraphicsAbstraction/vendor/imgui"
 	include "GraphicsAbstraction/vendor/tracy"
+	include "GraphicsAbstraction/vendor/fastgltf.lua"
 group ""
 
 group "Core"

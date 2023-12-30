@@ -8,6 +8,11 @@
 
 namespace GraphicsAbstraction {
 
+	Ref<Swapchain> Swapchain::Create(Ref<Surface>& surface, const glm::vec2& size, bool enableVSync)
+	{
+		return CreateRef<VulkanSwapchain>(surface, size, enableVSync);
+	}
+
 	VulkanSwapchain::VulkanSwapchain(Ref<Surface>& surface, const glm::vec2& size, bool enableVSync)
 		: m_Context(VulkanContext::GetReference()), m_Surface(&(VulkanSurface&)(*surface)), Width((uint32_t)size.x), Height((uint32_t)size.y), m_EnableVsync(enableVSync)
 	{

@@ -29,6 +29,7 @@ namespace GraphicsAbstraction {
 				case Blend::Zero:				return VK_BLEND_FACTOR_ZERO;
 				case Blend::One:				return VK_BLEND_FACTOR_ONE;
 				case Blend::SrcAlpha:			return VK_BLEND_FACTOR_SRC_ALPHA;
+				case Blend::DstAlpha:			return VK_BLEND_FACTOR_DST_ALPHA;
 				case Blend::OneMinusSrcAlpha:	return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 			}
 

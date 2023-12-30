@@ -20,6 +20,11 @@ namespace GraphicsAbstraction {
 
 	}
 
+	Ref<Sampler> Sampler::Create(Filter min, Filter mag)
+	{
+		return CreateRef<VulkanSampler>(min, mag);
+	}
+
 	VulkanSampler::VulkanSampler(Filter min, Filter mag)
 		: m_Context(VulkanContext::GetReference())
 	{

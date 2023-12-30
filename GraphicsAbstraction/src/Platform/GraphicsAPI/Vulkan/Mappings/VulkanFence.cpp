@@ -4,6 +4,11 @@
 
 namespace GraphicsAbstraction {
 
+	Ref<Fence> Fence::Create()
+	{
+		return CreateRef<VulkanFence>();
+	}
+
 	VulkanFence::VulkanFence()
 		: m_Context(VulkanContext::GetReference())
 	{

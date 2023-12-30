@@ -6,6 +6,11 @@
 
 namespace GraphicsAbstraction {
 
+	Ref<Surface> Surface::Create(const Ref<Window>& window)
+	{
+		return CreateRef<VulkanSurface>(window);
+	}
+
 	VulkanSurface::VulkanSurface(const Ref<Window>& window)
 		: m_Context(VulkanContext::GetReference())
 	{

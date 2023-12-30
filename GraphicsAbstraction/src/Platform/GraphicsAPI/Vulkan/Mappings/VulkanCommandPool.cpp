@@ -7,6 +7,11 @@
 
 namespace GraphicsAbstraction {
 
+	Ref<CommandPool> CommandPool::Create(const Ref<Queue>& queue)
+	{
+		return CreateRef<VulkanCommandPool>(queue);
+	}
+
 	VulkanCommandPool::VulkanCommandPool(const Ref<Queue>& queue)
 		: m_Context(VulkanContext::GetReference())
 	{

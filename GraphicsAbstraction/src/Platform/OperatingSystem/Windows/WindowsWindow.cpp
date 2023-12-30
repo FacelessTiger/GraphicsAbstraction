@@ -41,8 +41,8 @@ namespace GraphicsAbstraction {
 
 		// if requested window size is higher than monitor size then set it to monitor size - 10;
 		const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-		if (m_Data.Width > mode->width) m_Data.Width = mode->width - 10;
-		if (m_Data.Height > mode->height) m_Data.Height = mode->height - 10;
+		if (m_Data.Width > (uint32_t)mode->width) m_Data.Width = (uint32_t)mode->width - 10;
+		if (m_Data.Height > (uint32_t)mode->height) m_Data.Height = (uint32_t)mode->height - 10;
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		if (props.CustomTitlebar) glfwWindowHint(GLFW_TITLEBAR, false);

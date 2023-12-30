@@ -27,6 +27,7 @@ namespace GraphicsAbstraction {
 		static void SetVsync(bool vsync);
 
 		static void CopyNextFrame(const Ref<Buffer>& srcBuffer, const Ref<Image>& dstImage);
+		static void CopyNextFrame(const Ref<Buffer>& srcBuffer, const Ref<Buffer>& dstBuffer, uint32_t size, uint32_t srcOffset = 0, uint32_t dstOffset = 0);
 		static Ref<Image> GetDrawImage();
 	};
 

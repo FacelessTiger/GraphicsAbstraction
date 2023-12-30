@@ -3,6 +3,7 @@
 #include <Renderer/Procedures/RenderProcedure.h>
 #include <GraphicsAbstraction/Renderer/Buffer.h>
 #include <GraphicsAbstraction/Renderer/Shader.h>
+#include <Assets/ModelImporter.h>
 #include <glm/glm.hpp>
 
 namespace GraphicsAbstraction {
@@ -32,9 +33,12 @@ namespace GraphicsAbstraction {
 	private:
 		Data m_Data;
 		ComputePushConstant m_ComputePC;
+		Blend m_SrcBlend;
+		Blend m_DstBlend;
 
-		Ref<Buffer> m_Buffer, m_VertexBuffer, m_IndexBuffer;
+		Ref<Buffer> m_Buffer;
 		Ref<Shader> m_GradientShader, m_TriangleVertex, m_TrianglePixel;
+		std::vector<Mesh> m_Meshes;
 	};
 
 }

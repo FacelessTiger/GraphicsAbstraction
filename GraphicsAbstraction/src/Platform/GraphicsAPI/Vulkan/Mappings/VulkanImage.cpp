@@ -39,6 +39,11 @@ namespace GraphicsAbstraction {
 
 	}
 
+	Ref<Image> Image::Create(const glm::vec2& size, ImageFormat format, ImageUsage usage)
+	{
+		return CreateRef<VulkanImage>(size, format, usage);
+	}
+
 	VulkanImage::VulkanImage(const glm::vec2& size, ImageFormat format, ImageUsage usage)
 		: m_Context(VulkanContext::GetReference()), Layout(VK_IMAGE_LAYOUT_UNDEFINED), Width((uint32_t)size.x), Height((uint32_t)size.y), Handle((usage& ImageUsage::Sampled) ? ResourceType::SampledImage : ResourceType::StorageImage)
 	{
@@ -69,9 +74,9 @@ namespace GraphicsAbstraction {
 		TransitionLayout(vulkanCommandBuffer.CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 		vulkanImage.TransitionLayout(vulkanCommandBuffer.CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-		VkImageBlit blitRegion{};
-		blitRegion.srcOffsets[1].x = vulkanImage.Width;
-		blitRegion.srcOffsets[1].y = vulkanImage.Height;
+		VkImageBlit blitRegion = {};
+		blitRegion.srcOffsets[1].x = Width;
+		blitRegion.srcOffsets[1].y = Height;
 		blitRegion.srcOffsets[1].z = 1;
 
 		blitRegion.dstOffsets[1].x = vulkanImage.Width;

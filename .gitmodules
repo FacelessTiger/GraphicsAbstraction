@@ -16,3 +16,6 @@
 [submodule "GraphicsAbstraction/vendor/vma"]
 	path = GraphicsAbstraction/vendor/vma
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+[submodule "GraphicsAbstraction/vendor/fastgltf"]
+	path = GraphicsAbstraction/vendor/fastgltf
+	url = https://github.com/spnda/fastgltf.git

@@ -88,7 +88,7 @@ namespace GraphicsAbstraction {
 		inline void SetFrameInFlightImpl(uint32_t fif) override { FrameInFlight = fif; FrameDeletionQueues[FrameInFlight].Flush(); }
 
 		inline VulkanDeletionQueue& GetFrameDeletionQueue() { return FrameDeletionQueues[FrameInFlight]; }
-		inline static VulkanContextReference GetReference() { return VulkanContextReference(s_Instance); }
+		inline static VulkanContextReference GetReference() { return VulkanContextReference((VulkanContext*)s_Instance.get()); }
 	private:
 		void SetupInstance();
 		void SetupPhysicalDevice();
@@ -106,7 +106,6 @@ namespace GraphicsAbstraction {
 		uint32_t m_ReferenceCount = 0;
 
 		VkDescriptorPool m_BindlessPool;
-		static VulkanContext* s_Instance;
 	};
 
 }

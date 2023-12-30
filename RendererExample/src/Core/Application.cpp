@@ -34,10 +34,10 @@ namespace GraphicsAbstraction {
 		Renderer::Init(m_Window, true);
 		m_TestTexure = std::make_shared<Texture>("Assets/textures/Trickery.png");
 
-		m_QuadProcedure = new QuadProcedure();
-		//Renderer::AddProcedure(new GradientProcedure());
-		Renderer::AddProcedure(m_QuadProcedure);
-		#define DoQuad
+		//m_QuadProcedure = new QuadProcedure();
+		Renderer::AddProcedure(new GradientProcedure());
+		//Renderer::AddProcedure(m_QuadProcedure);
+		//#define DoQuad
 
 		Renderer::PreProcess();
 		Renderer::SetImGuiCallback(GA_BIND_EVENT_FN(Application::OnImGuiRender));
@@ -144,8 +144,12 @@ namespace GraphicsAbstraction {
 		ImGui::Begin("Viewport");
 
 		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
-		m_EditorCamera.SetViewportSize(viewportPanelSize.x, viewportPanelSize.y);
-		ImGui::Image((ImTextureID)Renderer::GetDrawImage()->GetHandle(), { viewportPanelSize.x, viewportPanelSize.y });
+		if (m_ViewportSize.x != viewportPanelSize.x || m_ViewportSize.y != viewportPanelSize.y)
+		{
+			m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
+			m_EditorCamera.SetViewportSize(viewportPanelSize.x, viewportPanelSize.y);
+		}
+		ImGui::Image((ImTextureID)(uint64_t)Renderer::GetDrawImage()->GetHandle(), { viewportPanelSize.x, viewportPanelSize.y });
 
 		ImGui::End();
 		ImGui::PopStyleVar();

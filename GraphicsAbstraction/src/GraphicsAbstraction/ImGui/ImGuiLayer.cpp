@@ -4,15 +4,15 @@
 #include <vulkan/vulkan.h>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <imgui.h>
-#include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_glfw.h>
 
 #include <GraphicsAbstraction/Renderer/CommandPool.h>
 #include <GraphicsAbstraction/Renderer/CommandBuffer.h>
 #include <GraphicsAbstraction/Renderer/Fence.h>
 #include <GraphicsAbstraction/Renderer/Buffer.h>
+#include <GraphicsAbstraction/Renderer/Surface.h>
 #include <GraphicsAbstraction/Renderer/Sampler.h>
+#include <GraphicsAbstraction/Renderer/Swapchain.h>
 #include <GraphicsAbstraction/Renderer/Shader.h>
 #include <GraphicsAbstraction/Renderer/Queue.h>
 #include <GraphicsAbstraction/Core/Window.h>
@@ -167,7 +167,7 @@ namespace GraphicsAbstraction {
 				if (clipMax.y > framebufferHeight) { clipMax.y = (float)framebufferHeight; }
 				if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y) continue;
 
-				pc.texture = (uint32_t)drawCmd.TextureId;
+				pc.texture = (uint32_t)(uint64_t)drawCmd.TextureId;
 				cmd->PushConstant(pc);
 
 				cmd->SetScissor({ clipMax.x - clipMin.x, clipMax.y - clipMin.y }, { clipMin.x, clipMin.y });
@@ -237,7 +237,7 @@ namespace GraphicsAbstraction {
 		queue->Submit(cmd, nullptr, fence);
 		fence->Wait();
 
-		io.Fonts->SetTexID((ImTextureID)s_Data->FontImage->GetHandle());
+		io.Fonts->SetTexID((ImTextureID)(uint64_t)s_Data->FontImage->GetHandle());
 	}
 
 }

@@ -14,7 +14,7 @@
 
 namespace GraphicsAbstraction {
 
-	VulkanContext* VulkanContext::s_Instance = nullptr;
+	Scope<GraphicsContext> GraphicsContext::s_Instance;
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 	{
@@ -28,10 +28,13 @@ namespace GraphicsAbstraction {
 		return false;
 	}
 
+	void GraphicsContext::Init(uint32_t frameInFlightCount)
+	{
+		s_Instance = CreateScope<VulkanContext>(frameInFlightCount);
+	}
+
 	VulkanContext::VulkanContext(uint32_t frameInFlightCount)
 	{
-		s_Instance = this;
-		
 		SetupInstance();
 		SetupPhysicalDevice();
 		SetupLogicalDevice();

@@ -19,6 +19,12 @@ namespace GraphicsAbstraction {
 		Ref<Image> dst;
 	};
 
+	struct BufferUpload
+	{
+		Ref<Buffer> src, dst;
+		uint32_t size, srcOffset, dstOffset;
+	};
+
 	struct RendererData
 	{
 		static constexpr uint32_t FrameOverlap = 2;
@@ -37,6 +43,7 @@ namespace GraphicsAbstraction {
 		std::function<void()> ImGuiCallback;
 
 		std::vector<ImageUpload> ImageUploads;
+		std::vector<BufferUpload> BufferUploads;
 	};
 
 	static RendererData* s_RendererData;
@@ -44,7 +51,7 @@ namespace GraphicsAbstraction {
 	void Renderer::Init(Ref<Window>& window, bool seperateDisplayImage)
 	{
 		s_RendererData = new RendererData();
-		s_RendererData->Size = window->GetSize();
+		s_RendererData->Size = { 1920, 1080 };
 		s_RendererData->SeperateDisplayImage = seperateDisplayImage;
 
 		GraphicsContext::Init(RendererData::FrameOverlap);
@@ -53,9 +60,9 @@ namespace GraphicsAbstraction {
 		s_RendererData->Surface = Surface::Create(window);
 		s_RendererData->Swapchain = Swapchain::Create(s_RendererData->Surface, window->GetSize());
 		s_RendererData->Fence = Fence::Create();
-		s_RendererData->DrawImage = Image::Create(s_RendererData->Size, ImageFormat::R16G16B16A16_SFLOAT, ImageUsage::Storage | ImageUsage::ColorAttachment | ImageUsage::TransferSrc | ImageUsage::TransferDst);
-		s_RendererData->DepthImage = Image::Create(s_RendererData->Size, ImageFormat::D32_SFLOAT, ImageUsage::DepthStencilAttachment);
-		if (seperateDisplayImage) s_RendererData->DisplayImage = Image::Create(s_RendererData->Size, ImageFormat::R8G8B8A8_UNORM, ImageUsage::Sampled | ImageUsage::TransferDst);
+		s_RendererData->DrawImage = Image::Create({ 1920, 1080 }, ImageFormat::R16G16B16A16_SFLOAT, ImageUsage::Storage | ImageUsage::ColorAttachment | ImageUsage::TransferSrc | ImageUsage::TransferDst);
+		s_RendererData->DepthImage = Image::Create({ 1920, 1080 }, ImageFormat::D32_SFLOAT, ImageUsage::DepthStencilAttachment);
+		if (seperateDisplayImage) s_RendererData->DisplayImage = Image::Create({ 1920, 1080 }, ImageFormat::R8G8B8A8_UNORM, ImageUsage::Sampled | ImageUsage::TransferDst);
 
 		for (int i = 0; i < RendererData::FrameOverlap; i++)
 			s_RendererData->CommandPools[i] = CommandPool::Create(s_RendererData->GraphicsQueue);
@@ -81,11 +88,7 @@ namespace GraphicsAbstraction {
 	void Renderer::Resize(uint32_t width, uint32_t height)
 	{
 		s_RendererData->Swapchain->Resize(width, height);
-		s_RendererData->Size = { width, height };
-
-		s_RendererData->DrawImage->Resize(s_RendererData->Size);
-		s_RendererData->DepthImage->Resize(s_RendererData->Size);
-		if (s_RendererData->SeperateDisplayImage) s_RendererData->DisplayImage->Resize(s_RendererData->Size);
+		if (!s_RendererData->SeperateDisplayImage) s_RendererData->Size = { width, height };
 	}
 
 	void Renderer::SetVsync(bool vsync)
@@ -96,6 +99,11 @@ namespace GraphicsAbstraction {
 	void Renderer::CopyNextFrame(const Ref<Buffer>& srcBuffer, const Ref<Image>& dstImage)
 	{
 		s_RendererData->ImageUploads.push_back({ srcBuffer, dstImage });
+	}
+
+	void Renderer::CopyNextFrame(const Ref<Buffer>& srcBuffer, const Ref<Buffer>& dstBuffer, uint32_t size, uint32_t srcOffset, uint32_t dstOffset)
+	{
+		s_RendererData->BufferUploads.push_back({ srcBuffer, dstBuffer, size, srcOffset, dstOffset });
 	}
 
 	Ref<Image> Renderer::GetDrawImage()
@@ -141,6 +149,10 @@ namespace GraphicsAbstraction {
 		for (auto& upload : data.ImageUploads)
 			cmd->CopyToImage(upload.src, upload.dst);
 		data.ImageUploads.clear();
+
+		for (auto& upload : data.BufferUploads)
+			cmd->CopyToBuffer(upload.src, upload.dst, upload.size, upload.srcOffset, upload.dstOffset);
+		data.BufferUploads.clear();
 
 		cmd->SetViewport(data.Size);
 		cmd->SetScissor(data.Size);

@@ -3,6 +3,7 @@
 #include <GraphicsAbstraction/Core/PlatformDetection.h>
 #include <cstdint>
 #include <utility>
+#include <memory>
 #include <type_traits>
 
 #ifndef GA_DIST
@@ -54,11 +55,28 @@ namespace GraphicsAbstraction {
 			Increment();
 		}
 
+		template<typename D>
+		Ref(const Ref<D>& other, T* pointer)
+			: m_Value(pointer)
+		{
+			Increment();
+		}
+
+		template<typename D>
+		Ref(const Ref<D>& other, const T* pointer)
+			: m_Value((T*)pointer) // TODO: basically a const_cast, very bad
+		{
+			Increment();
+		}
+
 		Ref() : m_Value(nullptr) { }
 		Ref(std::nullptr_t) : m_Value(nullptr) { }
 		Ref(const Ref& other) : m_Value(other.m_Value) { Increment(); }
 		Ref(Ref&& other) : m_Value(std::exchange(other.m_Value, nullptr)) { }
 		~Ref() { Decrement(); }
+
+		inline T* Get() { return m_Value; }
+		inline const T* Get() const { return m_Value; }
 
 		Ref& operator=(std::nullptr_t)
 		{
@@ -111,16 +129,19 @@ namespace GraphicsAbstraction {
 		T* m_Value;
 	};
 
+	template<typename T>
+	using Scope = std::unique_ptr<T>;
+
 	template<typename T, typename ... Args>
 	constexpr Ref<T> CreateRef(Args&& ... args)
 	{
 		return Ref<T>(new T(std::forward<Args>(args)...));
 	}
 
-	template<typename T, typename D>
-	constexpr Ref<D> StaticRefCast(const Ref<T>& other)
+	template<typename T, typename ... Args>
+	constexpr Scope<T> CreateScope(Args&& ... args)
 	{
-		return Ref<D>(other);
+		return std::make_unique<T>(std::forward<Args>(args)...);
 	}
 
 }
