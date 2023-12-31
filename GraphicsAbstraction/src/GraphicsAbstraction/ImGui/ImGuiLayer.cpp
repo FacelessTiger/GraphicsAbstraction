@@ -1,7 +1,6 @@
 #include "ImGuiLayer.h"
 
 #include <array>
-#include <vulkan/vulkan.h>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <backends/imgui_impl_glfw.h>

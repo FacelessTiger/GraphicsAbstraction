@@ -22,7 +22,8 @@ LibraryDir["DXC"] = "%{wks.location}/GraphicsAbstraction/vendor/DXC/lib"
 Library = {}
 
 Library["Vulkan"] = "%{LibraryDir.VulkanSDK}/vulkan-1.lib"
-Library["ShaderObjectLayer"] = "%{VULKAN_EXTENSION_LAYERS}/VkLayer_khronos_shader_object.lib"
+Library["DirectX"] = "d3d12.lib"
+Library["DXGI"] = "dxgi.lib"
 
 Library["SPIRV_Cross_Debug"] = "%{LibraryDir.VulkanSDK}/spirv-cross-cored.lib"
 Library["SPIRV_Cross_GLSL_Debug"] = "%{LibraryDir.VulkanSDK}/spirv-cross-glsld.lib"
