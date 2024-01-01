@@ -11,10 +11,11 @@ namespace GraphicsAbstraction {
 		{
 			VkBufferUsageFlags ret = 0;
 
-			if (usage & BufferUsage::StorageBuffer)	ret |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-			if (usage & BufferUsage::TransferSrc)	ret |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-			if (usage & BufferUsage::TransferDst)	ret |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-			if (usage & BufferUsage::IndexBuffer)	ret |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+			if (usage & BufferUsage::StorageBuffer)		ret |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			if (usage & BufferUsage::TransferSrc)		ret |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			if (usage & BufferUsage::TransferDst)		ret |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+			if (usage & BufferUsage::IndexBuffer)		ret |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+			if (usage & BufferUsage::IndirectBuffer)	ret |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 
 			return ret;
 		}

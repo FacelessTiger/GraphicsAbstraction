@@ -214,6 +214,9 @@ namespace GraphicsAbstraction {
 			.timelineSemaphore = true
 		});
 
+		// TEMP
+		builder.AddExtension(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+
 		builder.AddExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 		if (ShaderObjectSupported)
 		{
@@ -268,9 +271,16 @@ namespace GraphicsAbstraction {
 			builder.AddExtension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 		}
 
+		builder.AddFeature<VkPhysicalDeviceFeatures2>({
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+			.features = {
+				.multiDrawIndirect = true
+			}
+		});
+
 		VkDeviceCreateInfo createInfo = {
 			.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-			.pNext = builder.Build(),
+			.pNext = builder.GetChain(),
 			.queueCreateInfoCount = 1,
 			.pQueueCreateInfos = &queueCreateInfo,
 			.enabledExtensionCount = (uint32_t)builder.extensions.size(),

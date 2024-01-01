@@ -29,12 +29,16 @@ namespace GraphicsAbstraction {
 
 		void SetViewport(const glm::vec2& size) override;
 		void SetScissor(const glm::vec2& size, const glm::vec2& offset) override;
-		void SetDepthTest(bool testEnabled, bool writeEnabled, CompareOperation op) override;
+		void EnableDepthTest(bool writeEnabled, CompareOperation op) override;
+		void DisableDepthTest() override;
 		void EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha) override;
 		void DisableColorBlend() override;
 
 		void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) override;
 		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance) override;
+
+		void DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride) override;
+		void DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride) override;
 	private:
 		void SetColorBlend(bool enabled, VkBlendFactor srcBlend, VkBlendFactor dstBlend, VkBlendOp blendOp, VkBlendFactor srcBlendAlpha, VkBlendFactor dstBlendAlpha, VkBlendOp blendAlpha);
 		void SetDynamicState();

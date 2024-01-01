@@ -343,24 +343,38 @@ namespace GraphicsAbstraction {
 		else vkCmdSetScissor(CommandBuffer, 0, 1, &scissor);
 	}
 
-	void VulkanCommandBuffer::SetDepthTest(bool testEnabled, bool writeEnabled, CompareOperation op)
+	void VulkanCommandBuffer::EnableDepthTest(bool writeEnabled, CompareOperation op)
 	{
 		vkCmdSetDepthBounds(CommandBuffer, 0.0f, 1.0f);
 		if (m_Context->DynamicStateSupported)
 		{
-			m_Context->vkCmdSetDepthTestEnableEXT(CommandBuffer, testEnabled);
+			m_Context->vkCmdSetDepthTestEnableEXT(CommandBuffer, true);
 			m_Context->vkCmdSetDepthWriteEnableEXT(CommandBuffer, writeEnabled);
 			m_Context->vkCmdSetDepthCompareOpEXT(CommandBuffer, Utils::GACompareOpToVulkan(op));
 			m_DepthEnableSet = true;
 		}
 		else
 		{
-			m_GraphicsPipelineKey.DepthTestEnable = testEnabled;
+			m_GraphicsPipelineKey.DepthTestEnable = true;
 			m_GraphicsPipelineKey.DepthWriteEnable = writeEnabled;
 			m_GraphicsPipelineKey.DepthCompareOp = Utils::GACompareOpToVulkan(op);
 			m_GraphicsPipelineStateChanged = true;
 		}
 
+	}
+
+	void VulkanCommandBuffer::DisableDepthTest()
+	{
+		if (m_Context->DynamicRenderingSupported)
+		{
+			m_Context->vkCmdSetDepthTestEnableEXT(CommandBuffer, false);
+			m_DepthEnableSet = true;
+		}
+		else
+		{
+			m_GraphicsPipelineKey.DepthTestEnable = false;
+			m_GraphicsPipelineStateChanged = true;
+		}
 	}
 
 	void VulkanCommandBuffer::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
@@ -385,6 +399,22 @@ namespace GraphicsAbstraction {
 	{
 		SetDynamicState();
 		vkCmdDrawIndexed(CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+	}
+
+	void VulkanCommandBuffer::DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
+	{
+		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
+
+		SetDynamicState();
+		vkCmdDrawIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset, drawCount, stride);
+	}
+
+	void VulkanCommandBuffer::DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
+	{
+		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
+
+		SetDynamicState();
+		vkCmdDrawIndexedIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset, drawCount, stride);
 	}
 
 	void VulkanCommandBuffer::SetColorBlend(bool enabled, VkBlendFactor srcBlend, VkBlendFactor dstBlend, VkBlendOp blendOp, VkBlendFactor srcBlendAlpha, VkBlendFactor dstBlendAlpha, VkBlendOp blendAlpha)

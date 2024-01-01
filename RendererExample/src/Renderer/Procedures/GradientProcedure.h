@@ -36,9 +36,10 @@ namespace GraphicsAbstraction {
 		Blend m_SrcBlend;
 		Blend m_DstBlend;
 
-		Ref<Buffer> m_Buffer;
+		Ref<Buffer> m_Buffer, m_CommandBuffer, m_ModelMatrixBuffer;
 		Ref<Shader> m_GradientShader, m_TriangleVertex, m_TrianglePixel;
-		std::vector<Mesh> m_Meshes;
+		std::vector<glm::vec3> m_Positions;
+		Scene m_Scene;
 	};
 
 }

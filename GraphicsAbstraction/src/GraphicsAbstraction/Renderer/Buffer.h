@@ -12,7 +12,8 @@ namespace GraphicsAbstraction {
 		StorageBuffer = 1,
 		TransferSrc = 2,
 		TransferDst = 4,
-		IndexBuffer = 8
+		IndexBuffer = 8,
+		IndirectBuffer = 16
 	};
 
 	enum class BufferFlags : uint32_t

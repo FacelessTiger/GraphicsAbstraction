@@ -5,6 +5,8 @@
 
 #include <imgui/imgui.h>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace GraphicsAbstraction {
 
@@ -12,6 +14,7 @@ namespace GraphicsAbstraction {
 	{
 		glm::mat4 projection;
 		uint32_t vertices;
+		uint32_t modelMatrices;
 	};
 
 	void GradientProcedure::PreProcess(RenderProcedurePrePayload& payload)
@@ -27,7 +30,29 @@ namespace GraphicsAbstraction {
 
 		m_TriangleVertex = Shader::Create("Assets/shaders/triangleVertex.hlsl", ShaderStage::Vertex);
 		m_TrianglePixel = Shader::Create("Assets/shaders/trianglePixel.hlsl", ShaderStage::Pixel);
-		m_Meshes = ModelImporter::LoadModels("Assets/models/basicmesh.glb");
+		m_Scene = ModelImporter::LoadModels("Assets/models/basicmesh.glb");
+
+		m_ModelMatrixBuffer = Buffer::Create((uint32_t)(sizeof(glm::mat4) * m_Scene.Meshes.size()), BufferUsage::StorageBuffer, BufferFlags::Mapped);
+		m_CommandBuffer = Buffer::Create((uint32_t)(sizeof(DrawIndexedIndirectCommand) * m_Scene.Meshes.size()), BufferUsage::StorageBuffer | BufferUsage::IndirectBuffer, BufferFlags::Mapped);
+
+		for (uint32_t i = 0; i < m_Scene.Meshes.size(); i++)
+		{
+			Mesh& mesh = m_Scene.Meshes[i];
+
+			DrawIndexedIndirectCommand command = {
+				.IndexCount = mesh.Count,
+				.InstanceCount = 1,
+				.FirstIndex = mesh.StartIndex,
+				.VertexOffset = 0,
+				.FirstInstance = (uint32_t)i
+			};
+			m_CommandBuffer->SetData(&command, sizeof(DrawIndexedIndirectCommand), i * sizeof(DrawIndexedIndirectCommand));
+
+			m_Positions.push_back({0, 0, 0});
+			glm::mat4 rotation = glm::toMat4(glm::quat({ 0.0f, 0.0f, 0.0f }));
+			glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), { 0.0f, 0.0f, 0.0f }) * rotation * glm::scale(glm::mat4(1.0f), { 1.0f, 1.0f, 1.0f });
+			m_ModelMatrixBuffer->SetData(glm::value_ptr(modelMatrix), sizeof(glm::mat4), sizeof(glm::mat4) * i);
+		}
 	}
 
 	void GradientProcedure::Process(RenderProcedurePayload& payload)
@@ -41,12 +66,14 @@ namespace GraphicsAbstraction {
 		cmd->BindShaders({ m_TriangleVertex, m_TrianglePixel });
 		cmd->BeginRendering(payload.Size, { payload.DrawImage }, payload.DepthImage);
 
-		PushConstant pc = { payload.ViewProjection, m_Meshes[2].VertexBuffer->GetHandle() };
-		cmd->PushConstant(pc);
-		cmd->SetDepthTest(true, true, CompareOperation::GreaterEqual);
-		cmd->BindIndexBuffer(m_Meshes[2].IndexBuffer);
+		cmd->EnableDepthTest(true, CompareOperation::GreaterEqual);
 		cmd->EnableColorBlend(m_SrcBlend, m_DstBlend, BlendOp::Add, Blend::One, Blend::Zero, BlendOp::Add);
-		cmd->DrawIndexed(m_Meshes[2].Surfaces[0].Count, 1, m_Meshes[2].Surfaces[0].StartIndex, 0, 0);
+
+		PushConstant pc = { payload.ViewProjection, m_Scene.VertexBuffer->GetHandle(), m_ModelMatrixBuffer->GetHandle() };
+		cmd->PushConstant(pc);
+		cmd->BindIndexBuffer(m_Scene.IndexBuffer);
+		cmd->DrawIndexedIndirect(m_CommandBuffer, 0, (uint32_t)m_Scene.Meshes.size(), (uint32_t)sizeof(DrawIndexedIndirectCommand));
+
 		cmd->EndRendering();
 
 		OnImGui();
@@ -101,6 +128,18 @@ namespace GraphicsAbstraction {
 			ImGui::EndCombo();
 		}
 		ImGui::PopID();
+
+		for (int i = 0; i < m_Positions.size(); i++)
+		{
+			ImGui::PushID(i);
+			if (ImGui::DragFloat3("Position", glm::value_ptr(m_Positions[i])))
+			{
+				glm::mat4 rotation = glm::toMat4(glm::quat({ 0.0f, 0.0f, 0.0f }));
+				glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), m_Positions[i]) * rotation * glm::scale(glm::mat4(1.0f), { 1.0f, 1.0f, 1.0f });
+				m_ModelMatrixBuffer->SetData(glm::value_ptr(modelMatrix), sizeof(glm::mat4), sizeof(glm::mat4) * i);
+			}
+			ImGui::PopID();
+		}
 
 		ImGui::End();
 	}

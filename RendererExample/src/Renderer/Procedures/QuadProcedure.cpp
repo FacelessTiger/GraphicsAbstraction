@@ -50,7 +50,7 @@ namespace GraphicsAbstraction {
 		m_BufferIndex = 0;
 
 		cmd->BindShaders({ m_Vertex, m_Pixel });
-		cmd->SetDepthTest(true, true, CompareOperation::GreaterEqual);
+		cmd->EnableDepthTest(true, CompareOperation::GreaterEqual);
 
 		PushConstant pc = { payload.ViewProjection, m_QuadBuffer->GetHandle(), m_Sampler->GetHandle() };
 		cmd->PushConstant(pc);

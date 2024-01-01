@@ -29,13 +29,6 @@ namespace GraphicsAbstraction::Utils {
 		std::vector<const char*> extensions;
 		VkBaseInStructure* pNext = nullptr;
 
-		VulkanFeatureBuilder()
-		{
-			auto& features = deviceFeatures[VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2];
-			features = (VkBaseInStructure*)malloc(sizeof(VkPhysicalDeviceFeatures2));
-			new(features) VkPhysicalDeviceFeatures2 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-		}
-
 		~VulkanFeatureBuilder()
 		{
 			for (auto& [type, feature] : deviceFeatures)
@@ -58,13 +51,7 @@ namespace GraphicsAbstraction::Utils {
 			pNext = f;
 		}
 
-		const void* Build()
-		{
-			auto* f2 = deviceFeatures[VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2];
-			f2->pNext = pNext;
-
-			return f2;
-		}
+		const void* GetChain() { return pNext; }
 	};
 
 	VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags aspectMask);
