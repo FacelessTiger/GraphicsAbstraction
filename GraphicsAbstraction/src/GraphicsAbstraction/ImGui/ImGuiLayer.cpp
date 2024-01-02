@@ -9,7 +9,6 @@
 #include <GraphicsAbstraction/Renderer/CommandBuffer.h>
 #include <GraphicsAbstraction/Renderer/Fence.h>
 #include <GraphicsAbstraction/Renderer/Buffer.h>
-#include <GraphicsAbstraction/Renderer/Surface.h>
 #include <GraphicsAbstraction/Renderer/Sampler.h>
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
 #include <GraphicsAbstraction/Renderer/Shader.h>

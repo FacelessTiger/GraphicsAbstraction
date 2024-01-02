@@ -2,20 +2,22 @@
 
 #include <limits>
 #include <algorithm>
+#include <glfw/glfw3.h>
 
+#include <GraphicsAbstraction/Core/Window.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
-#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSurface.h>
 
 namespace GraphicsAbstraction {
 
-	Ref<Swapchain> Swapchain::Create(Ref<Surface>& surface, const glm::vec2& size, bool enableVSync)
+	Ref<Swapchain> Swapchain::Create(const Ref<Window>& window, const glm::vec2& size, bool enableVSync)
 	{
-		return CreateRef<VulkanSwapchain>(surface, size, enableVSync);
+		return CreateRef<VulkanSwapchain>(window, size, enableVSync);
 	}
 
-	VulkanSwapchain::VulkanSwapchain(Ref<Surface>& surface, const glm::vec2& size, bool enableVSync)
-		: m_Context(VulkanContext::GetReference()), m_Surface(&(VulkanSurface&)(*surface)), Width((uint32_t)size.x), Height((uint32_t)size.y), m_EnableVsync(enableVSync)
+	VulkanSwapchain::VulkanSwapchain(const Ref<Window>& window, const glm::vec2& size, bool enableVSync)
+		: m_Context(VulkanContext::GetReference()), Width((uint32_t)size.x), Height((uint32_t)size.y), m_EnableVsync(enableVSync)
 	{
+		CreateSurface(window);
 		CreateSwapchain(true);
 
 		VkSemaphoreCreateInfo semaphoreInfo = {
@@ -33,6 +35,7 @@ namespace GraphicsAbstraction {
 	VulkanSwapchain::~VulkanSwapchain()
 	{
 		m_Context->GetFrameDeletionQueue().Push(Swapchain);
+		m_Context->GetFrameDeletionQueue().Push(m_Surface);
 
 		for (auto semaphore : Semaphores)
 			m_Context->GetFrameDeletionQueue().Push(semaphore);
@@ -65,19 +68,24 @@ namespace GraphicsAbstraction {
 		Dirty = false;
 	}
 
+	void VulkanSwapchain::CreateSurface(const Ref<Window>& window)
+	{
+		glfwCreateWindowSurface(m_Context->Instance, (GLFWwindow*)window->GetNativeWindow(), nullptr, &m_Surface);
+	}
+
 	void VulkanSwapchain::CreateSwapchain(bool firstCreation)
 	{
 		if (firstCreation)
 		{
 			uint32_t formatCount;
-			vkGetPhysicalDeviceSurfaceFormatsKHR(m_Context->ChosenGPU, m_Surface->Surface, &formatCount, nullptr);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(m_Context->ChosenGPU, m_Surface, &formatCount, nullptr);
 			std::vector<VkSurfaceFormatKHR> formats(formatCount);
-			vkGetPhysicalDeviceSurfaceFormatsKHR(m_Context->ChosenGPU, m_Surface->Surface, &formatCount, formats.data());
+			vkGetPhysicalDeviceSurfaceFormatsKHR(m_Context->ChosenGPU, m_Surface, &formatCount, formats.data());
 
 			uint32_t presentModeCount;
-			vkGetPhysicalDeviceSurfacePresentModesKHR(m_Context->ChosenGPU, m_Surface->Surface, &presentModeCount, nullptr);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(m_Context->ChosenGPU, m_Surface, &presentModeCount, nullptr);
 			std::vector<VkPresentModeKHR> presentModes(presentModeCount);
-			vkGetPhysicalDeviceSurfacePresentModesKHR(m_Context->ChosenGPU, m_Surface->Surface, &presentModeCount, presentModes.data());
+			vkGetPhysicalDeviceSurfacePresentModesKHR(m_Context->ChosenGPU, m_Surface, &presentModeCount, presentModes.data());
 
 			m_ChosenSufaceFormat = ChooseSurfaceFormat(formats);
 			m_VsyncOnPresent = VK_PRESENT_MODE_FIFO_KHR; // support for this is required
@@ -85,7 +93,7 @@ namespace GraphicsAbstraction {
 		}
 
 		VkSurfaceCapabilitiesKHR capabilities;
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_Context->ChosenGPU, m_Surface->Surface, &capabilities);
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_Context->ChosenGPU, m_Surface, &capabilities);
 
 		VkExtent2D extent = ChooseSwapExtent(capabilities);
 		Width = extent.width;
@@ -97,7 +105,7 @@ namespace GraphicsAbstraction {
 		VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		VkSwapchainCreateInfoKHR createInfo = {
 			.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-			.surface = m_Surface->Surface,
+			.surface = m_Surface,
 			.minImageCount = imageCount,
 			.imageFormat = m_ChosenSufaceFormat.format,
 			.imageColorSpace = m_ChosenSufaceFormat.colorSpace,

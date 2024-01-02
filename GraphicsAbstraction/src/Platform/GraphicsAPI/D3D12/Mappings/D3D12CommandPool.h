@@ -4,15 +4,26 @@
 #include <GraphicsAbstraction/Renderer/CommandBuffer.h>
 #include <GraphicsAbstraction/Renderer/Queue.h>
 
+#include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Context.h>
+
+#include <d3d12.h>
+#include <dxgi1_6.h>
+#include <wrl.h>
+
 namespace GraphicsAbstraction {
 
 	class D3D12CommandPool : public CommandPool
 	{
 	public:
-		D3D12CommandPool(const Ref<Queue>& queue) { }
+		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> Allocator;
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> MainCommandList;
+	public:
+		D3D12CommandPool(const Ref<Queue>& queue);
 
-		void Reset() override { }
-		Ref<CommandBuffer> Begin() const override { return nullptr; }
+		CommandPool* Reset() override;
+		Ref<CommandBuffer> Begin() const override;
+	private:
+		D3D12Context& m_Context;
 	};
 
 }

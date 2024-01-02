@@ -41,9 +41,10 @@ namespace GraphicsAbstraction {
 		m_Context->GetFrameDeletionQueue().Push(CommandPool);
 	}
 
-	void VulkanCommandPool::Reset()
+	CommandPool* VulkanCommandPool::Reset()
 	{
 		vkResetCommandPool(m_Context->Device, CommandPool, 0);
+		return this;
 	}
 
 	Ref<CommandBuffer> VulkanCommandPool::Begin() const

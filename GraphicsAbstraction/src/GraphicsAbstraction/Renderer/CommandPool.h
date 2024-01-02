@@ -16,7 +16,7 @@ namespace GraphicsAbstraction {
 	public:
 		virtual ~CommandPool() = default;
 
-		virtual void Reset() = 0;
+		virtual CommandPool* Reset() = 0;
 		virtual Ref<CommandBuffer> Begin() const = 0;
 
 		static Ref<CommandPool> Create(const Ref<Queue>& queue);

@@ -29,13 +29,16 @@ namespace GraphicsAbstraction {
 	{
 	public:
 		Microsoft::WRL::ComPtr<ID3D12Device2> Device;
-		DWORD DebugCallbackCookie;
+
+		Microsoft::WRL::ComPtr<ID3D12CommandQueue> GraphicsQueue;
 	public:
 		D3D12Context(uint32_t frameInFlightCount);
 		void ShutdownImpl() override { };
 
-		Ref<Queue> GetQueueImpl(QueueType type) override { return nullptr; }
+		Ref<Queue> GetQueueImpl(QueueType type) override;
 		void SetFrameInFlightImpl(uint32_t fif) override { };
+
+		inline static D3D12Context& GetReference() { return (D3D12Context&)*s_Instance; }
 	private:
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> SetupAdapter();
 		void SetupDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);

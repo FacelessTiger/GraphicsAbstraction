@@ -1,7 +1,6 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/GraphicsContext.h>
-#include <GraphicsAbstraction/Renderer/Surface.h>
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
 #include <GraphicsAbstraction/Renderer/CommandPool.h>
 #include <GraphicsAbstraction/Renderer/CommandBuffer.h>

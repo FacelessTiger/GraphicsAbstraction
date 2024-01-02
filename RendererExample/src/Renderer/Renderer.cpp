@@ -3,7 +3,6 @@
 #include <GraphicsAbstraction/Renderer/GraphicsContext.h>
 #include <GraphicsAbstraction/ImGui/ImGuiLayer.h>
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
-#include <GraphicsAbstraction/Renderer/Surface.h>
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
 #include <GraphicsAbstraction/Renderer/CommandBuffer.h>
 #include <GraphicsAbstraction/Renderer/Buffer.h>
@@ -33,7 +32,6 @@ namespace GraphicsAbstraction {
 		bool SeperateDisplayImage;
 
 		Ref<Queue> GraphicsQueue;
-		Ref<Surface> Surface;
 		Ref<Swapchain> Swapchain;
 		Ref<Fence> Fence;
 		Ref<Image> DrawImage, DepthImage, DisplayImage;
@@ -57,8 +55,7 @@ namespace GraphicsAbstraction {
 		GraphicsContext::Init(RendererData::FrameOverlap);
 
 		s_RendererData->GraphicsQueue = GraphicsContext::GetQueue(QueueType::Graphics);
-		s_RendererData->Surface = Surface::Create(window);
-		s_RendererData->Swapchain = Swapchain::Create(s_RendererData->Surface, window->GetSize());
+		s_RendererData->Swapchain = Swapchain::Create(window, window->GetSize());
 		s_RendererData->Fence = Fence::Create();
 		s_RendererData->DrawImage = Image::Create({ 1920, 1080 }, ImageFormat::R16G16B16A16_SFLOAT, ImageUsage::Storage | ImageUsage::ColorAttachment | ImageUsage::TransferSrc | ImageUsage::TransferDst);
 		s_RendererData->DepthImage = Image::Create({ 1920, 1080 }, ImageFormat::D32_SFLOAT, ImageUsage::DepthStencilAttachment);

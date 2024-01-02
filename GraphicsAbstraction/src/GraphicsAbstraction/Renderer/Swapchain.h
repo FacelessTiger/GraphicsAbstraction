@@ -9,7 +9,7 @@
 namespace GraphicsAbstraction {
 
 	class GraphicsContext;
-	class Surface;
+	class Window;
 	class Image;
 
 	class Swapchain : public RefCounted
@@ -22,7 +22,7 @@ namespace GraphicsAbstraction {
 
 		virtual Ref<Image> GetCurrent() = 0;
 
-		static Ref<Swapchain> Create(Ref<Surface>& surface, const glm::vec2& size, bool enableVSync = true);
+		static Ref<Swapchain> Create(const Ref<Window>& window, const glm::vec2& size, bool enableVSync = true);
 	};
 
 }

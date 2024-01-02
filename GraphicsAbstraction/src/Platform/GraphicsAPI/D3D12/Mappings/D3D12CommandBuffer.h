@@ -1,19 +1,28 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/CommandBuffer.h>
+#include <GraphicsAbstraction/Renderer/Shader.h>
+
+#include <d3d12.h>
+#include <dxgi1_6.h>
+#include <wrl.h>
 
 namespace GraphicsAbstraction {
 
 	class D3D12CommandBuffer : public CommandBuffer
 	{
 	public:
-		void Clear(const Ref<Image>& image, const glm::vec4& color) override { }
-		void Present(const Ref<Swapchain>& swapchain) override { }
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandList;
+	public:
+		D3D12CommandBuffer(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
+
+		void Clear(const Ref<Image>& image, const glm::vec4& color) override;
+		void Present(const Ref<Swapchain>& swapchain) override;
 		void Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ) { }
 		void CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset = 0, uint32_t dstOffset = 0) { }
 		void CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset = 0) { }
 		void BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment = nullptr) { }
-		void EndRendering() = 0;
+		void EndRendering() { }
 
 		void BindShaders(const std::vector<Ref<Shader>> shaderStages) { }
 		void BindIndexBuffer(const Ref<Buffer>& buffer) { }
