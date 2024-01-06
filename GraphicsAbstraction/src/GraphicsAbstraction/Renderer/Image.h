@@ -13,13 +13,16 @@ namespace GraphicsAbstraction {
 
 	enum class ImageFormat
 	{
+		Unknown = 0,
 		R16G16B16A16_SFLOAT,
 		R8G8B8A8_UNORM,
+		B8G8R8A8_SRGB,
 		D32_SFLOAT
 	};
 
 	enum class ImageUsage : uint32_t
 	{
+		None = 0,
 		ColorAttachment = 1,
 		DepthStencilAttachment = 2,
 		TransferSrc = 4,
@@ -29,6 +32,7 @@ namespace GraphicsAbstraction {
 	};
 
 	inline ImageUsage operator|(ImageUsage a, ImageUsage b) { return (ImageUsage)((int)a | (int)b); };
+	inline ImageUsage& operator|=(ImageUsage& a, ImageUsage b) { return a = a | b; };
 	inline bool operator&(ImageUsage a, ImageUsage b) { return (int)a & (int)b; };
 
 	class Image : public RefCounted

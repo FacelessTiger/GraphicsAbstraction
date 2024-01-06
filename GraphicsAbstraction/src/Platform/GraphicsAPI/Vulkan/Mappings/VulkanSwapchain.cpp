@@ -5,6 +5,7 @@
 #include <glfw/glfw3.h>
 
 #include <GraphicsAbstraction/Core/Window.h>
+#include <GraphicsAbstraction/Renderer/Image.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 
 namespace GraphicsAbstraction {
@@ -151,7 +152,7 @@ namespace GraphicsAbstraction {
 			VkImageView view;
 			VK_CHECK(vkCreateImageView(m_Context->Device, &imageViewInfo, nullptr, &view));
 
-			Images.push_back(CreateRef<VulkanImage>(vulkanImages[i], view, VK_IMAGE_LAYOUT_UNDEFINED, ImageFormat, usageFlags, Width, Height));
+			Images.push_back(CreateRef<VulkanImage>(vulkanImages[i], view, VK_IMAGE_LAYOUT_UNDEFINED, Utils::VulkanImageFormatToGA(ImageFormat), Utils::VulkanImageUsageToGA(usageFlags), Width, Height));
 		}
 	}
 

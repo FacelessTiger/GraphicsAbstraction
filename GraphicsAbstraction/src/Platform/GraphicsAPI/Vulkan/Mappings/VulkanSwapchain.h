@@ -39,7 +39,7 @@ namespace GraphicsAbstraction {
 		VkPresentModeKHR ChooseVsyncOffPresent(const std::vector<VkPresentModeKHR>& presentModes);
 		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 	private:
-		VulkanContextReference m_Context;
+		Ref<VulkanContext> m_Context;
 		VkSurfaceKHR m_Surface;
 		bool m_EnableVsync;
 

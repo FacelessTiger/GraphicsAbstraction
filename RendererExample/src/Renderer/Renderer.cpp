@@ -74,7 +74,6 @@ namespace GraphicsAbstraction {
 		delete s_RendererData;
 
 		ImGuiLayer::Shutdown();
-		GraphicsContext::Shutdown();
 	}
 
 	void Renderer::SetImGuiCallback(std::function<void()> callback)

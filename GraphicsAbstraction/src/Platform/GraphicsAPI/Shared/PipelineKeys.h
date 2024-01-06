@@ -1,11 +1,13 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <xxhash.h>
 
 #include <vector>
 #include <array>
 #include <unordered_map>
+
+#include <GraphicsAbstraction/Renderer/Image.h>
+#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
 
 #define GA_PIPELINE_EQUALITY(name) bool operator==(const name& other) const = default
 #define GA_PIPELINE_HASH(name)															\
@@ -16,49 +18,50 @@
 		{																				\
 			return (std::size_t)XXH64(&key, sizeof(GraphicsAbstraction::name), 0);		\
 		}																				\
-	}	
+	}
 
 namespace GraphicsAbstraction {
 
-	struct VulkanGraphicsPipelineKey
+	struct GraphicsPipelineKey
 	{
 		// attachments/shaders
 		std::array<uint32_t, 5> Shaders = {};
-		std::array<VkFormat, 8> ColorAttachments = {};
-		VkFormat DepthAttachment = VK_FORMAT_UNDEFINED;
+		std::array<ImageFormat, 8> ColorAttachments = {};
+		ImageFormat DepthAttachment = ImageFormat::Unknown;
 
 		// depth test
 		bool DepthTestEnable = false;
 		bool DepthWriteEnable = false;
-		VkCompareOp DepthCompareOp = VK_COMPARE_OP_NEVER;
+		CompareOperation DepthCompareOp = CompareOperation::Never;
 
 		// color blending
 		bool BlendEnable = false;
-		VkBlendFactor SrcBlend = VK_BLEND_FACTOR_ZERO;
-		VkBlendFactor DstBlend = VK_BLEND_FACTOR_ZERO;
-		VkBlendFactor SrcBlendAlpha = VK_BLEND_FACTOR_ZERO;
-		VkBlendFactor DstBlendAlpha = VK_BLEND_FACTOR_ZERO;
-		VkBlendOp BlendOp = VK_BLEND_OP_ADD;
-		VkBlendOp BlendOpAlpha = VK_BLEND_OP_ADD;
+		Blend SrcBlend = Blend::Zero;
+		Blend DstBlend = Blend::Zero;
+		Blend SrcBlendAlpha = Blend::Zero;
+		Blend DstBlendAlpha = Blend::Zero;
+		BlendOp BlendOpAlpha = BlendOp::Add;
+		BlendOp BlendOp = BlendOp::Add;
 
-		VkRenderPass Renderpass = 0;
+		// vulkan specific
+		void* Renderpass = nullptr;
 
-		GA_PIPELINE_EQUALITY(VulkanGraphicsPipelineKey);
+		GA_PIPELINE_EQUALITY(GraphicsPipelineKey);
 	};
 
-	struct VulkanComputePipelineKey
+	struct ComputePipelineKey
 	{
 		uint32_t Shader = 0;
 
-		GA_PIPELINE_EQUALITY(VulkanComputePipelineKey);
+		GA_PIPELINE_EQUALITY(ComputePipelineKey);
 	};
 
 }
 
 namespace std {
 
-	GA_PIPELINE_HASH(VulkanGraphicsPipelineKey);
-	GA_PIPELINE_HASH(VulkanComputePipelineKey);
+	GA_PIPELINE_HASH(GraphicsPipelineKey);
+	GA_PIPELINE_HASH(ComputePipelineKey);
 
 }
 

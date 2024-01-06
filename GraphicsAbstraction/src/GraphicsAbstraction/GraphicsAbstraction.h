@@ -15,3 +15,5 @@
 #include <GraphicsAbstraction/Renderer/Sampler.h>
 #include <GraphicsAbstraction/Renderer/Shader.h>
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
+
+#include <GraphicsAbstraction/Events/ApplicationEvent.h>

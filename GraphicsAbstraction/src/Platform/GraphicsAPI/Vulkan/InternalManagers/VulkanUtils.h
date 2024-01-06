@@ -8,6 +8,9 @@
 #include <vector>
 #include <string>
 
+#include <GraphicsAbstraction/Renderer/Image.h>
+#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
+
 namespace GraphicsAbstraction::Utils {
 
 	struct AllocatedImage
@@ -68,5 +71,14 @@ namespace GraphicsAbstraction::Utils {
 	};
 
 	VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags aspectMask);
+
+	VkCompareOp GACompareOpToVulkan(CompareOperation op);
+	VkBlendFactor GABlendToVulkan(Blend blend);
+	VkBlendOp GABlendOpToVulkan(BlendOp blendOp);
+	VkFormat GAImageFormatToVulkan(ImageFormat format);
+	VkImageUsageFlags GAImageUsageToVulkan(ImageUsage usage);
+
+	ImageFormat VulkanImageFormatToGA(VkFormat format);
+	ImageUsage VulkanImageUsageToGA(VkImageUsageFlags usage);
 
 }

@@ -1,12 +1,16 @@
 #include "D3D12Context.h"
 
 #include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Queue.h>
+#include <d3dx12/d3dx12.h>
+
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 611; }
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
 
 namespace GraphicsAbstraction {
 
 	using namespace Microsoft::WRL;
 
-	Scope<GraphicsContext> GraphicsContext::s_Instance;
+	Ref<GraphicsContext> GraphicsContext::s_Instance;
 
 	// TODO: DOESNT DO ANYTHING CAUSE DIRECTX SUCKS GRRRRRR
 	static void debugCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR pDescription, void* pContext)
@@ -19,7 +23,7 @@ namespace GraphicsAbstraction {
 
 	void GraphicsContext::Init(uint32_t frameInFlightCount)
 	{
-		s_Instance = CreateScope<D3D12Context>(frameInFlightCount);
+		s_Instance = CreateRef<D3D12Context>(frameInFlightCount);
 	}
 
 	D3D12Context::D3D12Context(uint32_t frameInFlightCount)
@@ -32,6 +36,14 @@ namespace GraphicsAbstraction {
 
 		auto adapter = SetupAdapter();
 		SetupDevice(adapter);
+		SetupBindless();
+
+		PipelineManager = new D3D12PipelineManager(*this);
+	}
+
+	D3D12Context::~D3D12Context()
+	{
+		delete PipelineManager;
 	}
 
 	Ref<Queue> D3D12Context::GetQueueImpl(QueueType type)
@@ -101,6 +113,25 @@ namespace GraphicsAbstraction {
 			.Type = D3D12_COMMAND_LIST_TYPE_DIRECT
 		};
 		D3D12_CHECK(Device->CreateCommandQueue(&graphicsQueueDesc, IID_PPV_ARGS(&GraphicsQueue)));
+	}
+
+	void D3D12Context::SetupBindless()
+	{
+		CD3DX12_ROOT_PARAMETER1 pushConstant;
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC descVersion;
+		pushConstant.InitAsConstants(128 / 4, 0);
+		descVersion.Init_1_1(1, &pushConstant, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED);
+
+		ComPtr<ID3DBlob> signature, error;
+		D3D12_CHECK(D3DX12SerializeVersionedRootSignature(&descVersion, D3D_ROOT_SIGNATURE_VERSION_1_1, &signature, &error));
+		D3D12_CHECK(Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&BindlessRootSignature)));
+
+		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {
+			.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+			.NumDescriptors = 1'000'000,
+			.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+		};
+		D3D12_CHECK(Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&BindlessDescriptorHeap)));
 	}
 
 }

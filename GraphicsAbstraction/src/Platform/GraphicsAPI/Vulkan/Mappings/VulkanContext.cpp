@@ -14,7 +14,7 @@
 
 namespace GraphicsAbstraction {
 
-	Scope<GraphicsContext> GraphicsContext::s_Instance;
+	Ref<GraphicsContext> GraphicsContext::s_Instance;
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 	{
@@ -30,7 +30,7 @@ namespace GraphicsAbstraction {
 
 	void GraphicsContext::Init(uint32_t frameInFlightCount)
 	{
-		s_Instance = CreateScope<VulkanContext>(frameInFlightCount);
+		s_Instance = CreateRef<VulkanContext>(frameInFlightCount);
 	}
 
 	VulkanContext::VulkanContext(uint32_t frameInFlightCount)
@@ -57,6 +57,26 @@ namespace GraphicsAbstraction {
 		FrameDeletionQueues.resize(frameInFlightCount, *this);
 		if (!ShaderObjectSupported) PipelineManager = new VulkanPipelineManager(*this);
 		if (!DynamicRenderingSupported) RenderInfoManager = new VulkanRenderInfoManager(*this);
+	}
+
+	VulkanContext::~VulkanContext()
+	{
+		vkDeviceWaitIdle(Device);
+
+		for (auto& deletionQueue : FrameDeletionQueues)
+			deletionQueue.Flush();
+		if (!ShaderObjectSupported) delete PipelineManager;
+		if (!DynamicRenderingSupported) delete RenderInfoManager;
+
+		vkDestroyDescriptorPool(Device, m_BindlessPool, nullptr);
+		vkDestroyDescriptorSetLayout(Device, BindlessSetLayout, nullptr);
+		vkDestroyPipelineLayout(Device, BindlessPipelineLayout, nullptr);
+
+		vmaDestroyAllocator(Allocator);
+
+		vkDestroyDevice(Device, nullptr);
+		vkDestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
+		vkDestroyInstance(Instance, nullptr);
 	}
 
 	Ref<GraphicsAbstraction::Queue> VulkanContext::GetQueueImpl(QueueType type)
@@ -363,47 +383,6 @@ namespace GraphicsAbstraction {
 			.pPushConstantRanges = PushConstantRanges.data()
 		};
 		VK_CHECK(vkCreatePipelineLayout(Device, &pipelineInfo, nullptr, &BindlessPipelineLayout));
-	}
-
-	void VulkanContext::Destroy()
-	{
-		if (m_ReferenceCount != 0) return;
-		if (!m_ShutdownImplCalled) return;
-
-		vkDeviceWaitIdle(Device);
-
-		for (auto& deletionQueue : FrameDeletionQueues)
-			deletionQueue.Flush();
-		if (!ShaderObjectSupported) delete PipelineManager;
-		if (!DynamicRenderingSupported) delete RenderInfoManager;
-
-		vkDestroyDescriptorPool(Device, m_BindlessPool, nullptr);
-		vkDestroyDescriptorSetLayout(Device, BindlessSetLayout, nullptr);
-		vkDestroyPipelineLayout(Device, BindlessPipelineLayout, nullptr);
-
-		vmaDestroyAllocator(Allocator);
-
-		vkDestroyDevice(Device, nullptr);
-		vkDestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
-		vkDestroyInstance(Instance, nullptr);
-	}
-
-	VulkanContextReference::VulkanContextReference(const VulkanContextReference& other)
-	{
-		m_Context = other.m_Context;
-		m_Context->m_ReferenceCount++;
-	}
-
-	VulkanContextReference::VulkanContextReference(VulkanContext* context)
-		: m_Context(context)
-	{
-		m_Context->m_ReferenceCount++;
-	}
-
-	VulkanContextReference::~VulkanContextReference()
-	{
-		m_Context->m_ReferenceCount--;
-		m_Context->Destroy();
 	}
 
 }

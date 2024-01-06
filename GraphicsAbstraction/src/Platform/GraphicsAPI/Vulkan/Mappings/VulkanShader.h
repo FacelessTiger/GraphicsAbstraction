@@ -31,7 +31,7 @@ namespace GraphicsAbstraction {
 
 		void Reflect(const std::vector<uint32_t>& data);
 	private:
-		VulkanContextReference m_Context;
+		Ref<VulkanContext> m_Context;
 		std::string m_Path;
 	};
 

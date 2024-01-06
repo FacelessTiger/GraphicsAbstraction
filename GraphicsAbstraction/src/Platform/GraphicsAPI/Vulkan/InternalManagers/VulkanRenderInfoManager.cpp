@@ -33,16 +33,16 @@ namespace GraphicsAbstraction {
 			attachments.reserve(key.ColorAttachments.size());
 			colorReferences.reserve(key.ColorAttachments.size());
 
-			bool depthExists = (key.DepthAttachment.Format != VK_FORMAT_UNDEFINED);
+			bool depthExists = (key.DepthAttachment.Format != ImageFormat::Unknown);
 			if (depthExists)
 			{
 				attachments.push_back({
-					.format = key.DepthAttachment.Format,
+					.format = Utils::GAImageFormatToVulkan(key.DepthAttachment.Format),
 					.samples = VK_SAMPLE_COUNT_1_BIT,
 					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 					.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 					.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-					});
+				});
 
 				depthReference = {
 					.attachment = 0,
@@ -53,11 +53,11 @@ namespace GraphicsAbstraction {
 			for (uint32_t i = 0; i < key.ColorAttachments.size(); i++)
 			{
 				const auto& colorAttachment = key.ColorAttachments[i];
-				if (colorAttachment.Format == VK_FORMAT_UNDEFINED) break;
+				if (colorAttachment.Format == ImageFormat::Unknown) break;
 
 				VkAttachmentLoadOp loadOp = colorAttachment.InitialLayout ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				attachments.push_back({
-					.format = colorAttachment.Format,
+					.format = Utils::GAImageFormatToVulkan(colorAttachment.Format),
 					.samples = VK_SAMPLE_COUNT_1_BIT,
 					.loadOp = loadOp,
 					.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -95,35 +95,41 @@ namespace GraphicsAbstraction {
 		else
 		{
 			std::vector<VkFramebufferAttachmentImageInfo> framebufferAttachments;
+			std::vector<VkFormat> colorFormats;
+			VkFormat depthFormat;
+
 			framebufferAttachments.reserve(key.ColorAttachments.size());
 
-			bool depthExists = (key.DepthAttachment.Format != VK_FORMAT_UNDEFINED);
+			bool depthExists = (key.DepthAttachment.Format != ImageFormat::Unknown);
 			if (depthExists)
 			{
+				depthFormat = Utils::GAImageFormatToVulkan(key.DepthAttachment.Format);
+
 				framebufferAttachments.push_back(VkFramebufferAttachmentImageInfo{
 					.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_ATTACHMENT_IMAGE_INFO,
-					.usage = key.DepthAttachment.Usage,
+					.usage = Utils::GAImageUsageToVulkan(key.DepthAttachment.Usage),
 					.width = key.Width,
 					.height = key.Height,
 					.layerCount = 1,
 					.viewFormatCount = 1,
-					.pViewFormats = &key.DepthAttachment.Format
-					});
+					.pViewFormats = &depthFormat
+				});
 			}
 
 			for (uint32_t i = 0; i < key.ColorAttachments.size(); i++)
 			{
 				const auto& colorAttachment = key.ColorAttachments[i];
-				if (colorAttachment.Format == VK_FORMAT_UNDEFINED) break;
+				if (colorAttachment.Format == ImageFormat::Unknown) break;
 
+				colorFormats.push_back(Utils::GAImageFormatToVulkan(colorAttachment.Format));
 				framebufferAttachments.push_back(VkFramebufferAttachmentImageInfo{
 					.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_ATTACHMENT_IMAGE_INFO,
-					.usage = colorAttachment.Usage,
+					.usage = Utils::GAImageUsageToVulkan(colorAttachment.Usage),
 					.width = key.Width,
 					.height = key.Height,
 					.layerCount = 1,
 					.viewFormatCount = 1,
-					.pViewFormats = &colorAttachment.Format
+					.pViewFormats = &colorFormats.back()
 				});
 			}
 

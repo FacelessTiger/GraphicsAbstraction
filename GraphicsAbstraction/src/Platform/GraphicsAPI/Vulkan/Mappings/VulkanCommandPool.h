@@ -19,7 +19,7 @@ namespace GraphicsAbstraction {
 		GraphicsAbstraction::CommandPool* Reset() override;
 		Ref<CommandBuffer> Begin() const override;
 	private:
-		VulkanContextReference m_Context;
+		Ref<VulkanContext> m_Context;
 	};
 
 }

@@ -10,32 +10,7 @@ namespace GraphicsAbstraction {
 
 	namespace Utils {
 
-		VkFormat GAImageFormatToVulkan(ImageFormat format)
-		{
-			switch (format)
-			{
-				case ImageFormat::R16G16B16A16_SFLOAT:	return VK_FORMAT_R16G16B16A16_SFLOAT;
-				case ImageFormat::R8G8B8A8_UNORM:		return VK_FORMAT_R8G8B8A8_UNORM;
-				case ImageFormat::D32_SFLOAT:			return VK_FORMAT_D32_SFLOAT;
-			}
-
-			GA_CORE_ASSERT(false, "Unknown image format!");
-			return (VkFormat)0;
-		}
-
-		VkImageUsageFlags GAImageUsageToVulkan(ImageUsage usage)
-		{
-			VkImageUsageFlags ret = 0;
-
-			if (usage & ImageUsage::ColorAttachment)		ret |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-			if (usage & ImageUsage::DepthStencilAttachment)	ret |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-			if (usage & ImageUsage::TransferSrc)			ret |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-			if (usage & ImageUsage::TransferDst)			ret |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-			if (usage & ImageUsage::Storage)				ret |= VK_IMAGE_USAGE_STORAGE_BIT;
-			if (usage & ImageUsage::Sampled)				ret |= VK_IMAGE_USAGE_SAMPLED_BIT;
-
-			return ret;
-		}
+		
 
 	}
 
@@ -45,15 +20,12 @@ namespace GraphicsAbstraction {
 	}
 
 	VulkanImage::VulkanImage(const glm::vec2& size, ImageFormat format, ImageUsage usage)
-		: m_Context(VulkanContext::GetReference()), Layout(VK_IMAGE_LAYOUT_UNDEFINED), Width((uint32_t)size.x), Height((uint32_t)size.y), Handle((usage& ImageUsage::Sampled) ? ResourceType::SampledImage : ResourceType::StorageImage)
+		: m_Context(VulkanContext::GetReference()), Layout(VK_IMAGE_LAYOUT_UNDEFINED), Format(format), Usage(usage), Width((uint32_t)size.x), Height((uint32_t)size.y), Handle((usage& ImageUsage::Sampled) ? ResourceType::SampledImage : ResourceType::StorageImage)
 	{
-		Format = Utils::GAImageFormatToVulkan(format);
-		Usage = Utils::GAImageUsageToVulkan(usage);
-
 		Create();
 	}
 
-	VulkanImage::VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, VkFormat imageFormat, VkImageUsageFlags usage, uint32_t width, uint32_t height)
+	VulkanImage::VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, ImageFormat imageFormat, ImageUsage usage, uint32_t width, uint32_t height)
 		: m_Context(VulkanContext::GetReference()), View(imageView), Layout(imageLayout), Format(imageFormat), Usage(usage), Width(width), Height(height), m_ExternalAllocation(true), Handle(ResourceType::StorageImage)
 	{
 		Image.Image = image;
@@ -111,11 +83,13 @@ namespace GraphicsAbstraction {
 
 	void VulkanImage::Create()
 	{
+		VkFormat vulkanFormat = Utils::GAImageFormatToVulkan(Format);
+
 		VkImageCreateInfo imageInfo = {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 			.imageType = VK_IMAGE_TYPE_2D, // TODO: specify somehow
 
-			.format = Format,
+			.format = vulkanFormat,
 			.extent = { Width, Height, 1 },
 
 			.mipLevels = 1,
@@ -123,7 +97,7 @@ namespace GraphicsAbstraction {
 			.samples = VK_SAMPLE_COUNT_1_BIT,
 
 			.tiling = VK_IMAGE_TILING_OPTIMAL,
-			.usage = Usage
+			.usage = Utils::GAImageUsageToVulkan(Usage)
 		};
 
 		VmaAllocationCreateInfo imgAllocInfo = {
@@ -132,7 +106,7 @@ namespace GraphicsAbstraction {
 		vmaCreateImage(m_Context->Allocator, &imageInfo, &imgAllocInfo, &Image.Image, &Image.Allocation, nullptr);
 
 		VkImageSubresourceRange range = {
-			.aspectMask = (VkImageAspectFlags)((Usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT),
+			.aspectMask = (VkImageAspectFlags)((Usage & ImageUsage::DepthStencilAttachment) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT),
 			.baseMipLevel = 0,
 			.levelCount = 1,
 			.baseArrayLayer = 0,
@@ -142,7 +116,7 @@ namespace GraphicsAbstraction {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			.image = Image.Image,
 			.viewType = VK_IMAGE_VIEW_TYPE_2D, // TODO: specify, will be the same as image type above
-			.format = Format,
+			.format = vulkanFormat,
 			.subresourceRange = range
 		};
 		VK_CHECK(vkCreateImageView(m_Context->Device, &imageViewInfo, nullptr, &View));
@@ -159,7 +133,7 @@ namespace GraphicsAbstraction {
 
 	void VulkanImage::UpdateDescriptor()
 	{
-		if (Usage & VK_IMAGE_USAGE_STORAGE_BIT)
+		if (Usage & ImageUsage::Storage)
 		{
 			VkDescriptorImageInfo imageInfo = {
 				.imageView = View,
@@ -178,7 +152,7 @@ namespace GraphicsAbstraction {
 
 			vkUpdateDescriptorSets(m_Context->Device, 1, &write, 0, nullptr);
 		}
-		else if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT)
+		else if (Usage & ImageUsage::Sampled)
 		{
 			VkDescriptorImageInfo imageInfo = {
 				.imageView = View,

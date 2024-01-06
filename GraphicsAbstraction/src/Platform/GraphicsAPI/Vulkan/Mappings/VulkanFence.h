@@ -19,7 +19,7 @@ namespace GraphicsAbstraction {
 
 		void Wait() override;
 	private:
-		VulkanContextReference m_Context;
+		Ref<VulkanContext> m_Context;
 	};
 
 }

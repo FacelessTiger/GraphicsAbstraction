@@ -19,7 +19,7 @@ namespace GraphicsAbstraction {
 
 		inline uint32_t GetHandle() const override { return Handle.GetValue(); }
 	private:
-		VulkanContextReference m_Context;
+		Ref<VulkanContext> m_Context;
 	};
 
 }

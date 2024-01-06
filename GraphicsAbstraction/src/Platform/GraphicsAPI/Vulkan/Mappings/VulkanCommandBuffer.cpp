@@ -8,48 +8,6 @@
 
 namespace GraphicsAbstraction {
 
-	namespace Utils {
-
-		VkCompareOp GACompareOpToVulkan(CompareOperation op)
-		{
-			switch (op)
-			{
-				case CompareOperation::GreaterEqual:	return VK_COMPARE_OP_GREATER_OR_EQUAL;
-				case CompareOperation::LesserEqual:		return VK_COMPARE_OP_LESS_OR_EQUAL;
-			}
-
-			GA_CORE_ASSERT(false, "Unknown compare operation!");
-			return (VkCompareOp)0;
-		}
-
-		VkBlendFactor GABlendToVulkan(Blend blend)
-		{
-			switch (blend)
-			{
-				case Blend::Zero:				return VK_BLEND_FACTOR_ZERO;
-				case Blend::One:				return VK_BLEND_FACTOR_ONE;
-				case Blend::SrcAlpha:			return VK_BLEND_FACTOR_SRC_ALPHA;
-				case Blend::DstAlpha:			return VK_BLEND_FACTOR_DST_ALPHA;
-				case Blend::OneMinusSrcAlpha:	return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			}
-
-			GA_CORE_ASSERT(false, "Unknown blend factor!");
-			return (VkBlendFactor)0;
-		}
-
-		VkBlendOp GABlendOpToVulkan(BlendOp blendOp)
-		{
-			switch (blendOp)
-			{
-				case BlendOp::Add: return VK_BLEND_OP_ADD;
-			}
-
-			GA_CORE_ASSERT(false, "Unknown blend operation!");
-			return (VkBlendOp)0;
-		}
-
-	}
-
 	VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBuffer buffer)
 		: m_Context(VulkanContext::GetReference()), CommandBuffer(buffer)
 	{
@@ -151,7 +109,7 @@ namespace GraphicsAbstraction {
 				});
 			}
 
-			m_GraphicsPipelineKey.DepthAttachment = VK_FORMAT_UNDEFINED;
+			m_GraphicsPipelineKey.DepthAttachment = ImageFormat::Unknown;
 			if (depthAttachment)
 			{
 				auto& vulkanImage = (VulkanImage&)(*depthAttachment);
@@ -357,7 +315,7 @@ namespace GraphicsAbstraction {
 		{
 			m_GraphicsPipelineKey.DepthTestEnable = testEnabled;
 			m_GraphicsPipelineKey.DepthWriteEnable = writeEnabled;
-			m_GraphicsPipelineKey.DepthCompareOp = Utils::GACompareOpToVulkan(op);
+			m_GraphicsPipelineKey.DepthCompareOp = op;
 			m_GraphicsPipelineStateChanged = true;
 		}
 
@@ -365,14 +323,12 @@ namespace GraphicsAbstraction {
 
 	void VulkanCommandBuffer::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
 	{
-		SetColorBlend(true,		Utils::GABlendToVulkan(srcBlend), Utils::GABlendToVulkan(dstBlend), Utils::GABlendOpToVulkan(blendOp), 
-								Utils::GABlendToVulkan(srcBlendAlpha), Utils::GABlendToVulkan(dstBlendAlpha), Utils::GABlendOpToVulkan(blendAlpha));
+		SetColorBlend(true,	srcBlend, dstBlend, blendOp, srcBlendAlpha, dstBlendAlpha, blendAlpha);
 	}
 
 	void VulkanCommandBuffer::DisableColorBlend()
 	{
-		SetColorBlend(false,	VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
-								VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD);
+		SetColorBlend(false, Blend::Zero, Blend::Zero, BlendOp::Add, Blend::Zero, Blend::Zero, BlendOp::Add);
 	}
 
 	void VulkanCommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -387,18 +343,18 @@ namespace GraphicsAbstraction {
 		vkCmdDrawIndexed(CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
-	void VulkanCommandBuffer::SetColorBlend(bool enabled, VkBlendFactor srcBlend, VkBlendFactor dstBlend, VkBlendOp blendOp, VkBlendFactor srcBlendAlpha, VkBlendFactor dstBlendAlpha, VkBlendOp blendAlpha)
+	void VulkanCommandBuffer::SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
 	{
 		if (m_Context->DynamicState3Supported)
 		{
 			VkBool32 enable = enabled;
 			VkColorBlendEquationEXT equation = {
-				.srcColorBlendFactor = srcBlend,
-				.dstColorBlendFactor = dstBlend,
-				.colorBlendOp = blendOp,
-				.srcAlphaBlendFactor = srcBlendAlpha,
-				.dstAlphaBlendFactor = dstBlendAlpha,
-				.alphaBlendOp = blendAlpha
+				.srcColorBlendFactor = Utils::GABlendToVulkan(srcBlend),
+				.dstColorBlendFactor = Utils::GABlendToVulkan(dstBlend),
+				.colorBlendOp = Utils::GABlendOpToVulkan(blendOp),
+				.srcAlphaBlendFactor = Utils::GABlendToVulkan(srcBlendAlpha),
+				.dstAlphaBlendFactor = Utils::GABlendToVulkan(dstBlendAlpha),
+				.alphaBlendOp = Utils::GABlendOpToVulkan(blendAlpha)
 			};
 
 			m_Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, 0, 1, &enable);
@@ -453,6 +409,7 @@ namespace GraphicsAbstraction {
 			{
 				m_Context->vkCmdSetDepthTestEnableEXT(CommandBuffer, false);
 				m_Context->vkCmdSetDepthWriteEnableEXT(CommandBuffer, false);
+				m_Context->vkCmdSetDepthCompareOpEXT(CommandBuffer, VK_COMPARE_OP_NEVER);
 			}
 
 			m_Context->vkCmdSetDepthBoundsTestEnableEXT(CommandBuffer, false);

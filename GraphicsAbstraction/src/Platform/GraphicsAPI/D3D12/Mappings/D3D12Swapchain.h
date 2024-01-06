@@ -20,19 +20,24 @@ namespace GraphicsAbstraction {
 		std::vector<Ref<D3D12Image>> Images;
 
 		uint32_t ImageIndex = 0;
+		bool Dirty = false;
 
 		uint32_t Width, Height;
 		bool Vsync;
 	public:
 		D3D12Swapchain(const Ref<Window>& window, const glm::vec2& size, bool enableVSync);
 
-		void Resize(uint32_t width, uint32_t height) override { }
+		void Resize(uint32_t width, uint32_t height) override;
 		void SetVsync(bool enabled) override { Vsync = enabled; }
 
 		Ref<Image> GetCurrent() override { return Images[ImageIndex]; }
+
+		void ResizeImpl();
 	private:
 		void CreateSwapchain(HWND hwnd);
 		bool CheckTearingSupport();
+
+		void UpdateRenderTargetViews();
 	private:
 		D3D12Context& m_Context;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RTVHeap;

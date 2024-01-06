@@ -15,6 +15,8 @@ project "GraphicsAbstraction"
 	{
 		"src/GraphicsAbstraction/**.h",
 		"src/GraphicsAbstraction/**.cpp",
+		"src/Platform/Shared/**.h",
+		"src/Platform/Shared/**.cpp",
 		"vendor/stb_image/**.h",
 		"vendor/stb_image/**.cpp",
 		"vendor/glm/glm/**.hpp",
@@ -80,7 +82,8 @@ project "GraphicsAbstraction"
 
 		includedirs
 		{
-			"%{IncludeDir.DXC}"
+			"%{IncludeDir.DXC}",
+			"%{IncludeDir.AgilitySDK}"
 		}
 
 		links

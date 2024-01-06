@@ -22,6 +22,16 @@ namespace GraphicsAbstraction {
 	{
 		auto& d3d12Swapchain = (D3D12Swapchain&)*swapchain;
 		auto& d3d12Fence = (D3D12Fence&)*fence;
+
+		if (d3d12Swapchain.Dirty)
+		{
+			// flush gpu events
+			D3D12_CHECK(Queue->Signal(d3d12Fence.Fence.Get(), ++d3d12Fence.Value));
+			d3d12Fence.Wait();
+
+			// do resize
+			d3d12Swapchain.ResizeImpl();
+		}
 		
 		d3d12Swapchain.ImageIndex = d3d12Swapchain.Swapchain->GetCurrentBackBufferIndex();
 		D3D12_CHECK(Queue->Signal(d3d12Fence.Fence.Get(), ++d3d12Fence.Value));
@@ -34,12 +44,12 @@ namespace GraphicsAbstraction {
 		auto& d3d12Signal = (D3D12Fence&)*signal;
 
 		d3d12Cmd.CommandList->Close();
-		D3D12_CHECK(Queue->Wait(d3d12Wait.Fence.Get(), d3d12Wait.Value));
+		if (wait) D3D12_CHECK(Queue->Wait(d3d12Wait.Fence.Get(), d3d12Wait.Value));
 
 		ID3D12CommandList* list = d3d12Cmd.CommandList.Get();
 		Queue->ExecuteCommandLists(1, &list);
 
-		D3D12_CHECK(Queue->Signal(d3d12Signal.Fence.Get(), ++d3d12Signal.Value));
+		if (signal) D3D12_CHECK(Queue->Signal(d3d12Signal.Fence.Get(), ++d3d12Signal.Value));
 	}
 
 	void D3D12Queue::Present(const Ref<Swapchain>& swapchain, const Ref<Fence>& wait)

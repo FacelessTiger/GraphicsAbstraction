@@ -1,10 +1,12 @@
 #include "D3D12Swapchain.h"
 
 #include <GraphicsAbstraction/Core/Window.h>
+#include <Platform/GraphicsAPI/D3D12/InternalManagers/D3D12Utils.h>
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <glfw/glfw3.h>
 #include <GLFW/glfw3native.h>
+#include <d3dx12/d3dx12.h>
 
 namespace GraphicsAbstraction {
 
@@ -19,6 +21,42 @@ namespace GraphicsAbstraction {
 		: m_Context(D3D12Context::GetReference()), Width((uint32_t)size.x), Height((uint32_t)size.y), Vsync(enableVSync)
 	{
 		CreateSwapchain(glfwGetWin32Window((GLFWwindow*)window->GetNativeWindow()));
+	}
+
+	void D3D12Swapchain::Resize(uint32_t width, uint32_t height)
+	{
+		Width = width;
+		Height = height;
+		Dirty = true;
+	}
+
+	void D3D12Swapchain::UpdateRenderTargetViews()
+	{
+		auto descriptorSize = m_Context.Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		auto rtvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_RTVHeap->GetCPUDescriptorHandleForHeapStart());
+
+		Images.clear();
+		for (int i = 0; i < 2; i++)
+		{
+			ComPtr<ID3D12Resource> backBuffer;
+			D3D12_CHECK(Swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+
+			m_Context.Device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+			Images.push_back(CreateRef<D3D12Image>(backBuffer, D3D12_RESOURCE_STATE_PRESENT, ImageFormat::R8G8B8A8_UNORM, rtvHandle));
+			rtvHandle.Offset(1, descriptorSize);
+		}
+	}
+
+	void D3D12Swapchain::ResizeImpl()
+	{
+		for (int i = 0; i < Images.size(); i++) Images[i]->Image.Reset();
+
+		DXGI_SWAP_CHAIN_DESC swapchainDesc = {};
+		D3D12_CHECK(Swapchain->GetDesc(&swapchainDesc));
+		D3D12_CHECK(Swapchain->ResizeBuffers(2, Width, Height, swapchainDesc.BufferDesc.Format, swapchainDesc.Flags));
+
+		UpdateRenderTargetViews();
+		Dirty = false;
 	}
 
 	void D3D12Swapchain::CreateSwapchain(HWND hwnd)
@@ -59,19 +97,7 @@ namespace GraphicsAbstraction {
 		};
 		D3D12_CHECK(m_Context.Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_RTVHeap)));
 
-		// Create render target views
-		auto descriptorSize = m_Context.Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		auto rtvHandle = m_RTVHeap->GetCPUDescriptorHandleForHeapStart();
-
-		for (int i = 0; i < 2; i++)
-		{
-			ComPtr<ID3D12Resource> backBuffer;
-			D3D12_CHECK(Swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
-
-			m_Context.Device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
-			Images.push_back(CreateRef<D3D12Image>(backBuffer, D3D12_RESOURCE_STATE_PRESENT, rtvHandle));
-			rtvHandle.ptr += descriptorSize;
-		}
+		UpdateRenderTargetViews();
 	}
 
 	bool D3D12Swapchain::CheckTearingSupport()

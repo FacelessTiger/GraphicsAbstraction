@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GraphicsAbstraction/Renderer/GraphicsContext.h>
+#include <Platform/GraphicsAPI/D3D12/InternalManagers/D3D12PipelineManager.h>
 
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -29,11 +30,15 @@ namespace GraphicsAbstraction {
 	{
 	public:
 		Microsoft::WRL::ComPtr<ID3D12Device2> Device;
-
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> GraphicsQueue;
+
+		Microsoft::WRL::ComPtr<ID3D12RootSignature> BindlessRootSignature;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> BindlessDescriptorHeap;
+
+		D3D12PipelineManager* PipelineManager;
 	public:
 		D3D12Context(uint32_t frameInFlightCount);
-		void ShutdownImpl() override { };
+		~D3D12Context();
 
 		Ref<Queue> GetQueueImpl(QueueType type) override;
 		void SetFrameInFlightImpl(uint32_t fif) override { };
@@ -42,6 +47,7 @@ namespace GraphicsAbstraction {
 	private:
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> SetupAdapter();
 		void SetupDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
+		void SetupBindless();
 	};
 
 }

@@ -16,6 +16,7 @@ namespace GraphicsAbstraction {
 
 	enum class CompareOperation
 	{
+		Never = 0,
 		GreaterEqual,
 		LesserEqual
 	};

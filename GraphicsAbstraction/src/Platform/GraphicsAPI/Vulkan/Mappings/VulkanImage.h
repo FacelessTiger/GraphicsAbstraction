@@ -17,8 +17,8 @@ namespace GraphicsAbstraction {
 		Utils::AllocatedImage Image;
 		VkImageView View;
 		VkImageLayout Layout;
-		VkFormat Format;
-		VkImageUsageFlags Usage;
+		ImageFormat Format;
+		ImageUsage Usage;
 
 		uint32_t Width;
 		uint32_t Height;
@@ -26,7 +26,7 @@ namespace GraphicsAbstraction {
 		VulkanResourceHandle Handle;
 	public:
 		VulkanImage(const glm::vec2& size, ImageFormat format, ImageUsage usage);
-		VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, VkFormat imageFormat, VkImageUsageFlags usage, uint32_t width, uint32_t height);
+		VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, ImageFormat imageFormat, ImageUsage usage, uint32_t width, uint32_t height);
 		virtual ~VulkanImage();
 
 		void CopyTo(const Ref<CommandBuffer>& cmd, const Ref<GraphicsAbstraction::Image>& other) override;
@@ -42,7 +42,7 @@ namespace GraphicsAbstraction {
 
 		void UpdateDescriptor();
 	private:
-		VulkanContextReference m_Context;
+		Ref<VulkanContext> m_Context;
 		bool m_ExternalAllocation = false;
 	};
 
