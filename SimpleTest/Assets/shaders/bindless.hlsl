@@ -13,13 +13,20 @@ struct RenderResourceHandle
 
 struct ArrayBuffer
 {
-	RenderResourceHandle handle;
+	uint index;
+
+	static ArrayBuffer Create(uint index)
+	{
+		ArrayBuffer ret;
+		ret.index = index;
+		return ret;
+	}
 
 	template <typename ReadStructure>
 	ReadStructure Load(uint index, uint size = 0)
 	{
 		uint byteSize = size ? size : sizeof(ReadStructure);
-		ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.handle.index);
+		ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.index);
 		ReadStructure result = buffer.Load<ReadStructure>(byteSize * index);
 
 		return result;
@@ -28,32 +35,34 @@ struct ArrayBuffer
 
 struct SimpleBuffer
 {
-	RenderResourceHandle handle;
+	uint index;
 
 	template <typename ReadStructure>
 	ReadStructure Load()
 	{
-		ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.handle.index);
+		ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.index);
 		ReadStructure result = buffer.Load<ReadStructure>(0);
 
 		return result;
 	}
 };
 
-/*struct Sampler
-{
-	RenderResourceHandle handle;
-};
-
 struct Texture
 {
-	RenderResourceHandle handle;
+	uint index;
+
+	static Texture Create(uint index)
+	{
+		Texture ret;
+		ret.index = index;
+		return ret;
+	}
 
 	template <typename TextureValue>
-	TextureValue Sample2D(Sampler s, float2 uv)
+	TextureValue Sample2D(uint s, float2 uv)
 	{
-		Texture2D<TextureValue> texture = DESCRIPTOR_HEAP(Texture2DHandle<TextureValue>, this.handle.index);
-		SamplerState sampler = DESCRIPTOR_HEAP(SamplerHandle, s.handle.index);
+		Texture2D<TextureValue> texture = DESCRIPTOR_HEAP(Texture2DHandle<TextureValue>, this.index);
+		SamplerState sampler = SAMPLER_HEAP(s);
 
 		return texture.Sample(sampler, uv);
 	}
@@ -61,12 +70,12 @@ struct Texture
 
 struct RwTexture
 {
-	RenderResourceHandle handle;
+	uint index;
 
 	template <typename RWTextureValue>
 	int2 GetDimensions()
 	{
-		RWTexture2D<RWTextureValue> texture = DESCRIPTOR_HEAP(RWTexture2DHandle<RWTextureValue>, this.handle.index);
+		RWTexture2D<RWTextureValue> texture = DESCRIPTOR_HEAP(RWTexture2DHandle<RWTextureValue>, this.index);
 
 		int2 size;
 		texture.GetDimensions(size.x, size.y);
@@ -76,10 +85,10 @@ struct RwTexture
 	template <typename RWTextureValue>
 	void store2D(uint2 pos, RWTextureValue value)
 	{
-		RWTexture2D<RWTextureValue> texture = DESCRIPTOR_HEAP(RWTexture2DHandle<RWTextureValue>, this.handle.index);
+		RWTexture2D<RWTextureValue> texture = DESCRIPTOR_HEAP(RWTexture2DHandle<RWTextureValue>, this.index);
 		texture[pos] = value;
 	}
-};*/
+};
 
 float4 UnpackUnorm4x8(uint value)
 {

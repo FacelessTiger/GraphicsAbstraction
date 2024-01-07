@@ -1,6 +1,21 @@
 #include "bindless.hlsl"
 
-float4 main(): SV_Target
+struct PushConstant
 {
-	return float4(1.0f, 0.0f, 0.0f, 1.0f);
+	float4x4 projection;
+	uint vertices;
+	uint image;
+	uint sampler;
+};
+PushConstant(PushConstant, pushConstants);
+
+struct VertexInput
+{
+	float4 position: SV_Position;
+	float2 uv: TEXCOORD0;
+};
+
+float4 main(VertexInput input): SV_Target
+{
+	return Texture::Create(pushConstants.image).Sample2D<float4>(pushConstants.sampler, input.uv);
 }

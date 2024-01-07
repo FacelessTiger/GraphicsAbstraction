@@ -23,6 +23,32 @@ namespace GraphicsAbstraction {
 			return D3D12_COMPARISON_FUNC_NEVER;
 		}
 
+		D3D12_BLEND GABlendToD3D12(Blend blend)
+		{
+			switch (blend)
+			{
+				case Blend::Zero:				return D3D12_BLEND_ZERO;
+				case Blend::One:				return D3D12_BLEND_ONE;
+				case Blend::SrcAlpha:			return D3D12_BLEND_SRC_ALPHA;
+				case Blend::DstAlpha:			return D3D12_BLEND_DEST_ALPHA;
+				case Blend::OneMinusSrcAlpha:	return D3D12_BLEND_INV_SRC_ALPHA;
+			}
+
+			GA_CORE_ASSERT(false, "Unknown blend!");
+			return D3D12_BLEND_ZERO;
+		}
+
+		D3D12_BLEND_OP GABlendOpToD3D12(BlendOp op)
+		{
+			switch (op)
+			{
+				case BlendOp::Add: return D3D12_BLEND_OP_ADD;
+			}
+
+			GA_CORE_ASSERT(false, "Unknown blend op!");
+			return D3D12_BLEND_OP_ADD;
+		}
+
 	}
 
 	using namespace Microsoft::WRL;
@@ -57,11 +83,22 @@ namespace GraphicsAbstraction {
 				.DepthFunc = Utils::GACompareOpToD3D12(key.DepthCompareOp)
 			},
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-			.DSVFormat = DXGI_FORMAT_D32_FLOAT,
+			.DSVFormat = Utils::GAImageFormatToD3D12(key.DepthAttachment),
 			.SampleDesc = {
 				.Count = 1,
 				.Quality = 0
 			},
+		};
+
+		D3D12_RENDER_TARGET_BLEND_DESC blendDesc = {
+			.BlendEnable = key.BlendEnable,
+			.SrcBlend = Utils::GABlendToD3D12(key.SrcBlend),
+			.DestBlend = Utils::GABlendToD3D12(key.DstBlend),
+			.BlendOp = Utils::GABlendOpToD3D12(key.BlendOp),
+			.SrcBlendAlpha = Utils::GABlendToD3D12(key.SrcBlendAlpha),
+			.DestBlendAlpha = Utils::GABlendToD3D12(key.DstBlendAlpha),
+			.BlendOpAlpha = Utils::GABlendOpToD3D12(key.BlendOpAlpha),
+			.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL
 		};
 
 		for (int i = 0; i < key.ColorAttachments.size(); i++)
@@ -69,7 +106,7 @@ namespace GraphicsAbstraction {
 			if (key.ColorAttachments[i] == ImageFormat::Unknown) break;
 
 			desc.RTVFormats[i] = Utils::GAImageFormatToD3D12(key.ColorAttachments[i]);
-			desc.BlendState.RenderTarget[i].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+			desc.BlendState.RenderTarget[i] = blendDesc;
 			desc.NumRenderTargets++;
 		}
 

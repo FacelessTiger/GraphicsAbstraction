@@ -120,7 +120,7 @@ namespace GraphicsAbstraction {
 		CD3DX12_ROOT_PARAMETER1 pushConstant;
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC descVersion;
 		pushConstant.InitAsConstants(128 / 4, 0);
-		descVersion.Init_1_1(1, &pushConstant, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED);
+		descVersion.Init_1_1(1, &pushConstant, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED | D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED);
 
 		ComPtr<ID3DBlob> signature, error;
 		D3D12_CHECK(D3DX12SerializeVersionedRootSignature(&descVersion, D3D_ROOT_SIGNATURE_VERSION_1_1, &signature, &error));
@@ -132,6 +132,10 @@ namespace GraphicsAbstraction {
 			.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 		};
 		D3D12_CHECK(Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&BindlessDescriptorHeap)));
+
+		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+		heapDesc.NumDescriptors = 2000;
+		D3D12_CHECK(Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&BindlessSamplerHeap)));
 	}
 
 }

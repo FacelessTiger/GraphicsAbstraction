@@ -31,9 +31,9 @@ namespace GraphicsAbstraction {
 
 	Ref<CommandBuffer> D3D12CommandPool::Begin() const
 	{
-		auto descriptorHeap = m_Context.BindlessDescriptorHeap.Get();
+		ID3D12DescriptorHeap* descriptorHeap[2] = { m_Context.BindlessDescriptorHeap.Get(), m_Context.BindlessSamplerHeap.Get() };
 		MainCommandList->SetGraphicsRootSignature(m_Context.BindlessRootSignature.Get());
-		MainCommandList->SetDescriptorHeaps(1, &descriptorHeap);
+		MainCommandList->SetDescriptorHeaps(2, descriptorHeap);
 
 		return CreateRef<D3D12CommandBuffer>(MainCommandList);
 	}

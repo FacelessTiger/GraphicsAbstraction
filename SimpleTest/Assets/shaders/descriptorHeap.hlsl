@@ -20,7 +20,6 @@
     [[vk::binding(1, 0)]] SamplerState g_SamplerState[];
 
     struct ByteBufferHandle { uint internalIndex; };
-    struct SamplerHandle { uint internalIndex; };
 
     template <typename T> struct Texture2DHandle { uint internalIndex; };
     template <typename T> struct RWTexture2DHandle { uint internalIndex; };
@@ -41,7 +40,6 @@
     struct VulkanResourceDescriptorHeapInternal
     {
     	ByteAddressBuffer operator[](ByteBufferHandle identifier) { return g_ByteAddressBuffer[NonUniformResourceIndex(identifier.internalIndex)]; }
-        SamplerState operator[](SamplerHandle identifier) { return g_SamplerState[NonUniformResourceIndex(identifier.internalIndex)]; }
 
     	TEXTURE_TYPE_TEMPLATE_SPECIALIZATION_DECL_MULTI(Texture2D)
         TEXTURE_TYPE_TEMPLATE_SPECIALIZATION_DECL_MULTI(RWTexture2D)
@@ -49,6 +47,8 @@
 
     static VulkanResourceDescriptorHeapInternal VkResourceDescriptorHeap;
     #define DESCRIPTOR_HEAP(handleType, handle) VkResourceDescriptorHeap[(handleType)handle]
+    #define SAMPLER_HEAP(handle) g_SamplerState[NonUniformResourceIndex(handle)]
 #else
-    #define DESCRIPTOR_HEAP(handleType, handle) ResourceDescriptorHeap[handle]
+    #define DESCRIPTOR_HEAP(handleType, handle) ResourceDescriptorHeap[NonUniformResourceIndex(handle)]
+    #define SAMPLER_HEAP(handle) SamplerDescriptorHeap[NonUniformResourceIndex(handle)]
 #endif

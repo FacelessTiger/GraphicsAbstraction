@@ -31,7 +31,8 @@ namespace GraphicsAbstraction {
 		Ref<Swapchain> m_Swapchain;
 		Ref<Queue> m_Queue;
 		Ref<Fence> m_Fence;
-		Ref<Image> m_DepthImage;
+		Ref<Image> m_DepthImage, m_Image;
+		Ref<Sampler> m_Sampler;
 		Ref<CommandPool> m_CommandPools[2];
 		Ref<Shader> m_VertexShader, m_PixelShader;
 		Ref<Buffer> m_VertexBuffer, m_IndexBuffer;

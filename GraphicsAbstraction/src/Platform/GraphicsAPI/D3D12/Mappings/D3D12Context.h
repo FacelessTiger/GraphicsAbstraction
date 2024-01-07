@@ -33,7 +33,7 @@ namespace GraphicsAbstraction {
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> GraphicsQueue;
 
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> BindlessRootSignature;
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> BindlessDescriptorHeap;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> BindlessDescriptorHeap, BindlessSamplerHeap;
 
 		D3D12PipelineManager* PipelineManager;
 	public:

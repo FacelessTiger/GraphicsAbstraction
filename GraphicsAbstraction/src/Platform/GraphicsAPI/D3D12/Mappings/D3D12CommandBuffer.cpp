@@ -4,6 +4,7 @@
 #include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Buffer.h>
 #include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Swapchain.h>
 #include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Shader.h>
+#include <Platform/GraphicsAPI/D3D12/InternalManagers/D3D12Utils.h>
 #include <d3dx12/d3dx12.h>
 
 #include <glm/gtc/type_ptr.hpp>
@@ -18,10 +19,10 @@ namespace GraphicsAbstraction {
 
 	void D3D12CommandBuffer::Clear(const Ref<Image>&image, const glm::vec4& color)
 	{
-		auto& vulkanImage = (D3D12Image&)*image;
+		auto& d3d12Image = (D3D12Image&)*image;
 
-		vulkanImage.TransitionState(CommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		CommandList->ClearRenderTargetView(vulkanImage.CpuHandle, glm::value_ptr(color), 0, nullptr);
+		d3d12Image.TransitionState(CommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		CommandList->ClearRenderTargetView(d3d12Image.CpuHandle, glm::value_ptr(color), 0, nullptr);
 	}
 
 	void D3D12CommandBuffer::Present(const Ref<Swapchain>& swapchain)
@@ -40,16 +41,52 @@ namespace GraphicsAbstraction {
 		CommandList->CopyBufferRegion(dstBuffer.Resource.Get(), dstOffset, srcBuffer.Resource.Get(), srcOffset, size);
 	}
 
+	void D3D12CommandBuffer::CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset)
+	{
+		auto& d3d12Buffer = (D3D12Buffer&)*src;
+		auto& d3d12Image = (D3D12Image&)*dst;
+
+		d3d12Image.TransitionState(CommandList, D3D12_RESOURCE_STATE_COPY_DEST);
+		
+		uint32_t bpp = 32; // TODO: make a utility function to calculate this off of format
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT placed = {
+			.Offset = srcOffset,
+			.Footprint = {
+				.Format = Utils::GAImageFormatToD3D12(d3d12Image.Format),
+				.Width = d3d12Image.Width,
+				.Height = d3d12Image.Height,
+				.Depth = 1,
+				.RowPitch = (d3d12Image.Width * 32 + 7) / 8
+			}
+		};
+
+		auto srcCopy = CD3DX12_TEXTURE_COPY_LOCATION(d3d12Buffer.Resource.Get(), placed);
+		auto dstCopy = CD3DX12_TEXTURE_COPY_LOCATION(d3d12Image.Image.Get(), 0);
+		
+		CommandList->CopyTextureRegion(&dstCopy, 0, 0, 0, &srcCopy, nullptr);
+	}
+
 	void D3D12CommandBuffer::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
 	{
 		auto& d3d12Image = (D3D12Image&)*colorAttachments[0];
 		auto& d3d12Depth = (D3D12Image&)*depthAttachment;
 
-		m_GraphicsPipelineKey.ColorAttachments[0] = d3d12Image.Format;
-		m_GraphicsPipelineStateChanged = true;
+		m_GraphicsPipelineKey.DepthAttachment = ImageFormat::Unknown;
+		if (depthAttachment)
+		{
+			m_GraphicsPipelineKey.DepthAttachment = d3d12Depth.Format;
+			CommandList->ClearDepthStencilView(d3d12Depth.CpuHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
+		}
+		else 
+		{
+			m_GraphicsPipelineKey.DepthTestEnable = false;
+			m_GraphicsPipelineKey.DepthWriteEnable = false;
+		}
 
-		CommandList->OMSetRenderTargets(1, &d3d12Image.CpuHandle, false, &d3d12Depth.CpuHandle);
-		CommandList->ClearDepthStencilView(d3d12Depth.CpuHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
+		m_GraphicsPipelineKey.ColorAttachments[0] = d3d12Image.Format;
+		CommandList->OMSetRenderTargets(1, &d3d12Image.CpuHandle, false, depthAttachment ? &d3d12Depth.CpuHandle : nullptr);
+
+		m_GraphicsPipelineStateChanged = true;
 	}
 
 	void D3D12CommandBuffer::BindShaders(const std::vector<Ref<Shader>> shaderStages)
@@ -90,7 +127,7 @@ namespace GraphicsAbstraction {
 
 	void D3D12CommandBuffer::PushConstant(const void* data, uint32_t size, uint32_t offset)
 	{
-		CommandList->SetGraphicsRoot32BitConstants(0, size / 4, data, 0);
+		CommandList->SetGraphicsRoot32BitConstants(0, size / 4, data, offset);
 	}
 
 	void D3D12CommandBuffer::SetViewport(const glm::vec2& size)
@@ -107,10 +144,10 @@ namespace GraphicsAbstraction {
 	void D3D12CommandBuffer::SetScissor(const glm::vec2& size, const glm::vec2& offset)
 	{
 		D3D12_RECT scissor = {
-			.left = 0,
-			.top = 0,
-			.right = (LONG)size.x,
-			.bottom = (LONG)size.y,
+			.left = (LONG)offset.x,
+			.top = (LONG)offset.y,
+			.right = (LONG)(size.x + offset.x),
+			.bottom = (LONG)(size.y + offset.y),
 		};
 		CommandList->RSSetScissorRects(1, &scissor);
 	}
@@ -120,6 +157,18 @@ namespace GraphicsAbstraction {
 		m_GraphicsPipelineKey.DepthTestEnable = testEnabled;
 		m_GraphicsPipelineKey.DepthWriteEnable = writeEnabled;
 		m_GraphicsPipelineKey.DepthCompareOp = op;
+		m_GraphicsPipelineStateChanged = true;
+	}
+
+	void D3D12CommandBuffer::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
+	{
+		m_GraphicsPipelineKey.BlendEnable = true;
+		m_GraphicsPipelineKey.SrcBlend = srcBlend;
+		m_GraphicsPipelineKey.DstBlend = dstBlend;
+		m_GraphicsPipelineKey.BlendOp = blendOp;
+		m_GraphicsPipelineKey.SrcBlendAlpha = srcBlendAlpha;
+		m_GraphicsPipelineKey.DstBlendAlpha = dstBlendAlpha;
+		m_GraphicsPipelineKey.BlendOpAlpha = blendAlpha;
 		m_GraphicsPipelineStateChanged = true;
 	}
 

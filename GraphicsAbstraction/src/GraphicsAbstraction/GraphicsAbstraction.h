@@ -17,3 +17,4 @@
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
 
 #include <GraphicsAbstraction/Events/ApplicationEvent.h>
+#include <GraphicsAbstraction/ImGui/ImGuiLayer.h>

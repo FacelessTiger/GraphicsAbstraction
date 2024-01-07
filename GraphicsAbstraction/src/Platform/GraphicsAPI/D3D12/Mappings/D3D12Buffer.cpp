@@ -53,8 +53,7 @@ namespace GraphicsAbstraction {
 
 		if (usage & BufferUsage::StorageBuffer)
 		{
-			auto descriptorSize = m_Context.Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_Context.BindlessDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), Handle.GetValue(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_Context.BindlessDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), Handle.GetValue(), m_Context.Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC shaderViewDesc = {
 				.Format = DXGI_FORMAT_R32_TYPELESS,

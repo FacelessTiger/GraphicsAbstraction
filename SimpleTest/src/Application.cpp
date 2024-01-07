@@ -6,12 +6,23 @@
 #include <imgui/imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 namespace GraphicsAbstraction {
+
+	struct Vertex
+	{
+		glm::vec2 position;
+		glm::vec2 uv;
+	};
 
 	struct PushConstant
 	{
 		glm::mat4 projection;
 		uint32_t vertices;
+		uint32_t image;
+		uint32_t sampler;
 	};
 
 	Application* Application::s_Instance = nullptr;
@@ -40,28 +51,43 @@ namespace GraphicsAbstraction {
 		for (int i = 0; i < 2; i++)
 			m_CommandPools[i] = CommandPool::Create(m_Queue);
 
-		std::vector<glm::vec2> vertices = {
-			{  0.5f, -0.5f },
-			{  0.5f,  0.5f },
-			{ -0.5f, -0.5f },
-			{ -0.5f,  0.5f }
+		// vertex/index buffer
+		std::vector<Vertex> vertices = {
+			{ {  0.5f, -0.5f }, { 1, 0 } },
+			{ {  0.5f,  0.5f }, { 1, 1 } },
+			{ { -0.5f, -0.5f }, { 0, 0 } },
+			{ { -0.5f,  0.5f }, { 0, 1 } }
 		};
 		std::vector<uint16_t> indices = { 0, 1, 2, 2, 1, 3 };
-		uint32_t verticesSize = vertices.size() * sizeof(glm::vec2);
+		uint32_t verticesSize = vertices.size() * sizeof(Vertex);
 		uint32_t indicesSize = indices.size() * sizeof(uint16_t);
 
 		m_VertexBuffer = Buffer::Create(verticesSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
 		m_IndexBuffer = Buffer::Create(indicesSize, BufferUsage::IndexBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
 
-		auto staging = Buffer::Create(verticesSize + indicesSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
+		// texture
+		int width, height, channels;
+		stbi_set_flip_vertically_on_load(true);
+		unsigned char* data = stbi_load("Assets/textures/trickery.png", &width, &height, &channels, 4);
+
+		uint32_t imageSize = width * height * 4;
+		m_Image = Image::Create({ width, height }, ImageFormat::R8G8B8A8_UNORM, ImageUsage::Sampled | ImageUsage::TransferDst);
+		m_Sampler = Sampler::Create(Filter::Linear, Filter::Linear);
+
+		// staging
+		auto staging = Buffer::Create(verticesSize + indicesSize + imageSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
 		staging->SetData(vertices.data(), verticesSize);
 		staging->SetData(indices.data(), indicesSize, verticesSize);
+		staging->SetData(data, imageSize, verticesSize + indicesSize);
 
 		auto cmd = m_CommandPools[0]->Reset()->Begin();
 		cmd->CopyToBuffer(staging, m_VertexBuffer, verticesSize);
 		cmd->CopyToBuffer(staging, m_IndexBuffer, indicesSize, verticesSize);
+		cmd->CopyToImage(staging, m_Image, verticesSize + indicesSize);
 		m_Queue->Submit(cmd, nullptr, m_Fence);
 		m_Fence->Wait();
+
+		ImGuiLayer::Init(m_CommandPools[0], m_Swapchain, m_Window, m_Queue, m_Fence);
 	}
 
 	Application::~Application()
@@ -86,6 +112,13 @@ namespace GraphicsAbstraction {
 
 			if (!m_Minimized)
 			{
+				ImGuiLayer::BeginFrame();
+
+				ImGui::Begin("Test");
+				ImGui::Text("Heck!!");
+				ImGui::Image((ImTextureID)(uint64_t)m_Image->GetHandle(), { 200, 200 }, { 0, 1 }, { 1, 0 });
+				ImGui::End();
+
 				uint32_t fif = m_FrameNumber++ % 2;
 				m_Fence->Wait();
 				GraphicsContext::SetFrameInFlight(fif);
@@ -94,17 +127,22 @@ namespace GraphicsAbstraction {
 				auto cmd = m_CommandPools[fif]->Reset()->Begin();
 				cmd->Clear(m_Swapchain->GetCurrent(), { 0.0f, 0.0f, 1.0f, 1.0f });
 
-				PushConstant pc = { m_EditorCamera.GetViewProjection(), m_VertexBuffer->GetHandle() };
-				cmd->PushConstant(pc);
 				cmd->BindShaders({ m_VertexShader, m_PixelShader });
-				cmd->SetViewport(m_Window->GetSize());
-				cmd->SetScissor(m_Window->GetSize());
 				cmd->SetDepthTest(true, true, CompareOperation::GreaterEqual);
 
 				cmd->BeginRendering(m_Window->GetSize(), { m_Swapchain->GetCurrent() }, m_DepthImage);
+
+				cmd->SetViewport(m_Window->GetSize());
+				cmd->SetScissor(m_Window->GetSize());
+
+				PushConstant pc = { m_EditorCamera.GetViewProjection(), m_VertexBuffer->GetHandle(), m_Image->GetHandle(), m_Sampler->GetHandle() };
+				cmd->PushConstant(pc);
+
 				cmd->BindIndexBuffer(m_IndexBuffer);
 				cmd->DrawIndexed(6, 1, 0, 0, 0);
 				cmd->EndRendering();
+
+				ImGuiLayer::DrawFrame(cmd, m_Swapchain->GetCurrent());
 
 				cmd->Present(m_Swapchain);
 				m_Queue->Submit(cmd, m_Fence, m_Fence);

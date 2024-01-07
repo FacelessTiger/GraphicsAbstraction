@@ -35,13 +35,18 @@ namespace GraphicsAbstraction {
 		auto descriptorSize = m_Context.Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		auto rtvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_RTVHeap->GetCPUDescriptorHandleForHeapStart());
 
+		D3D12_RENDER_TARGET_VIEW_DESC desc = {
+			.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+			.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D
+		};
+
 		Images.clear();
 		for (int i = 0; i < 2; i++)
 		{
 			ComPtr<ID3D12Resource> backBuffer;
 			D3D12_CHECK(Swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
-			m_Context.Device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+			m_Context.Device->CreateRenderTargetView(backBuffer.Get(), &desc, rtvHandle);
 			Images.push_back(CreateRef<D3D12Image>(backBuffer, D3D12_RESOURCE_STATE_PRESENT, ImageFormat::R8G8B8A8_UNORM, rtvHandle));
 			rtvHandle.Offset(1, descriptorSize);
 		}
