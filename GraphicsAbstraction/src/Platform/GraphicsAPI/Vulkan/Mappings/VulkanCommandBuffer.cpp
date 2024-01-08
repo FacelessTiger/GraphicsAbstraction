@@ -85,6 +85,44 @@ namespace GraphicsAbstraction {
 		vulkanDst.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
+	void VulkanCommandBuffer::CopyToImage(const Ref<Image>& src, const Ref<Image>& dst)
+	{
+		auto& vulkanSrc = (VulkanImage&)(*src);
+		auto& vulkanDst = (VulkanImage&)(*dst);
+
+		vulkanSrc.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		vulkanDst.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+		VkImageCopy copy = {
+			.extent = { vulkanSrc.Width, vulkanSrc.Height, 1 }
+		};
+		copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.srcSubresource.layerCount = 1;
+
+		copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.dstSubresource.layerCount = 1;
+
+		vkCmdCopyImage(CommandBuffer, vulkanSrc.Image.Image, vulkanSrc.Layout, vulkanDst.Image.Image, vulkanDst.Layout, 1, &copy);
+	}
+
+	void VulkanCommandBuffer::RWResourceBarrier(const Ref<Image>& resource)
+	{
+		auto& vulkanImage = (VulkanImage&)(*resource);
+		if (vulkanImage.Layout == VK_IMAGE_LAYOUT_UNDEFINED) return;
+		
+		VkImageMemoryBarrier barrier = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+			.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+			.oldLayout = vulkanImage.Layout,
+			.newLayout = vulkanImage.Layout,
+
+			.image = vulkanImage.Image.Image,
+			.subresourceRange = Utils::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT)
+		};
+		vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	}
+
 	void VulkanCommandBuffer::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
 	{
 		GA_PROFILE_SCOPE();

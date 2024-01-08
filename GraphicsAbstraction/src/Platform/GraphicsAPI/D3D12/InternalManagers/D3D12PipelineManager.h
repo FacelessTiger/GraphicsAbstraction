@@ -17,8 +17,10 @@ namespace GraphicsAbstraction {
 		~D3D12PipelineManager();
 
 		ID3D12PipelineState* GetGraphicsPipeline(const GraphicsPipelineKey& key);
+		ID3D12PipelineState* GetComputePipeline(const ComputePipelineKey& key);
 	private:
 		std::unordered_map<GraphicsPipelineKey, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_GraphicsPipelines;
+		std::unordered_map<ComputePipelineKey, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_ComputePipelines;
 
 		D3D12Context& m_Context;
 	};

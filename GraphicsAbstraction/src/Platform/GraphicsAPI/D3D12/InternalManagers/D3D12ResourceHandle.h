@@ -4,10 +4,11 @@
 
 namespace GraphicsAbstraction {
 
+	// Number represents stride
 	enum class ResourceType
 	{
-		Resource,
-		Sampler
+		Sampler = 1,
+		Resource = 2
 	};
 
 	class D3D12ResourceHandle

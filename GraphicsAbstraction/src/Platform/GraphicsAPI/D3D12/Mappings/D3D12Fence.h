@@ -16,11 +16,11 @@ namespace GraphicsAbstraction {
 		uint64_t Value = 0;
 	public:
 		D3D12Fence();
-		~D3D12Fence();
+		virtual ~D3D12Fence();
 
 		void Wait();
 	private:
-		D3D12Context& m_Context;
+		Ref<D3D12Context> m_Context;
 		HANDLE m_Event;
 	};
 

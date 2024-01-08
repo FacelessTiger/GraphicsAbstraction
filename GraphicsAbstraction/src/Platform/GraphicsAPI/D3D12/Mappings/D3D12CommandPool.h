@@ -19,11 +19,12 @@ namespace GraphicsAbstraction {
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> MainCommandList;
 	public:
 		D3D12CommandPool(const Ref<Queue>& queue);
+		virtual ~D3D12CommandPool();
 
 		CommandPool* Reset() override;
 		Ref<CommandBuffer> Begin() const override;
 	private:
-		D3D12Context& m_Context;
+		Ref<D3D12Context> m_Context;
 	};
 
 }

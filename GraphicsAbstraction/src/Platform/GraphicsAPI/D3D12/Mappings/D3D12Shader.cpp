@@ -90,12 +90,20 @@ namespace GraphicsAbstraction {
 			GA_CORE_ERROR((const char*)errorBlob->GetBufferPointer());
 			GA_CORE_ASSERT(false);
 		}
-
-		//ComPtr<IDxcBlob> blob;
 		result->GetResult(&m_Blob);
 
-		//m_Data.resize(blob->GetBufferSize());
-		//memcpy(m_Data.data(), blob->GetBufferPointer(), blob->GetBufferSize());
+		ComPtr<IDxcBlob> debugBlob;
+		ComPtr<IDxcBlobUtf16> debugDataPath;
+		D3D12_CHECK(result->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&debugBlob), &debugDataPath));
+
+		auto pdbPath = std::filesystem::path(path).parent_path().wstring() + L"/" + debugDataPath->GetStringPointer();
+		std::ofstream out(pdbPath, std::ios::out | std::ios::binary);
+		if (out.is_open())
+		{
+			out.write((char*)debugBlob->GetBufferPointer(), debugBlob->GetBufferSize());
+			out.flush();
+			out.close();
+		}
 
 		Shader = {
 			.pShaderBytecode = m_Blob->GetBufferPointer(),

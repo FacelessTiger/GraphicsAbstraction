@@ -23,16 +23,27 @@ namespace GraphicsAbstraction {
 		CreateSwapchain(glfwGetWin32Window((GLFWwindow*)window->GetNativeWindow()));
 	}
 
+	D3D12Swapchain::~D3D12Swapchain()
+	{
+		m_Context->GetFrameDeletionQueue().Push(Swapchain);
+	}
+
 	void D3D12Swapchain::Resize(uint32_t width, uint32_t height)
 	{
 		Width = width;
 		Height = height;
+		for (auto image : Images)
+		{
+			image->Width = width;
+			image->Height = height;
+		}
+
 		Dirty = true;
 	}
 
 	void D3D12Swapchain::UpdateRenderTargetViews()
 	{
-		auto descriptorSize = m_Context.Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		auto descriptorSize = m_Context->Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		auto rtvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_RTVHeap->GetCPUDescriptorHandleForHeapStart());
 
 		D3D12_RENDER_TARGET_VIEW_DESC desc = {
@@ -41,12 +52,12 @@ namespace GraphicsAbstraction {
 		};
 
 		Images.clear();
-		for (int i = 0; i < 2; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			ComPtr<ID3D12Resource> backBuffer;
 			D3D12_CHECK(Swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
-			m_Context.Device->CreateRenderTargetView(backBuffer.Get(), &desc, rtvHandle);
+			m_Context->Device->CreateRenderTargetView(backBuffer.Get(), &desc, rtvHandle);
 			Images.push_back(CreateRef<D3D12Image>(backBuffer, D3D12_RESOURCE_STATE_PRESENT, ImageFormat::R8G8B8A8_UNORM, rtvHandle));
 			rtvHandle.Offset(1, descriptorSize);
 		}
@@ -81,7 +92,7 @@ namespace GraphicsAbstraction {
 			.Stereo = false,
 			.SampleDesc = { 1, 0 },
 			.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-			.BufferCount = 2,
+			.BufferCount = 3,
 			.Scaling = DXGI_SCALING_STRETCH,
 			.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 			.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
@@ -89,7 +100,7 @@ namespace GraphicsAbstraction {
 		};
 
 		ComPtr<IDXGISwapChain1> swapchain1;
-		D3D12_CHECK(factory->CreateSwapChainForHwnd(m_Context.GraphicsQueue.Get(), hwnd, &swapchainDesc, nullptr, nullptr, &swapchain1));
+		D3D12_CHECK(factory->CreateSwapChainForHwnd(m_Context->GraphicsQueue.Get(), hwnd, &swapchainDesc, nullptr, nullptr, &swapchain1));
 
 		// Disable alt+enter fullscreen toggle
 		D3D12_CHECK(factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
@@ -98,9 +109,9 @@ namespace GraphicsAbstraction {
 		// create descriptor heap
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {
 			.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-			.NumDescriptors = 2
+			.NumDescriptors = 3
 		};
-		D3D12_CHECK(m_Context.Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_RTVHeap)));
+		D3D12_CHECK(m_Context->Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_RTVHeap)));
 
 		UpdateRenderTargetViews();
 	}

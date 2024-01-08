@@ -8,25 +8,19 @@
 
 namespace GraphicsAbstraction {
 
-	namespace Utils {
-
-		
-
-	}
-
 	Ref<Image> Image::Create(const glm::vec2& size, ImageFormat format, ImageUsage usage)
 	{
 		return CreateRef<VulkanImage>(size, format, usage);
 	}
 
 	VulkanImage::VulkanImage(const glm::vec2& size, ImageFormat format, ImageUsage usage)
-		: m_Context(VulkanContext::GetReference()), Layout(VK_IMAGE_LAYOUT_UNDEFINED), Format(format), Usage(usage), Width((uint32_t)size.x), Height((uint32_t)size.y), Handle((usage& ImageUsage::Sampled) ? ResourceType::SampledImage : ResourceType::StorageImage)
+		: m_Context(VulkanContext::GetReference()), Layout(VK_IMAGE_LAYOUT_UNDEFINED), Format(format), Usage(usage), Width((uint32_t)size.x), Height((uint32_t)size.y)
 	{
 		Create();
 	}
 
 	VulkanImage::VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, ImageFormat imageFormat, ImageUsage usage, uint32_t width, uint32_t height)
-		: m_Context(VulkanContext::GetReference()), View(imageView), Layout(imageLayout), Format(imageFormat), Usage(usage), Width(width), Height(height), m_ExternalAllocation(true), Handle(ResourceType::StorageImage)
+		: m_Context(VulkanContext::GetReference()), View(imageView), Layout(imageLayout), Format(imageFormat), Usage(usage), Width(width), Height(height), m_ExternalAllocation(true)
 	{
 		Image.Image = image;
 	}
@@ -34,41 +28,6 @@ namespace GraphicsAbstraction {
 	VulkanImage::~VulkanImage()
 	{
 		Destroy();
-	}
-
-	void VulkanImage::CopyTo(const Ref<CommandBuffer>& cmd, const Ref<GraphicsAbstraction::Image>& other)
-	{
-		GA_PROFILE_SCOPE();
-
-		auto& vulkanCommandBuffer = (VulkanCommandBuffer&)(*cmd);
-		auto& vulkanImage = (VulkanImage&)(*other);
-
-		TransitionLayout(vulkanCommandBuffer.CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-		vulkanImage.TransitionLayout(vulkanCommandBuffer.CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-		VkImageBlit blitRegion = {};
-		blitRegion.srcOffsets[1].x = Width;
-		blitRegion.srcOffsets[1].y = Height;
-		blitRegion.srcOffsets[1].z = 1;
-
-		blitRegion.dstOffsets[1].x = vulkanImage.Width;
-		blitRegion.dstOffsets[1].y = vulkanImage.Height;
-		blitRegion.dstOffsets[1].z = 1;
-
-		blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		blitRegion.srcSubresource.baseArrayLayer = 0;
-		blitRegion.srcSubresource.layerCount = 1;
-		blitRegion.srcSubresource.mipLevel = 0;
-
-		blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		blitRegion.dstSubresource.baseArrayLayer = 0;
-		blitRegion.dstSubresource.layerCount = 1;
-		blitRegion.dstSubresource.mipLevel = 0;
-
-		vkCmdBlitImage(vulkanCommandBuffer.CommandBuffer, 
-			Image.Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
-			vulkanImage.Image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-			1, &blitRegion, VK_FILTER_LINEAR);
 	}
 
 	void VulkanImage::Resize(const glm::vec2& size)
@@ -144,7 +103,7 @@ namespace GraphicsAbstraction {
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = m_Context->BindlessSet,
 				.dstBinding = m_Context->STORAGE_IMAGE_BINDING,
-				.dstArrayElement = Handle.GetValue(),
+				.dstArrayElement = StorageHandle.GetValue(),
 				.descriptorCount = 1,
 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 				.pImageInfo = &imageInfo,
@@ -152,7 +111,8 @@ namespace GraphicsAbstraction {
 
 			vkUpdateDescriptorSets(m_Context->Device, 1, &write, 0, nullptr);
 		}
-		else if (Usage & ImageUsage::Sampled)
+
+		if (Usage & ImageUsage::Sampled)
 		{
 			VkDescriptorImageInfo imageInfo = {
 				.imageView = View,
@@ -163,7 +123,7 @@ namespace GraphicsAbstraction {
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = m_Context->BindlessSet,
 				.dstBinding = m_Context->SAMPLED_IMAGE_BINDING,
-				.dstArrayElement = Handle.GetValue(),
+				.dstArrayElement = SampledHandle.GetValue(),
 				.descriptorCount = 1,
 				.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 				.pImageInfo = &imageInfo,
@@ -180,8 +140,8 @@ namespace GraphicsAbstraction {
 
 		VkImageMemoryBarrier imageBarrier = {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT,
+			.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
+			.dstAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
 
 			.oldLayout = Layout,
 			.newLayout = newLayout,
@@ -190,7 +150,7 @@ namespace GraphicsAbstraction {
 			.subresourceRange = Utils::ImageSubresourceRange(aspectMask)
 		};
 
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 		Layout = newLayout;
 	}
 

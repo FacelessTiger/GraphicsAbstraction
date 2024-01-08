@@ -40,10 +40,12 @@ namespace GraphicsAbstraction {
 	public:
 		virtual ~Image() = default;
 
-		virtual void CopyTo(const Ref<CommandBuffer>& cmd, const Ref<Image>& other) = 0;
 		virtual void Resize(const glm::vec2& size) = 0;
 
-		virtual uint32_t GetHandle() const = 0;
+		virtual uint32_t GetSampledHandle() const = 0;
+		virtual uint32_t GetStorageHandle() const = 0;
+		virtual uint32_t GetWidth() const = 0;
+		virtual uint32_t GetHeight() const = 0;
 		virtual glm::vec2 GetSize() const = 0;
 
 		static Ref<Image> Create(const glm::vec2& size, ImageFormat format, ImageUsage usage);

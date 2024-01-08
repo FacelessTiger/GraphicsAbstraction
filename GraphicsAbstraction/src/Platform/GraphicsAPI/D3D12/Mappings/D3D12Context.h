@@ -2,6 +2,7 @@
 
 #include <GraphicsAbstraction/Renderer/GraphicsContext.h>
 #include <Platform/GraphicsAPI/D3D12/InternalManagers/D3D12PipelineManager.h>
+#include <Platform/GraphicsAPI/D3D12/InternalManagers/D3D12DeletionQueue.h>
 
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -36,14 +37,17 @@ namespace GraphicsAbstraction {
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> BindlessDescriptorHeap, BindlessSamplerHeap;
 
 		D3D12PipelineManager* PipelineManager;
+		std::vector<D3D12DeletionQueue> FrameDeletionQueues;
+		uint32_t FrameInFlight = 0;
 	public:
 		D3D12Context(uint32_t frameInFlightCount);
 		~D3D12Context();
 
 		Ref<Queue> GetQueueImpl(QueueType type) override;
-		void SetFrameInFlightImpl(uint32_t fif) override { };
+		void SetFrameInFlightImpl(uint32_t fif) override { FrameInFlight = fif; FrameDeletionQueues[FrameInFlight].Flush(); };
 
-		inline static D3D12Context& GetReference() { return (D3D12Context&)*s_Instance; }
+		inline D3D12DeletionQueue& GetFrameDeletionQueue() { return FrameDeletionQueues[FrameInFlight]; }
+		inline static Ref<D3D12Context> GetReference() { return { s_Instance, (D3D12Context*)s_Instance.Get() }; }
 	private:
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> SetupAdapter();
 		void SetupDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);

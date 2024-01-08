@@ -19,20 +19,27 @@ namespace GraphicsAbstraction {
 
 		D3D12_RESOURCE_STATES State;
 		ImageFormat Format;
+		ImageUsage Usage;
 		uint32_t Width, Height;
 	public:
 		D3D12Image(const glm::vec2& size, ImageFormat format, ImageUsage usage);
 		D3D12Image(Microsoft::WRL::ComPtr<ID3D12Resource> image, D3D12_RESOURCE_STATES state, ImageFormat format, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
+		virtual ~D3D12Image();
 
-		void CopyTo(const Ref<CommandBuffer>& cmd, const Ref<GraphicsAbstraction::Image>& other) override { }
-		void Resize(const glm::vec2& size) override { }
+		void Resize(const glm::vec2& size) override;
 
-		uint32_t GetHandle() const override { return Handle.GetValue(); }
-		glm::vec2 GetSize() const override { return glm::vec2(0.0f); }
+		inline uint32_t GetSampledHandle() const override { return Handle.GetValue(); }
+		inline uint32_t GetStorageHandle() const override { return Handle.GetValue(); }
+		inline uint32_t GetWidth() const override { return Width; }
+		inline uint32_t GetHeight() const override { return Height; }
+		inline glm::vec2 GetSize() const override { return glm::vec2(Width, Height); }
 
 		void TransitionState(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, D3D12_RESOURCE_STATES newState);
 	private:
-		D3D12Context& m_Context;
+		void Create();
+		void CreateViews(DXGI_FORMAT d3d12Format);
+	private:
+		Ref<D3D12Context> m_Context;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_Heap; // only used for depthstencil and color attachment
 	};
 

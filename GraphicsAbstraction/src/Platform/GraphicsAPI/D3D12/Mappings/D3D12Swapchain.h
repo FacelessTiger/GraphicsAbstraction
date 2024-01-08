@@ -26,6 +26,7 @@ namespace GraphicsAbstraction {
 		bool Vsync;
 	public:
 		D3D12Swapchain(const Ref<Window>& window, const glm::vec2& size, bool enableVSync);
+		virtual ~D3D12Swapchain();
 
 		void Resize(uint32_t width, uint32_t height) override;
 		void SetVsync(bool enabled) override { Vsync = enabled; }
@@ -39,7 +40,7 @@ namespace GraphicsAbstraction {
 
 		void UpdateRenderTargetViews();
 	private:
-		D3D12Context& m_Context;
+		Ref<D3D12Context> m_Context;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RTVHeap;
 	};
 

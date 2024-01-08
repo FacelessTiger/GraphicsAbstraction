@@ -58,7 +58,8 @@ namespace GraphicsAbstraction {
 		auto& d3d12Wait = (D3D12Fence&)*wait;
 
 		d3d12Wait.Wait();
-		d3d12Swapchain.Swapchain->Present(d3d12Swapchain.Vsync ? 1 : 0, !d3d12Swapchain.Vsync ? DXGI_PRESENT_ALLOW_TEARING : 0);
+		if (d3d12Swapchain.Vsync) d3d12Swapchain.Swapchain->Present(1, 0);
+		else d3d12Swapchain.Swapchain->Present(0, DXGI_PRESENT_ALLOW_TEARING);
 	}
 
 }

@@ -33,10 +33,23 @@ namespace GraphicsAbstraction {
 		image->TransitionState(CommandList, D3D12_RESOURCE_STATE_PRESENT);
 	}
 
+	void D3D12CommandBuffer::Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ)
+	{
+		if (m_ComputePipelineStateChanged)
+		{
+			CommandList->SetPipelineState(m_Context->PipelineManager->GetComputePipeline(m_ComputePipelineKey));
+			m_ComputePipelineStateChanged = false;
+		}
+
+		CommandList->Dispatch(workX, workY, workZ);
+	}
+
 	void D3D12CommandBuffer::CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset)
 	{
 		auto& srcBuffer = (D3D12Buffer&)*src;
 		auto& dstBuffer = (D3D12Buffer&)*dst;
+
+		dstBuffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_COPY_DEST);
 
 		CommandList->CopyBufferRegion(dstBuffer.Resource.Get(), dstOffset, srcBuffer.Resource.Get(), srcOffset, size);
 	}
@@ -61,9 +74,29 @@ namespace GraphicsAbstraction {
 		};
 
 		auto srcCopy = CD3DX12_TEXTURE_COPY_LOCATION(d3d12Buffer.Resource.Get(), placed);
-		auto dstCopy = CD3DX12_TEXTURE_COPY_LOCATION(d3d12Image.Image.Get(), 0);
-		
+		auto dstCopy = CD3DX12_TEXTURE_COPY_LOCATION(d3d12Image.Image.Get(), 0);	
 		CommandList->CopyTextureRegion(&dstCopy, 0, 0, 0, &srcCopy, nullptr);
+	}
+
+	void D3D12CommandBuffer::CopyToImage(const Ref<Image>& src, const Ref<Image>& dst)
+	{
+		auto& d3d12Src = (D3D12Image&)*src;
+		auto& d3d12Dst = (D3D12Image&)*dst;
+
+		d3d12Src.TransitionState(CommandList, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		d3d12Dst.TransitionState(CommandList, D3D12_RESOURCE_STATE_COPY_DEST);
+
+		auto srcCopy = CD3DX12_TEXTURE_COPY_LOCATION(d3d12Src.Image.Get(), 0);
+		auto dstCopy = CD3DX12_TEXTURE_COPY_LOCATION(d3d12Dst.Image.Get(), 0);
+		CommandList->CopyTextureRegion(&dstCopy, 0, 0, 0, &srcCopy, nullptr);
+	}
+
+	void D3D12CommandBuffer::RWResourceBarrier(const Ref<Image>& resource)
+	{
+		auto& d3d12Image = (D3D12Image&)*resource;
+
+		auto barrier = CD3DX12_RESOURCE_BARRIER::UAV(d3d12Image.Image.Get());
+		CommandList->ResourceBarrier(1, &barrier);
 	}
 
 	void D3D12CommandBuffer::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
@@ -71,13 +104,15 @@ namespace GraphicsAbstraction {
 		auto& d3d12Image = (D3D12Image&)*colorAttachments[0];
 		auto& d3d12Depth = (D3D12Image&)*depthAttachment;
 
+		d3d12Image.TransitionState(CommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
 		m_GraphicsPipelineKey.DepthAttachment = ImageFormat::Unknown;
 		if (depthAttachment)
 		{
 			m_GraphicsPipelineKey.DepthAttachment = d3d12Depth.Format;
 			CommandList->ClearDepthStencilView(d3d12Depth.CpuHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
 		}
-		else 
+		else // TODO: should have EnableDepthTest and DisableDepthTest like with color blend
 		{
 			m_GraphicsPipelineKey.DepthTestEnable = false;
 			m_GraphicsPipelineKey.DepthWriteEnable = false;
@@ -109,6 +144,12 @@ namespace GraphicsAbstraction {
 					m_GraphicsPipelineStateChanged = true;
 					break;
 				}
+				case ShaderStage::Compute:
+				{
+					m_ComputePipelineKey.Shader = d3d12Shader.ID;
+					m_ComputePipelineStateChanged = true;
+					break;
+				}
 			}
 		}
 	}
@@ -116,6 +157,7 @@ namespace GraphicsAbstraction {
 	void D3D12CommandBuffer::BindIndexBuffer(const Ref<Buffer>& buffer)
 	{
 		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
+		d3d12Buffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 		D3D12_INDEX_BUFFER_VIEW view = {
 			.BufferLocation = d3d12Buffer.Resource->GetGPUVirtualAddress(),
@@ -127,6 +169,7 @@ namespace GraphicsAbstraction {
 
 	void D3D12CommandBuffer::PushConstant(const void* data, uint32_t size, uint32_t offset)
 	{
+		CommandList->SetComputeRoot32BitConstants(0, size / 4, data, offset);
 		CommandList->SetGraphicsRoot32BitConstants(0, size / 4, data, offset);
 	}
 
@@ -172,6 +215,12 @@ namespace GraphicsAbstraction {
 		m_GraphicsPipelineStateChanged = true;
 	}
 
+	void D3D12CommandBuffer::DisableColorBlend()
+	{
+		m_GraphicsPipelineKey.BlendEnable = false;
+		m_GraphicsPipelineStateChanged = true;
+	}
+
 	void D3D12CommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 	{
 		SetGraphicsPipeline();
@@ -188,7 +237,7 @@ namespace GraphicsAbstraction {
 	{
 		if (m_GraphicsPipelineStateChanged)
 		{
-			CommandList->SetPipelineState(m_Context.PipelineManager->GetGraphicsPipeline(m_GraphicsPipelineKey));
+			CommandList->SetPipelineState(m_Context->PipelineManager->GetGraphicsPipeline(m_GraphicsPipelineKey));
 			m_GraphicsPipelineStateChanged = false;
 		}
 		if (m_DefaultDynamicStateSet) return;

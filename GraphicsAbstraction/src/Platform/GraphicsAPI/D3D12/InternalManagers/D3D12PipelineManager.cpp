@@ -117,4 +117,21 @@ namespace GraphicsAbstraction {
 		return pipeline.Get();
 	}
 
+	ID3D12PipelineState* D3D12PipelineManager::GetComputePipeline(const ComputePipelineKey& key)
+	{
+		GA_PROFILE_SCOPE();
+		if (m_ComputePipelines.find(key) != m_ComputePipelines.end()) return m_ComputePipelines[key].Get();
+
+		D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {
+			.pRootSignature = m_Context.BindlessRootSignature.Get(),
+			.CS = D3D12Shader::GetShaderByID(key.Shader)->Shader
+		};
+
+		ComPtr<ID3D12PipelineState> pipeline;
+		D3D12_CHECK(m_Context.Device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pipeline)));
+		m_ComputePipelines[key] = pipeline;
+
+		return pipeline.Get();
+	}
+
 }

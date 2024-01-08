@@ -27,14 +27,14 @@ namespace GraphicsAbstraction {
 	D3D12Sampler::D3D12Sampler(Filter min, Filter mag)
 		: m_Context(D3D12Context::GetReference())
 	{
-		auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_Context.BindlessSamplerHeap->GetCPUDescriptorHandleForHeapStart(), Handle.GetValue(), m_Context.Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER));
+		auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_Context->BindlessSamplerHeap->GetCPUDescriptorHandleForHeapStart(), Handle.GetValue(), m_Context->Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER));
 		D3D12_SAMPLER_DESC desc = {
 			.Filter = Utils::GAFiltersToD3D12(min, mag),
-			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP
+			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP
 		};
-		m_Context.Device->CreateSampler(&desc, handle);
+		m_Context->Device->CreateSampler(&desc, handle);
 	}
 
 }

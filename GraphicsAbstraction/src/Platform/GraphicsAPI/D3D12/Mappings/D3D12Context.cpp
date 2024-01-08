@@ -39,10 +39,16 @@ namespace GraphicsAbstraction {
 		SetupBindless();
 
 		PipelineManager = new D3D12PipelineManager(*this);
+		FrameDeletionQueues.resize(frameInFlightCount, *this);
 	}
 
 	D3D12Context::~D3D12Context()
 	{
+		GraphicsQueue.Reset();
+
+		for (auto& deletionQueue : FrameDeletionQueues)
+			deletionQueue.Flush();
+
 		delete PipelineManager;
 	}
 

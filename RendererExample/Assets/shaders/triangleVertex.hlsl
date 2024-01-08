@@ -12,7 +12,7 @@ struct Vertex
 struct PushConstant
 {
 	float4x4 projection;
-	ArrayBuffer vertices;
+	uint vertices;
 };
 PushConstant(PushConstant, pushConstants);
 
@@ -25,7 +25,7 @@ struct VertexOutput
 
 VertexOutput main(uint vertexID: SV_VertexID)
 {
-	Vertex vertex = pushConstants.vertices.Load<Vertex>(vertexID);
+	Vertex vertex = ArrayBuffer::Create(pushConstants.vertices).Load<Vertex>(vertexID);
 
 	VertexOutput output;
 	output.position = mul(pushConstants.projection, float4(vertex.position, 1.0f));

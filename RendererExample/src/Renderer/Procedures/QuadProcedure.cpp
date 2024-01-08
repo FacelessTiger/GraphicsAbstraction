@@ -63,7 +63,7 @@ namespace GraphicsAbstraction {
 
 	uint32_t QuadProcedure::UploadQuad(const glm::vec3& position, const glm::vec2& scale, const glm::vec4& color, const std::shared_ptr<Texture>& texture)
 	{
-		uint32_t texureBinding = texture ? texture->GetImage()->GetHandle() : m_WhiteImage->GetHandle();
+		uint32_t texureBinding = texture ? texture->GetImage()->GetSampledHandle() : m_WhiteImage->GetSampledHandle();
 		uint32_t packedColor = glm::packUnorm4x8(color);
 		uint32_t id = m_QuadCount++;
 

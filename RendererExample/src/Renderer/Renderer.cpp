@@ -1,13 +1,6 @@
 #include "Renderer.h"
 
-#include <GraphicsAbstraction/Renderer/GraphicsContext.h>
-#include <GraphicsAbstraction/ImGui/ImGuiLayer.h>
-#include <GraphicsAbstraction/Debug/Instrumentor.h>
-#include <GraphicsAbstraction/Renderer/Swapchain.h>
-#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
-#include <GraphicsAbstraction/Renderer/Buffer.h>
 #include <Renderer/Procedures/RenderProcedure.h>
-
 #include <glm/gtc/type_ptr.hpp>
 
 namespace GraphicsAbstraction {
@@ -24,6 +17,13 @@ namespace GraphicsAbstraction {
 		uint32_t size, srcOffset, dstOffset;
 	};
 
+	struct DownsampleConstant
+	{
+		uint32_t srcImage;
+		uint32_t dstImage;
+		uint32_t sampler;
+	};
+
 	struct RendererData
 	{
 		static constexpr uint32_t FrameOverlap = 2;
@@ -36,6 +36,9 @@ namespace GraphicsAbstraction {
 		Ref<Fence> Fence;
 		Ref<Image> DrawImage, DepthImage, DisplayImage;
 		Ref<CommandPool> CommandPools[FrameOverlap];
+
+		Ref<Shader> ResizeShader;
+		Ref<Sampler> ResizeSampler;
 
 		std::vector<RenderProcedure*> RenderProcedures;
 		std::function<void()> ImGuiCallback;
@@ -57,9 +60,15 @@ namespace GraphicsAbstraction {
 		s_RendererData->GraphicsQueue = GraphicsContext::GetQueue(QueueType::Graphics);
 		s_RendererData->Swapchain = Swapchain::Create(window, window->GetSize());
 		s_RendererData->Fence = Fence::Create();
-		s_RendererData->DrawImage = Image::Create({ 1920, 1080 }, ImageFormat::R16G16B16A16_SFLOAT, ImageUsage::Storage | ImageUsage::ColorAttachment | ImageUsage::TransferSrc | ImageUsage::TransferDst);
+		s_RendererData->DrawImage = Image::Create({ 1920, 1080 }, ImageFormat::R16G16B16A16_SFLOAT, ImageUsage::Storage | ImageUsage::Sampled | ImageUsage::ColorAttachment | ImageUsage::TransferDst);
 		s_RendererData->DepthImage = Image::Create({ 1920, 1080 }, ImageFormat::D32_SFLOAT, ImageUsage::DepthStencilAttachment);
-		if (seperateDisplayImage) s_RendererData->DisplayImage = Image::Create({ 1920, 1080 }, ImageFormat::R8G8B8A8_UNORM, ImageUsage::Sampled | ImageUsage::TransferDst);
+
+		auto displayImageUsage = ImageUsage::Storage | ImageUsage::TransferSrc;
+		if (seperateDisplayImage) displayImageUsage |= ImageUsage::Sampled;
+		s_RendererData->DisplayImage = Image::Create(window->GetSize(), ImageFormat::R8G8B8A8_UNORM, displayImageUsage);
+
+		s_RendererData->ResizeShader = Shader::Create("Assets/shaders/resizeImage.hlsl", ShaderStage::Compute);
+		s_RendererData->ResizeSampler = Sampler::Create(Filter::Nearest, Filter::Nearest);
 
 		for (int i = 0; i < RendererData::FrameOverlap; i++)
 			s_RendererData->CommandPools[i] = CommandPool::Create(s_RendererData->GraphicsQueue);
@@ -84,7 +93,7 @@ namespace GraphicsAbstraction {
 	void Renderer::Resize(uint32_t width, uint32_t height)
 	{
 		s_RendererData->Swapchain->Resize(width, height);
-		if (!s_RendererData->SeperateDisplayImage) s_RendererData->Size = { width, height };
+		s_RendererData->DisplayImage->Resize({ width, height });
 	}
 
 	void Renderer::SetVsync(bool vsync)
@@ -139,9 +148,7 @@ namespace GraphicsAbstraction {
 		GraphicsContext::SetFrameInFlight(fif);
 		data.GraphicsQueue->Acquire(data.Swapchain, data.Fence);
 
-		data.CommandPools[fif]->Reset();
-		auto cmd = data.CommandPools[fif]->Begin();
-
+		auto cmd = data.CommandPools[fif]->Reset()->Begin();
 		for (auto& upload : data.ImageUploads)
 			cmd->CopyToImage(upload.src, upload.dst);
 		data.ImageUploads.clear();
@@ -166,8 +173,13 @@ namespace GraphicsAbstraction {
 		for (auto* procedure : data.RenderProcedures)
 			procedure->Process(payload);
 
-		auto copyDst = data.SeperateDisplayImage ? data.DisplayImage : data.Swapchain->GetCurrent();
-		data.DrawImage->CopyTo(cmd, copyDst);
+		DownsampleConstant dpc = { data.DrawImage->GetSampledHandle(), data.DisplayImage->GetStorageHandle(), data.ResizeSampler->GetHandle() };
+		cmd->PushConstant(dpc);
+		cmd->BindShaders({ data.ResizeShader });
+		cmd->Dispatch((uint32_t)std::ceil(data.DisplayImage->GetWidth() / 16.0f), (uint32_t)std::ceil(data.DisplayImage->GetHeight() / 16.0f), 1);
+		cmd->RWResourceBarrier(data.DisplayImage);
+
+		if (!data.SeperateDisplayImage) cmd->CopyToImage(data.DisplayImage, data.Swapchain->GetCurrent());
 		ImGuiLayer::DrawFrame(cmd, data.Swapchain->GetCurrent());
 
 		cmd->Present(data.Swapchain);

@@ -19,7 +19,7 @@ namespace GraphicsAbstraction {
 
 		uint32_t GetHandle() const override { return Handle.GetValue(); }
 	private:
-		D3D12Context& m_Context;
+		Ref<D3D12Context> m_Context;
 	};
 
 }

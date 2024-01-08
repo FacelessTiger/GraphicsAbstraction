@@ -38,7 +38,9 @@ namespace GraphicsAbstraction {
 			return m_ID.value();
 		}
 
-		m_ID = s_IDInfos[m_Type].IDCounter++;
+		m_ID = s_IDInfos[m_Type].IDCounter;
+		s_IDInfos[m_Type].IDCounter += (int)m_Type;
+
 		return m_ID.value();
 	}
 
