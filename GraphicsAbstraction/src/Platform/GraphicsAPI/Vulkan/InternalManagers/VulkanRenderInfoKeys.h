@@ -7,6 +7,8 @@
 #include <array>
 #include <unordered_map>
 
+#include <GraphicsAbstraction/Renderer/Image.h>
+
 #define GA_RENDERINFO_EQUALITY(name) bool operator==(const name& other) const = default
 #define GA_RENDERINFO_HASH(name)														\
 	template<>																			\
@@ -22,9 +24,9 @@ namespace GraphicsAbstraction {
 
 	struct VulkanRenderInfoAttachment
 	{
-		VkFormat Format = VK_FORMAT_UNDEFINED;
+		ImageFormat Format = ImageFormat::Unknown;
 		VkImageLayout InitialLayout;
-		VkImageUsageFlags Usage;
+		ImageUsage Usage = ImageUsage::None;
 
 		GA_RENDERINFO_EQUALITY(VulkanRenderInfoAttachment);
 	};

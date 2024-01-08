@@ -15,6 +15,8 @@ project "GraphicsAbstraction"
 	{
 		"src/GraphicsAbstraction/**.h",
 		"src/GraphicsAbstraction/**.cpp",
+		"src/Platform/Shared/**.h",
+		"src/Platform/Shared/**.cpp",
 		"vendor/stb_image/**.h",
 		"vendor/stb_image/**.cpp",
 		"vendor/glm/glm/**.hpp",
@@ -26,7 +28,8 @@ project "GraphicsAbstraction"
 	defines
 	{
 		"_CRT_SECURE_NO_WARNINGS",
-		"GLFW_INCLUDE_NONE"
+		"GLFW_INCLUDE_NONE",
+		"SPDLOG_WCHAR_TO_UTF8_SUPPORT"
 	}
 
 	includedirs
@@ -46,7 +49,7 @@ project "GraphicsAbstraction"
 		"ImGui",
 	}
 
-	filter "options:with-vulkan"
+	filter "options:vulkan"
 		defines "GA_RENDERER_VULKAN"
 
 		files
@@ -68,14 +71,36 @@ project "GraphicsAbstraction"
 			"%{Library.DXCompiler}"
 		}
 
-	filter { "options:with-vulkan", "configurations:Debug" }
+	filter "options:directx"
+		defines "GA_RENDERER_DIRECTX"
+
+		files
+		{
+			"src/Platform/GraphicsAPI/D3D12/**.h",
+			"src/Platform/GraphicsAPI/D3D12/**.cpp"
+		}
+
+		includedirs
+		{
+			"%{IncludeDir.DXC}",
+			"%{IncludeDir.AgilitySDK}"
+		}
+
+		links
+		{
+			"%{Library.DirectX}",
+			"%{Library.DXGI}",
+			"%{Library.DXCompiler}"
+		}
+
+	filter { "options:vulkan", "configurations:Debug" }
 		links
 		{
 			"%{Library.SPIRV_Cross_Debug}",
 			"%{Library.SPIRV_Cross_GLSL_Debug}"
 		}
 
-	filter { "options:with-vulkan", "configurations:Release or Dist" }
+	filter { "options:vulkan", "configurations:Release or Dist" }
 		links
 		{
 			"%{Library.SPIRV_Cross_Release}",

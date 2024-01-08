@@ -3,7 +3,6 @@
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanImage.h>
-#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSurface.h>
 
 #include <vulkan/vulkan.h>
 
@@ -23,7 +22,7 @@ namespace GraphicsAbstraction {
 		uint32_t Width, Height;
 		bool Dirty = false;
 	public:
-		VulkanSwapchain(Ref<Surface>& surface, const glm::vec2& size, bool enableVSync);
+		VulkanSwapchain(const Ref<Window>& window, const glm::vec2& size, bool enableVSync);
 		virtual ~VulkanSwapchain();
 
 		void Resize(uint32_t width, uint32_t height) override;
@@ -33,14 +32,15 @@ namespace GraphicsAbstraction {
 
 		void Recreate();
 	private:
+		void CreateSurface(const Ref<Window>& window);
 		void CreateSwapchain(bool firstCreation);
 
 		VkSurfaceFormatKHR ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 		VkPresentModeKHR ChooseVsyncOffPresent(const std::vector<VkPresentModeKHR>& presentModes);
 		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 	private:
-		VulkanContextReference m_Context;
-		Ref<VulkanSurface> m_Surface;
+		Ref<VulkanContext> m_Context;
+		VkSurfaceKHR m_Surface;
 		bool m_EnableVsync;
 
 		VkSurfaceFormatKHR m_ChosenSufaceFormat;

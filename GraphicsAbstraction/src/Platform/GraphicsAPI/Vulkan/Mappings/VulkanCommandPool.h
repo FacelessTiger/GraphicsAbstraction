@@ -16,10 +16,10 @@ namespace GraphicsAbstraction {
 		VulkanCommandPool(const Ref<Queue>& queue);
 		virtual ~VulkanCommandPool();
 
-		void Reset() override;
+		GraphicsAbstraction::CommandPool* Reset() override;
 		Ref<CommandBuffer> Begin() const override;
 	private:
-		VulkanContextReference m_Context;
+		Ref<VulkanContext> m_Context;
 	};
 
 }

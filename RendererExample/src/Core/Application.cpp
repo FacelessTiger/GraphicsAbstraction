@@ -149,7 +149,7 @@ namespace GraphicsAbstraction {
 			m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
 			m_EditorCamera.SetViewportSize(viewportPanelSize.x, viewportPanelSize.y);
 		}
-		ImGui::Image((ImTextureID)(uint64_t)Renderer::GetDrawImage()->GetHandle(), { viewportPanelSize.x, viewportPanelSize.y });
+		ImGui::Image((ImTextureID)(uint64_t)Renderer::GetDrawImage()->GetSampledHandle(), { viewportPanelSize.x, viewportPanelSize.y });
 
 		ImGui::End();
 		ImGui::PopStyleVar();

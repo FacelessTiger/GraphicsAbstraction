@@ -12,8 +12,8 @@ struct Vertex
 struct PushConstant
 {
 	float4x4 projection;
-	ArrayBuffer vertices;
-	ArrayBuffer modelMatrices;
+	uint vertices;
+	uint modelMatrices;
 };
 PushConstant(PushConstant, pushConstants);
 
@@ -26,8 +26,8 @@ struct VertexOutput
 
 VertexOutput main(uint vertexID: SV_VertexID, uint instanceIndex: SV_InstanceID)
 {
-	Vertex vertex = pushConstants.vertices.Load<Vertex>(vertexID);
-	float4x4 modelMatrix = pushConstants.modelMatrices.Load<float4x4>(instanceIndex);
+	Vertex vertex = ArrayBuffer::Create(pushConstants.vertices).Load<Vertex>(vertexID);
+	float4x4 modelMatrix = ArrayBuffer::Create(pushConstants.modelMatrices).Load<float4x4>(instanceIndex);
 
 	VertexOutput output;
 	output.position = mul(pushConstants.projection, mul(modelMatrix, float4(vertex.position, 1.0f)));

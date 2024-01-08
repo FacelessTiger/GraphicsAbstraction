@@ -2,8 +2,13 @@ include "/vendor/premake/premake_customization/solution_items.lua"
 include "Dependencies.lua"
 
 newoption {
-	trigger = "with-vulkan",
+	trigger = "vulkan",
 	description = "Force the use of Vulkan for rendering, regardless of platform"
+}
+
+newoption {
+	trigger = "directx",
+	description = "Force the use of DirectX for rendering, regardless of platform"
 }
 
 workspace "GraphicsAbstraction"

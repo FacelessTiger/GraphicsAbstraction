@@ -2,9 +2,9 @@
 
 #include <GraphicsAbstraction/Renderer/GraphicsContext.h>
 #include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanDeletionQueue.h>
-#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanPipelineKeys.h>
 #include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanPipelineManager.h>
 #include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanRenderInfoManager.h>
+#include <Platform/GraphicsAPI/Shared/PipelineKeys.h>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -27,24 +27,9 @@ namespace GraphicsAbstraction {
 	class VulkanShader;
 	class VulkanContext;
 
-	class VulkanContextReference
-	{
-	public:
-		VulkanContextReference(const VulkanContextReference& other);
-		VulkanContextReference(VulkanContext* context);
-		~VulkanContextReference();
-
-		VulkanContext* operator->() { return m_Context; }
-		const VulkanContext* operator->() const { return m_Context; }
-	private:
-		VulkanContext* m_Context;
-	};
-
 	class VulkanContext : public GraphicsContext
 	{
 	public:
-		friend VulkanContextReference;
-
 		VkInstance Instance;
 		VkDebugUtilsMessengerEXT DebugMessenger;
 		VkPhysicalDevice ChosenGPU;
@@ -82,28 +67,24 @@ namespace GraphicsAbstraction {
 		#include "../InternalManagers/VulkanFunctions.inl"
 	public:
 		VulkanContext(uint32_t frameInFlightCount);
-		inline void ShutdownImpl() override { m_ShutdownImplCalled = true; Destroy(); };
+		~VulkanContext();
 
 		Ref<Queue> GetQueueImpl(QueueType type) override;
 		inline void SetFrameInFlightImpl(uint32_t fif) override { FrameInFlight = fif; FrameDeletionQueues[FrameInFlight].Flush(); }
 
 		inline VulkanDeletionQueue& GetFrameDeletionQueue() { return FrameDeletionQueues[FrameInFlight]; }
-		inline static VulkanContextReference GetReference() { return VulkanContextReference((VulkanContext*)s_Instance.get()); }
+		inline static Ref<VulkanContext> GetReference() { return { s_Instance, (VulkanContext*)s_Instance.Get() }; }
 	private:
 		void SetupInstance();
 		void SetupPhysicalDevice();
 		void SetupLogicalDevice();
 		void SetupBindless();
-
-		void Destroy();
 	private:
 #ifndef GA_DIST
 		bool m_UseValidationLayers = true;
 #else
 		bool m_UseValidationLayers = false;
 #endif
-		bool m_ShutdownImplCalled = false;
-		uint32_t m_ReferenceCount = 0;
 
 		VkDescriptorPool m_BindlessPool;
 	};

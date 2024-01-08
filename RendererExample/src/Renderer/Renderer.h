@@ -1,11 +1,6 @@
 #pragma once
 
-#include <GraphicsAbstraction/Core/Window.h>
-#include <GraphicsAbstraction/Renderer/Image.h>
-#include <GraphicsAbstraction/Renderer/CommandPool.h>
-#include <GraphicsAbstraction/Renderer/Queue.h>
-#include <GraphicsAbstraction/Renderer/Buffer.h>
-#include <GraphicsAbstraction/Renderer/Fence.h>
+#include <GraphicsAbstraction/GraphicsAbstraction.h>
 #include <Renderer/EditorCamera.h>
 
 namespace GraphicsAbstraction {

@@ -31,7 +31,7 @@ namespace GraphicsAbstraction {
 	private:
 		void UpdateDescriptor();
 	private:
-		VulkanContextReference m_Context;
+		Ref<VulkanContext> m_Context;
 	};
 
 }

@@ -8,48 +8,6 @@
 
 namespace GraphicsAbstraction {
 
-	namespace Utils {
-
-		VkCompareOp GACompareOpToVulkan(CompareOperation op)
-		{
-			switch (op)
-			{
-				case CompareOperation::GreaterEqual:	return VK_COMPARE_OP_GREATER_OR_EQUAL;
-				case CompareOperation::LesserEqual:		return VK_COMPARE_OP_LESS_OR_EQUAL;
-			}
-
-			GA_CORE_ASSERT(false, "Unknown compare operation!");
-			return (VkCompareOp)0;
-		}
-
-		VkBlendFactor GABlendToVulkan(Blend blend)
-		{
-			switch (blend)
-			{
-				case Blend::Zero:				return VK_BLEND_FACTOR_ZERO;
-				case Blend::One:				return VK_BLEND_FACTOR_ONE;
-				case Blend::SrcAlpha:			return VK_BLEND_FACTOR_SRC_ALPHA;
-				case Blend::DstAlpha:			return VK_BLEND_FACTOR_DST_ALPHA;
-				case Blend::OneMinusSrcAlpha:	return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			}
-
-			GA_CORE_ASSERT(false, "Unknown blend factor!");
-			return (VkBlendFactor)0;
-		}
-
-		VkBlendOp GABlendOpToVulkan(BlendOp blendOp)
-		{
-			switch (blendOp)
-			{
-				case BlendOp::Add: return VK_BLEND_OP_ADD;
-			}
-
-			GA_CORE_ASSERT(false, "Unknown blend operation!");
-			return (VkBlendOp)0;
-		}
-
-	}
-
 	VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBuffer buffer)
 		: m_Context(VulkanContext::GetReference()), CommandBuffer(buffer)
 	{
@@ -127,6 +85,44 @@ namespace GraphicsAbstraction {
 		vulkanDst.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
+	void VulkanCommandBuffer::CopyToImage(const Ref<Image>& src, const Ref<Image>& dst)
+	{
+		auto& vulkanSrc = (VulkanImage&)(*src);
+		auto& vulkanDst = (VulkanImage&)(*dst);
+
+		vulkanSrc.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		vulkanDst.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+		VkImageCopy copy = {
+			.extent = { vulkanSrc.Width, vulkanSrc.Height, 1 }
+		};
+		copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.srcSubresource.layerCount = 1;
+
+		copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.dstSubresource.layerCount = 1;
+
+		vkCmdCopyImage(CommandBuffer, vulkanSrc.Image.Image, vulkanSrc.Layout, vulkanDst.Image.Image, vulkanDst.Layout, 1, &copy);
+	}
+
+	void VulkanCommandBuffer::RWResourceBarrier(const Ref<Image>& resource)
+	{
+		auto& vulkanImage = (VulkanImage&)(*resource);
+		if (vulkanImage.Layout == VK_IMAGE_LAYOUT_UNDEFINED) return;
+		
+		VkImageMemoryBarrier barrier = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+			.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+			.oldLayout = vulkanImage.Layout,
+			.newLayout = vulkanImage.Layout,
+
+			.image = vulkanImage.Image.Image,
+			.subresourceRange = Utils::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT)
+		};
+		vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	}
+
 	void VulkanCommandBuffer::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
 	{
 		GA_PROFILE_SCOPE();
@@ -151,7 +147,7 @@ namespace GraphicsAbstraction {
 				});
 			}
 
-			m_GraphicsPipelineKey.DepthAttachment = VK_FORMAT_UNDEFINED;
+			m_GraphicsPipelineKey.DepthAttachment = ImageFormat::Unknown;
 			if (depthAttachment)
 			{
 				auto& vulkanImage = (VulkanImage&)(*depthAttachment);
@@ -357,7 +353,7 @@ namespace GraphicsAbstraction {
 		{
 			m_GraphicsPipelineKey.DepthTestEnable = true;
 			m_GraphicsPipelineKey.DepthWriteEnable = writeEnabled;
-			m_GraphicsPipelineKey.DepthCompareOp = Utils::GACompareOpToVulkan(op);
+			m_GraphicsPipelineKey.DepthCompareOp = op;
 			m_GraphicsPipelineStateChanged = true;
 		}
 
@@ -379,14 +375,12 @@ namespace GraphicsAbstraction {
 
 	void VulkanCommandBuffer::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
 	{
-		SetColorBlend(true,		Utils::GABlendToVulkan(srcBlend), Utils::GABlendToVulkan(dstBlend), Utils::GABlendOpToVulkan(blendOp), 
-								Utils::GABlendToVulkan(srcBlendAlpha), Utils::GABlendToVulkan(dstBlendAlpha), Utils::GABlendOpToVulkan(blendAlpha));
+		SetColorBlend(true,	srcBlend, dstBlend, blendOp, srcBlendAlpha, dstBlendAlpha, blendAlpha);
 	}
 
 	void VulkanCommandBuffer::DisableColorBlend()
 	{
-		SetColorBlend(false,	VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
-								VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD);
+		SetColorBlend(false, Blend::Zero, Blend::Zero, BlendOp::Add, Blend::Zero, Blend::Zero, BlendOp::Add);
 	}
 
 	void VulkanCommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -417,18 +411,18 @@ namespace GraphicsAbstraction {
 		vkCmdDrawIndexedIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset, drawCount, stride);
 	}
 
-	void VulkanCommandBuffer::SetColorBlend(bool enabled, VkBlendFactor srcBlend, VkBlendFactor dstBlend, VkBlendOp blendOp, VkBlendFactor srcBlendAlpha, VkBlendFactor dstBlendAlpha, VkBlendOp blendAlpha)
+	void VulkanCommandBuffer::SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
 	{
 		if (m_Context->DynamicState3Supported)
 		{
 			VkBool32 enable = enabled;
 			VkColorBlendEquationEXT equation = {
-				.srcColorBlendFactor = srcBlend,
-				.dstColorBlendFactor = dstBlend,
-				.colorBlendOp = blendOp,
-				.srcAlphaBlendFactor = srcBlendAlpha,
-				.dstAlphaBlendFactor = dstBlendAlpha,
-				.alphaBlendOp = blendAlpha
+				.srcColorBlendFactor = Utils::GABlendToVulkan(srcBlend),
+				.dstColorBlendFactor = Utils::GABlendToVulkan(dstBlend),
+				.colorBlendOp = Utils::GABlendOpToVulkan(blendOp),
+				.srcAlphaBlendFactor = Utils::GABlendToVulkan(srcBlendAlpha),
+				.dstAlphaBlendFactor = Utils::GABlendToVulkan(dstBlendAlpha),
+				.alphaBlendOp = Utils::GABlendOpToVulkan(blendAlpha)
 			};
 
 			m_Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, 0, 1, &enable);
@@ -483,6 +477,7 @@ namespace GraphicsAbstraction {
 			{
 				m_Context->vkCmdSetDepthTestEnableEXT(CommandBuffer, false);
 				m_Context->vkCmdSetDepthWriteEnableEXT(CommandBuffer, false);
+				m_Context->vkCmdSetDepthCompareOpEXT(CommandBuffer, VK_COMPARE_OP_NEVER);
 			}
 
 			m_Context->vkCmdSetDepthBoundsTestEnableEXT(CommandBuffer, false);

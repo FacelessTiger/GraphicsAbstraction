@@ -199,6 +199,7 @@ namespace GraphicsAbstraction {
 		std::vector<LPCWSTR> arguments = {
 			filePath,
 			L"-E", L"main",
+			L"-D", L"VK_BINDLESS",
 			L"-T", Utils::ShaderStageToDXC(Stage),
 			L"-spirv",
 			L"-Zi"

@@ -10,6 +10,7 @@ PushConstant(PushConstant, pushConstants);
 
 struct VertexInput
 {
+	float4 position: SV_Position;
 	float4 color: COLOR0;
 	Texture texture: BLENDINDICES0;
 	float2 uv: TEXCOORD0;

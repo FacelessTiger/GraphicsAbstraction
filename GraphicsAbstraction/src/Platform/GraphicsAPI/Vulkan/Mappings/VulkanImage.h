@@ -17,22 +17,25 @@ namespace GraphicsAbstraction {
 		Utils::AllocatedImage Image;
 		VkImageView View;
 		VkImageLayout Layout;
-		VkFormat Format;
-		VkImageUsageFlags Usage;
+		ImageFormat Format;
+		ImageUsage Usage;
 
 		uint32_t Width;
 		uint32_t Height;
 
-		VulkanResourceHandle Handle;
+		VulkanResourceHandle SampledHandle = { ResourceType::SampledImage };
+		VulkanResourceHandle StorageHandle = { ResourceType::StorageImage };
 	public:
 		VulkanImage(const glm::vec2& size, ImageFormat format, ImageUsage usage);
-		VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, VkFormat imageFormat, VkImageUsageFlags usage, uint32_t width, uint32_t height);
+		VulkanImage(VkImage image, VkImageView imageView, VkImageLayout imageLayout, ImageFormat imageFormat, ImageUsage usage, uint32_t width, uint32_t height);
 		virtual ~VulkanImage();
 
-		void CopyTo(const Ref<CommandBuffer>& cmd, const Ref<GraphicsAbstraction::Image>& other) override;
 		void Resize(const glm::vec2& size) override;
 
-		inline uint32_t GetHandle() const override { return Handle.GetValue(); }
+		inline uint32_t GetSampledHandle() const override { return SampledHandle.GetValue(); }
+		inline uint32_t GetStorageHandle() const override { return StorageHandle.GetValue(); }
+		inline uint32_t GetWidth() const override { return Width; }
+		inline uint32_t GetHeight() const override { return Height; }
 		inline glm::vec2 GetSize() const { return { (float)Width, (float)Height }; };
 
 		void TransitionLayout(VkCommandBuffer cmd, VkImageLayout newLayout);
@@ -42,7 +45,7 @@ namespace GraphicsAbstraction {
 
 		void UpdateDescriptor();
 	private:
-		VulkanContextReference m_Context;
+		Ref<VulkanContext> m_Context;
 		bool m_ExternalAllocation = false;
 	};
 

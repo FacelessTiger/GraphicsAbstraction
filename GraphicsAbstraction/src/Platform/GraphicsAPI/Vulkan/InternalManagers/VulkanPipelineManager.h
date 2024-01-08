@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Platform/GraphicsAPI/Vulkan/InternalManagers/VulkanPipelineKeys.h>
+#include <Platform/GraphicsAPI/Shared/PipelineKeys.h>
 
 #include <vulkan/vulkan.h>
 
@@ -14,11 +14,11 @@ namespace GraphicsAbstraction {
 		VulkanPipelineManager(VulkanContext& context);
 		~VulkanPipelineManager();
 
-		VkPipeline GetGraphicsPipeline(const VulkanGraphicsPipelineKey& key);
-		VkPipeline GetComputePipeline(const VulkanComputePipelineKey& key);
+		VkPipeline GetGraphicsPipeline(const GraphicsPipelineKey& key);
+		VkPipeline GetComputePipeline(const ComputePipelineKey& key);
 	private:
-		std::unordered_map<VulkanGraphicsPipelineKey, VkPipeline> m_GraphicsPipelines;
-		std::unordered_map<VulkanComputePipelineKey, VkPipeline> m_ComputePipelines;
+		std::unordered_map<GraphicsPipelineKey, VkPipeline> m_GraphicsPipelines;
+		std::unordered_map<ComputePipelineKey, VkPipeline> m_ComputePipelines;
 
 		VkPipelineCache m_PipelineCache;
 		VulkanContext& m_Context;

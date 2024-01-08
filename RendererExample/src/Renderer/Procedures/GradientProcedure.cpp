@@ -26,7 +26,7 @@ namespace GraphicsAbstraction {
 		m_Buffer->SetData(&m_Data);
 
 		m_GradientShader = Shader::Create("Assets/shaders/gradient.hlsl", ShaderStage::Compute);
-		m_ComputePC = { payload.DrawImage->GetHandle(), m_Buffer->GetHandle() };
+		m_ComputePC = { payload.DrawImage->GetStorageHandle(), m_Buffer->GetHandle() };
 
 		m_TriangleVertex = Shader::Create("Assets/shaders/triangleVertex.hlsl", ShaderStage::Vertex);
 		m_TrianglePixel = Shader::Create("Assets/shaders/trianglePixel.hlsl", ShaderStage::Pixel);

@@ -50,7 +50,7 @@ namespace GraphicsAbstraction {
 			vkDestroyPipeline(m_Context.Device, pipeline, nullptr);
 	}
 
-	VkPipeline VulkanPipelineManager::GetGraphicsPipeline(const VulkanGraphicsPipelineKey& key)
+	VkPipeline VulkanPipelineManager::GetGraphicsPipeline(const GraphicsPipelineKey& key)
 	{
 		GA_PROFILE_SCOPE();
 		if (m_GraphicsPipelines.find(key) != m_GraphicsPipelines.end()) return m_GraphicsPipelines[key];
@@ -64,9 +64,9 @@ namespace GraphicsAbstraction {
 
 		std::vector<VkFormat> colorAttachmentFormats;
 		colorAttachmentFormats.reserve(key.ColorAttachments.size());
-		for (VkFormat format : key.ColorAttachments)
+		for (ImageFormat format : key.ColorAttachments)
 		{
-			if (format != VK_FORMAT_UNDEFINED) colorAttachmentFormats.push_back(format);
+			if (format != ImageFormat::Unknown) colorAttachmentFormats.push_back(Utils::GAImageFormatToVulkan(format));
 		}
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
@@ -98,12 +98,12 @@ namespace GraphicsAbstraction {
 
 		VkPipelineColorBlendAttachmentState colorAttachment = {
 			.blendEnable = key.BlendEnable,
-			.srcColorBlendFactor = key.SrcBlend,
-			.dstColorBlendFactor = key.DstBlend,
-			.colorBlendOp = key.BlendOp,
-			.srcAlphaBlendFactor = key.SrcBlendAlpha,
-			.dstAlphaBlendFactor = key.DstBlendAlpha,
-			.alphaBlendOp = key.BlendOpAlpha,
+			.srcColorBlendFactor = Utils::GABlendToVulkan(key.SrcBlend),
+			.dstColorBlendFactor = Utils::GABlendToVulkan(key.DstBlend),
+			.colorBlendOp = Utils::GABlendOpToVulkan(key.BlendOp),
+			.srcAlphaBlendFactor = Utils::GABlendToVulkan(key.SrcBlendAlpha),
+			.dstAlphaBlendFactor = Utils::GABlendToVulkan(key.DstBlendAlpha),
+			.alphaBlendOp = Utils::GABlendOpToVulkan(key.BlendOpAlpha),
 			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
 		};
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo = {
@@ -118,7 +118,7 @@ namespace GraphicsAbstraction {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			.depthTestEnable = key.DepthTestEnable,
 			.depthWriteEnable = key.DepthWriteEnable,
-			.depthCompareOp = key.DepthCompareOp,
+			.depthCompareOp = Utils::GACompareOpToVulkan(key.DepthCompareOp),
 			.depthBoundsTestEnable = false,
 			.stencilTestEnable = false
 		};
@@ -162,7 +162,7 @@ namespace GraphicsAbstraction {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
 			.colorAttachmentCount = (uint32_t)colorAttachmentFormats.size(),
 			.pColorAttachmentFormats = colorAttachmentFormats.data(),
-			.depthAttachmentFormat = key.DepthAttachment
+			.depthAttachmentFormat = Utils::GAImageFormatToVulkan(key.DepthAttachment)
 		};
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {
@@ -180,7 +180,7 @@ namespace GraphicsAbstraction {
 			.layout = m_Context.BindlessPipelineLayout
 		};
 		if (m_Context.DynamicRenderingSupported) pipelineInfo.pNext = &renderingInfo;
-		else pipelineInfo.renderPass = key.Renderpass;
+		else pipelineInfo.renderPass = (VkRenderPass)key.Renderpass;
 
 		VkPipeline pipeline;
 		VK_CHECK(vkCreateGraphicsPipelines(m_Context.Device, m_PipelineCache, 1, &pipelineInfo, nullptr, &pipeline));
@@ -189,7 +189,7 @@ namespace GraphicsAbstraction {
 		return pipeline;
 	}
 
-	VkPipeline VulkanPipelineManager::GetComputePipeline(const VulkanComputePipelineKey& key)
+	VkPipeline VulkanPipelineManager::GetComputePipeline(const ComputePipelineKey& key)
 	{
 		GA_PROFILE_SCOPE();
 		if (m_ComputePipelines.find(key) != m_ComputePipelines.end()) return m_ComputePipelines[key];

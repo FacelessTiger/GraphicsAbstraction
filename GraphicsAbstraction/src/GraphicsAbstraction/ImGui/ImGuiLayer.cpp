@@ -1,7 +1,6 @@
 #include "ImGuiLayer.h"
 
 #include <array>
-#include <vulkan/vulkan.h>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <backends/imgui_impl_glfw.h>
@@ -10,7 +9,6 @@
 #include <GraphicsAbstraction/Renderer/CommandBuffer.h>
 #include <GraphicsAbstraction/Renderer/Fence.h>
 #include <GraphicsAbstraction/Renderer/Buffer.h>
-#include <GraphicsAbstraction/Renderer/Surface.h>
 #include <GraphicsAbstraction/Renderer/Sampler.h>
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
 #include <GraphicsAbstraction/Renderer/Shader.h>
@@ -28,6 +26,10 @@ namespace GraphicsAbstraction {
 		Ref<Image> FontImage;
 	};
 
+	// TODO: For vertex pulling, SV_VertexID is draw index id [0,indexCount-1] + vertexOffset in vulkan
+	// but in d3d12 its only draw index id. For now just putting a push constant but should ensure its the same for both
+	// either by subtracting it on the vulkan side (but requires an extension), or using experimental agility sdk
+	// on the directx side for SM 6.8 (which has SV_BaseVertexLocation)
 	struct PushConstant
 	{
 		glm::vec2 scale;
@@ -35,6 +37,7 @@ namespace GraphicsAbstraction {
 		uint32_t vertices;
 		uint32_t texture;
 		uint32_t sampler;
+		uint32_t vertexOffset;
 	};
 
 	static ImGuiLayerData* s_Data;
@@ -68,7 +71,7 @@ namespace GraphicsAbstraction {
 		SetDarkThemeColors();
 
 		GLFWwindow* glfwWindow = static_cast<GLFWwindow*>(window->GetNativeWindow());
-		ImGui_ImplGlfw_InitForVulkan(glfwWindow, true);
+		ImGui_ImplGlfw_InitForOther(glfwWindow, true);
 
 		// do init
 		GA_CORE_ASSERT(!io.BackendRendererUserData, "Imgui already has a backend!");
@@ -112,7 +115,7 @@ namespace GraphicsAbstraction {
 		if (drawData->TotalVtxCount > 0)
 		{
 			uint32_t indexSize = drawData->TotalIdxCount * sizeof(ImDrawIdx);
-			uint32_t vertexSize = drawData->TotalVtxCount * (sizeof(ImDrawVert) + 12);
+			uint32_t vertexSize = drawData->TotalVtxCount * sizeof(ImDrawVert);
 			if (s_Data->IndexBuffer->GetSize() < indexSize) s_Data->IndexBuffer = Buffer::Create(indexSize, BufferUsage::IndexBuffer, BufferFlags::Mapped);
 			if (s_Data->VertexBuffer->GetSize() < vertexSize) s_Data->VertexBuffer = Buffer::Create(vertexSize, BufferUsage::StorageBuffer, BufferFlags::Mapped);
 
@@ -168,10 +171,11 @@ namespace GraphicsAbstraction {
 				if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y) continue;
 
 				pc.texture = (uint32_t)(uint64_t)drawCmd.TextureId;
+				pc.vertexOffset = drawCmd.VtxOffset + vertexOffset;
 				cmd->PushConstant(pc);
 
 				cmd->SetScissor({ clipMax.x - clipMin.x, clipMax.y - clipMin.y }, { clipMin.x, clipMin.y });
-				cmd->DrawIndexed(drawCmd.ElemCount, 1, drawCmd.IdxOffset + indexOffset, drawCmd.VtxOffset + vertexOffset, 0);
+				cmd->DrawIndexed(drawCmd.ElemCount, 1, drawCmd.IdxOffset + indexOffset, 0, 0);
 			}
 
 			vertexOffset += drawList->VtxBuffer.Size;
@@ -237,7 +241,7 @@ namespace GraphicsAbstraction {
 		queue->Submit(cmd, nullptr, fence);
 		fence->Wait();
 
-		io.Fonts->SetTexID((ImTextureID)(uint64_t)s_Data->FontImage->GetHandle());
+		io.Fonts->SetTexID((ImTextureID)(uint64_t)s_Data->FontImage->GetSampledHandle());
 	}
 
 }

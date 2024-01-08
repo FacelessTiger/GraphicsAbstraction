@@ -18,8 +18,12 @@ namespace GraphicsAbstraction {
 		void Clear(const Ref<Image>& image, const glm::vec4& color) override;
 		void Present(const Ref<Swapchain>& swapchain) override;
 		void Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ) override;
+
 		void CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset) override;
 		void CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset) override;
+		void CopyToImage(const Ref<Image>& src, const Ref<Image>& dst) override;
+		void RWResourceBarrier(const Ref<Image>& resource) override;
+
 		void BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment) override;
 		void EndRendering() override;
 
@@ -40,13 +44,13 @@ namespace GraphicsAbstraction {
 		void DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride) override;
 		void DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride) override;
 	private:
-		void SetColorBlend(bool enabled, VkBlendFactor srcBlend, VkBlendFactor dstBlend, VkBlendOp blendOp, VkBlendFactor srcBlendAlpha, VkBlendFactor dstBlendAlpha, VkBlendOp blendAlpha);
+		void SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha);
 		void SetDynamicState();
 	private:
-		VulkanContextReference m_Context;
+		Ref<VulkanContext> m_Context;
 
-		VulkanGraphicsPipelineKey m_GraphicsPipelineKey;
-		VulkanComputePipelineKey m_ComputePipelineKey;
+		GraphicsPipelineKey m_GraphicsPipelineKey;
+		ComputePipelineKey m_ComputePipelineKey;
 		bool m_GraphicsPipelineStateChanged = false;
 		bool m_ComputePipelineStateChanged = false;
 
