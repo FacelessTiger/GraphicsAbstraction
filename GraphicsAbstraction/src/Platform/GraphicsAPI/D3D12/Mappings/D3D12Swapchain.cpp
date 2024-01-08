@@ -69,7 +69,7 @@ namespace GraphicsAbstraction {
 
 		DXGI_SWAP_CHAIN_DESC swapchainDesc = {};
 		D3D12_CHECK(Swapchain->GetDesc(&swapchainDesc));
-		D3D12_CHECK(Swapchain->ResizeBuffers(2, Width, Height, swapchainDesc.BufferDesc.Format, swapchainDesc.Flags));
+		D3D12_CHECK(Swapchain->ResizeBuffers(3, Width, Height, swapchainDesc.BufferDesc.Format, swapchainDesc.Flags));
 
 		UpdateRenderTargetViews();
 		Dirty = false;
