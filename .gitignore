@@ -15,3 +15,5 @@ Intermediates/
 # Directories
 scripts/__pycache__
 GraphicsAbstraction/Assets/cache
+GraphicsAbstraction/vendor/imgui
+GraphicsAbstraction/vendor/tracy
