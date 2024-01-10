@@ -400,7 +400,7 @@ namespace GraphicsAbstraction {
 		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
 
 		SetDynamicState();
-		vkCmdDrawIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset, drawCount, stride);
+		vkCmdDrawIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset + 8, drawCount, stride);
 	}
 
 	void VulkanCommandBuffer::DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
@@ -408,7 +408,7 @@ namespace GraphicsAbstraction {
 		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
 
 		SetDynamicState();
-		vkCmdDrawIndexedIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset, drawCount, stride);
+		vkCmdDrawIndexedIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset + 8, drawCount, stride);
 	}
 
 	void VulkanCommandBuffer::SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)

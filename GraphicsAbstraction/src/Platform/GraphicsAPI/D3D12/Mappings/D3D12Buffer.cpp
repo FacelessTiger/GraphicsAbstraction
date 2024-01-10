@@ -10,7 +10,7 @@ namespace GraphicsAbstraction {
 	}
 
 	D3D12Buffer::D3D12Buffer(uint32_t size, BufferUsage usage, BufferFlags flags)
-		: m_Context(D3D12Context::GetReference()), Size(size)
+		: m_Context(D3D12Context::GetReference()), Size(size), Usage(usage)
 	{
 		D3D12_HEAP_TYPE heapType;
 		if (flags & BufferFlags::DeviceLocal) heapType = (flags & BufferFlags::Mapped) ? D3D12_HEAP_TYPE_GPU_UPLOAD : D3D12_HEAP_TYPE_DEFAULT;

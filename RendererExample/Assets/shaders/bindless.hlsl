@@ -16,6 +16,13 @@ struct RenderResourceHandle
 	#define PushConstant(structName, variableName) [[vk::push_constant]] ConstantBuffer<structName> variableName
 #else
 	#define PushConstant(structName, variableName) ConstantBuffer<structName> variableName: register(b0, space0);
+
+	struct SpecialConstant
+	{
+		uint vertexOffset;
+		uint instanceOffset;
+	};
+	ConstantBuffer<SpecialConstant> g_SpecialConstants: register(b1, space0);
 #endif
 
 struct ArrayBuffer
@@ -31,15 +38,15 @@ struct ArrayBuffer
 	}
 
 	template <typename ReadStructure>
-	ReadStructure Load(uint index, uint size = 0)
+	ReadStructure Load(uint index)
 	{
-		uint byteSize = size ? size : sizeof(ReadStructure);
 		ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.handle.GetReadIndex());
-		ReadStructure result = buffer.Load<ReadStructure>(byteSize * index);
+		ReadStructure result = buffer.Load<ReadStructure>(index * sizeof(ReadStructure));
 
 		return result;
 	}
 };
+
 
 struct SimpleBuffer
 {

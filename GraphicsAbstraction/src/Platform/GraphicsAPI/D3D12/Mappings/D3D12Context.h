@@ -2,6 +2,7 @@
 
 #include <GraphicsAbstraction/Renderer/GraphicsContext.h>
 #include <Platform/GraphicsAPI/D3D12/InternalManagers/D3D12PipelineManager.h>
+#include <Platform/GraphicsAPI/D3D12/InternalManagers/D3D12CommandSignatureManager.h>
 #include <Platform/GraphicsAPI/D3D12/InternalManagers/D3D12DeletionQueue.h>
 
 #include <d3d12.h>
@@ -37,6 +38,7 @@ namespace GraphicsAbstraction {
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> BindlessDescriptorHeap, BindlessSamplerHeap;
 
 		D3D12PipelineManager* PipelineManager;
+		D3D12CommandSignatureManager* CommandSignatureManager;
 		std::vector<D3D12DeletionQueue> FrameDeletionQueues;
 		uint32_t FrameInFlight = 0;
 	public:

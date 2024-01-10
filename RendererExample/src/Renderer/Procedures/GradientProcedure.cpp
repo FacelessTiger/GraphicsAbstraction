@@ -39,18 +39,12 @@ namespace GraphicsAbstraction {
 		{
 			Mesh& mesh = m_Scene.Meshes[i];
 
-			DrawIndexedIndirectCommand command = {
-				.IndexCount = mesh.Count,
-				.InstanceCount = 1,
-				.FirstIndex = mesh.StartIndex,
-				.VertexOffset = 0,
-				.FirstInstance = (uint32_t)i
-			};
+			DrawIndexedIndirectCommand command(mesh.Count, 1, mesh.StartIndex, 0, (uint32_t)i);
 			m_CommandBuffer->SetData(&command, sizeof(DrawIndexedIndirectCommand), i * sizeof(DrawIndexedIndirectCommand));
 
 			m_Positions.push_back({0, 0, 0});
 			glm::mat4 rotation = glm::toMat4(glm::quat({ 0.0f, 0.0f, 0.0f }));
-			glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), { 0.0f, 0.0f, 0.0f }) * rotation * glm::scale(glm::mat4(1.0f), { 1.0f, 1.0f, 1.0f });
+			glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), { 0.0, 0.0f, 0.0f }) * rotation * glm::scale(glm::mat4(1.0f), { 1.0f, 1.0f, 1.0f });
 			m_ModelMatrixBuffer->SetData(glm::value_ptr(modelMatrix), sizeof(glm::mat4), sizeof(glm::mat4) * i);
 		}
 	}

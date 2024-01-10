@@ -14,7 +14,6 @@ struct PushConstant
 	uint vertices;
 	uint texture;
 	uint sampler;
-	uint vertexOffset;
 };
 PushConstant(PushConstant, pushConstants);
 
@@ -27,7 +26,7 @@ struct VertexOutput
 
 VertexOutput main(uint vertexID: SV_VertexID)
 {
-	ImDrawVert vertex = ArrayBuffer::Create(pushConstants.vertices).Load<ImDrawVert>(vertexID + pushConstants.vertexOffset);
+	ImDrawVert vertex = ArrayBuffer::Create(pushConstants.vertices).Load<ImDrawVert>(vertexID);
 
 	VertexOutput output;
 	output.position = float4((vertex.pos * pushConstants.scale) + pushConstants.offset, 0, 1);

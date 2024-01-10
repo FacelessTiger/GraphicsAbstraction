@@ -19,6 +19,7 @@ namespace GraphicsAbstraction {
 
 		void* Data = nullptr;
 		uint32_t Size;
+		BufferUsage Usage;
 	public:
 		D3D12Buffer(uint32_t size, BufferUsage usage, BufferFlags flags);
 		virtual ~D3D12Buffer();

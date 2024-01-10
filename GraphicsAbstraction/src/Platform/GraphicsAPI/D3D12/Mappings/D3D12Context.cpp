@@ -3,7 +3,7 @@
 #include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Queue.h>
 #include <d3dx12/d3dx12.h>
 
-extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 611; }
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 711; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
 
 namespace GraphicsAbstraction {
@@ -28,6 +28,7 @@ namespace GraphicsAbstraction {
 
 	D3D12Context::D3D12Context(uint32_t frameInFlightCount)
 	{
+		D3D12_CHECK(D3D12EnableExperimentalFeatures(1, &D3D12ExperimentalShaderModels, nullptr, nullptr));
 #ifndef GA_DIST
 		ComPtr<ID3D12Debug> debugInterface;
 		D3D12_CHECK(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
@@ -39,6 +40,7 @@ namespace GraphicsAbstraction {
 		SetupBindless();
 
 		PipelineManager = new D3D12PipelineManager(*this);
+		CommandSignatureManager = new D3D12CommandSignatureManager(*this);
 		FrameDeletionQueues.resize(frameInFlightCount, *this);
 	}
 
@@ -50,6 +52,7 @@ namespace GraphicsAbstraction {
 			deletionQueue.Flush();
 
 		delete PipelineManager;
+		delete CommandSignatureManager;
 	}
 
 	Ref<Queue> D3D12Context::GetQueueImpl(QueueType type)
@@ -111,7 +114,7 @@ namespace GraphicsAbstraction {
 			D3D12_INFO_QUEUE_FILTER filter = {};
 			filter.DenyList.NumSeverities = 1;
 			filter.DenyList.pSeverityList = &infoSeverity;
-			//D3D12_CHECK(pInfoQueue->PushStorageFilter(&filter));
+			D3D12_CHECK(pInfoQueue->PushStorageFilter(&filter));
 		}
 #endif
 
@@ -123,10 +126,11 @@ namespace GraphicsAbstraction {
 
 	void D3D12Context::SetupBindless()
 	{
-		CD3DX12_ROOT_PARAMETER1 pushConstant;
+		CD3DX12_ROOT_PARAMETER1 pushConstants[2];
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC descVersion;
-		pushConstant.InitAsConstants(128 / 4, 0);
-		descVersion.Init_1_1(1, &pushConstant, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED | D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED);
+		pushConstants[0].InitAsConstants(128 / 4, 0);
+		pushConstants[1].InitAsConstants(2, 1);
+		descVersion.Init_1_1(2, pushConstants, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED | D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED);
 
 		ComPtr<ID3DBlob> signature, error;
 		D3D12_CHECK(D3DX12SerializeVersionedRootSignature(&descVersion, D3D_ROOT_SIGNATURE_VERSION_1_1, &signature, &error));

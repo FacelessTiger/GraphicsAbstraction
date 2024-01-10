@@ -26,10 +26,6 @@ namespace GraphicsAbstraction {
 		Ref<Image> FontImage;
 	};
 
-	// TODO: For vertex pulling, SV_VertexID is draw index id [0,indexCount-1] + vertexOffset in vulkan
-	// but in d3d12 its only draw index id. For now just putting a push constant but should ensure its the same for both
-	// either by subtracting it on the vulkan side (but requires an extension), or using experimental agility sdk
-	// on the directx side for SM 6.8 (which has SV_BaseVertexLocation)
 	struct PushConstant
 	{
 		glm::vec2 scale;
@@ -37,7 +33,6 @@ namespace GraphicsAbstraction {
 		uint32_t vertices;
 		uint32_t texture;
 		uint32_t sampler;
-		uint32_t vertexOffset;
 	};
 
 	static ImGuiLayerData* s_Data;
@@ -142,6 +137,7 @@ namespace GraphicsAbstraction {
 		cmd->BeginRendering({ framebufferWidth, framebufferHeight }, { image });
 		cmd->BindShaders({ s_Data->VertexShader, s_Data->PixelShader });
 		cmd->EnableColorBlend(Blend::SrcAlpha, Blend::OneMinusSrcAlpha, BlendOp::Add, Blend::One, Blend::Zero, BlendOp::Add);
+		cmd->DisableDepthTest();
 		cmd->SetViewport({ framebufferWidth, framebufferHeight });
 		cmd->BindIndexBuffer(s_Data->IndexBuffer);
 
@@ -171,11 +167,10 @@ namespace GraphicsAbstraction {
 				if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y) continue;
 
 				pc.texture = (uint32_t)(uint64_t)drawCmd.TextureId;
-				pc.vertexOffset = drawCmd.VtxOffset + vertexOffset;
 				cmd->PushConstant(pc);
 
 				cmd->SetScissor({ clipMax.x - clipMin.x, clipMax.y - clipMin.y }, { clipMin.x, clipMin.y });
-				cmd->DrawIndexed(drawCmd.ElemCount, 1, drawCmd.IdxOffset + indexOffset, 0, 0);
+				cmd->DrawIndexed(drawCmd.ElemCount, 1, drawCmd.IdxOffset + indexOffset, drawCmd.VtxOffset + vertexOffset, 0);
 			}
 
 			vertexOffset += drawList->VtxBuffer.Size;

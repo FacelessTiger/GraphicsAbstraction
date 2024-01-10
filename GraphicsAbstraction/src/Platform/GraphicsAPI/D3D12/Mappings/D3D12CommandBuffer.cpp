@@ -13,6 +13,12 @@ namespace GraphicsAbstraction {
 
 	using namespace Microsoft::WRL;
 
+	struct SpecialConstant
+	{
+		uint32_t vertexOffset;
+		uint32_t instanceOffset;
+	};
+
 	D3D12CommandBuffer::D3D12CommandBuffer(ComPtr<ID3D12GraphicsCommandList> commandList)
 		: m_Context(D3D12Context::GetReference()), CommandList(commandList)
 	{ }
@@ -112,11 +118,6 @@ namespace GraphicsAbstraction {
 			m_GraphicsPipelineKey.DepthAttachment = d3d12Depth.Format;
 			CommandList->ClearDepthStencilView(d3d12Depth.CpuHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
 		}
-		else // TODO: should have EnableDepthTest and DisableDepthTest like with color blend
-		{
-			m_GraphicsPipelineKey.DepthTestEnable = false;
-			m_GraphicsPipelineKey.DepthWriteEnable = false;
-		}
 
 		m_GraphicsPipelineKey.ColorAttachments[0] = d3d12Image.Format;
 		CommandList->OMSetRenderTargets(1, &d3d12Image.CpuHandle, false, depthAttachment ? &d3d12Depth.CpuHandle : nullptr);
@@ -195,11 +196,18 @@ namespace GraphicsAbstraction {
 		CommandList->RSSetScissorRects(1, &scissor);
 	}
 
-	void D3D12CommandBuffer::SetDepthTest(bool testEnabled, bool writeEnabled, CompareOperation op)
+	void D3D12CommandBuffer::EnableDepthTest(bool writeEnabled, CompareOperation op)
 	{
-		m_GraphicsPipelineKey.DepthTestEnable = testEnabled;
+		m_GraphicsPipelineKey.DepthTestEnable = true;
 		m_GraphicsPipelineKey.DepthWriteEnable = writeEnabled;
 		m_GraphicsPipelineKey.DepthCompareOp = op;
+		m_GraphicsPipelineStateChanged = true;
+	}
+
+	void D3D12CommandBuffer::DisableDepthTest()
+	{
+		m_GraphicsPipelineKey.DepthTestEnable = false;
+		m_GraphicsPipelineKey.DepthWriteEnable = false;
 		m_GraphicsPipelineStateChanged = true;
 	}
 
@@ -224,13 +232,37 @@ namespace GraphicsAbstraction {
 	void D3D12CommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 	{
 		SetGraphicsPipeline();
+
+		SpecialConstant pc = { firstVertex, firstInstance };
+		CommandList->SetGraphicsRoot32BitConstants(1, 2, &pc, 0);
 		CommandList->DrawInstanced(vertexCount, instanceCount, firstVertex, firstInstance);
 	}
 
 	void D3D12CommandBuffer::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
 	{
 		SetGraphicsPipeline();
+
+		SpecialConstant pc = { vertexOffset, firstInstance };
+		CommandList->SetGraphicsRoot32BitConstants(1, 2, &pc, 0);
 		CommandList->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+	}
+
+	void D3D12CommandBuffer::DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
+	{
+		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
+
+		SetGraphicsPipeline();
+		d3d12Buffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW, stride }), drawCount, d3d12Buffer.Resource.Get(), offset, nullptr, 0);
+	}
+
+	void D3D12CommandBuffer::DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
+	{
+		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
+
+		SetGraphicsPipeline();
+		d3d12Buffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED, stride }), drawCount, d3d12Buffer.Resource.Get(), offset, nullptr, 0);
 	}
 
 	void D3D12CommandBuffer::SetGraphicsPipeline()

@@ -22,6 +22,8 @@ namespace GraphicsAbstraction {
 
 		static D3D12Shader* GetShaderByID(uint32_t id);
 	private:
+		std::string ReadAndPreProcessFile(const std::string& path);
+	private:
 		Microsoft::WRL::ComPtr<IDxcBlob> m_Blob;
 	};
 

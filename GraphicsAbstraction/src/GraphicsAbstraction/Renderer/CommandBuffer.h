@@ -37,19 +37,31 @@ namespace GraphicsAbstraction {
 
 	struct DrawIndirectCommand
 	{
-		uint32_t VertexCount;
-		uint32_t InstanceCount;
-		uint32_t FirstVertex;
-		uint32_t FirstInstance;
+	public:
+		DrawIndirectCommand(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+			: m_VertexCount(vertexCount), m_InstanceCount(instanceCount), m_FirstVertex(firstVertex), m_FirstInstance(firstInstance), m_Reserved(firstVertex), m_Reserved2(firstInstance)
+		{ }
+	private:
+		uint32_t m_Reserved, m_Reserved2;
+		uint32_t m_VertexCount;
+		uint32_t m_InstanceCount;
+		uint32_t m_FirstVertex;
+		uint32_t m_FirstInstance;
 	};
 
 	struct DrawIndexedIndirectCommand
 	{
-		uint32_t IndexCount;
-		uint32_t InstanceCount;
-		uint32_t FirstIndex;
-		uint32_t VertexOffset;
-		uint32_t FirstInstance;
+	public:
+		DrawIndexedIndirectCommand(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
+			: m_IndexCount(indexCount), m_InstanceCount(instanceCount), m_FirstIndex(firstIndex), m_VertexOffset(vertexOffset), m_FirstInstance(firstInstance), m_Reserved(vertexOffset), m_Reserved2(firstInstance)
+		{ }
+	private:
+		uint32_t m_Reserved, m_Reserved2;
+		uint32_t m_IndexCount;
+		uint32_t m_InstanceCount;
+		uint32_t m_FirstIndex;
+		uint32_t m_VertexOffset;
+		uint32_t m_FirstInstance;
 	};
 
 	class CommandBuffer : public RefCounted
