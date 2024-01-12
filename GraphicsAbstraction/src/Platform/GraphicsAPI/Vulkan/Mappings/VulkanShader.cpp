@@ -197,8 +197,8 @@ namespace GraphicsAbstraction {
 		
 		// Note: Zi causes debug information
 		std::vector<LPCWSTR> arguments = {
-			filePath,
-			L"-E", L"main",
+			filePath, L"-fspv-use-legacy-buffer-matrix-order",
+			L"-E", L"main", 
 			L"-D", L"VK_BINDLESS",
 			L"-T", Utils::ShaderStageToDXC(Stage),
 			L"-spirv",
