@@ -34,9 +34,13 @@ namespace GraphicsAbstraction {
 
 		virtual void OnUpdate() = 0;
 
+		virtual void SetSize(const glm::vec2& size) = 0;
 		virtual glm::vec2 GetSize() const = 0;
-		virtual inline uint32_t GetWidth() const = 0;
-		virtual inline uint32_t GetHeight() const = 0;
+		virtual uint32_t GetWidth() const = 0;
+		virtual uint32_t GetHeight() const = 0;
+
+		virtual void SetPosition(const glm::vec2& position) = 0;
+		virtual glm::vec2 GetPosition() const = 0;
 
 		virtual inline void SetEventCallback(const EventCallbackFn& callback) = 0;
 

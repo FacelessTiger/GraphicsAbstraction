@@ -17,7 +17,6 @@ namespace GraphicsAbstraction {
 
 		void Clear(const Ref<Image>& image, const glm::vec4& color) override;
 		void Present(const Ref<Swapchain>& swapchain) override;
-		void Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ) override;
 
 		void CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset) override;
 		void CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset) override;
@@ -39,10 +38,15 @@ namespace GraphicsAbstraction {
 		void DisableColorBlend() override;
 
 		void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) override;
-		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance) override;
-
 		void DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride) override;
+		void DrawIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride) override;
+
+		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance) override;
 		void DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride) override;
+		void DrawIndexedIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride) override;
+
+		void Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ) override;
+		void DispatchIndirect(const Ref<Buffer>& buffer, uint64_t offset) override;
 	private:
 		void SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha);
 		void SetDynamicState();

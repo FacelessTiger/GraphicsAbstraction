@@ -38,17 +38,6 @@ namespace GraphicsAbstraction {
 		image->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 
-	void VulkanCommandBuffer::Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ)
-	{
-		if (!m_Context->ShaderObjectSupported && m_ComputePipelineStateChanged)
-		{
-			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_Context->PipelineManager->GetComputePipeline(m_ComputePipelineKey));
-			m_ComputePipelineStateChanged = false;
-		}
-
-		vkCmdDispatch(CommandBuffer, workX, workY, workZ);
-	}
-
 	void VulkanCommandBuffer::CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset)
 	{
 		auto& vulkanSrc = (VulkanBuffer&)(*src);
@@ -403,12 +392,53 @@ namespace GraphicsAbstraction {
 		vkCmdDrawIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset + 8, drawCount, stride);
 	}
 
+	void VulkanCommandBuffer::DrawIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
+	{
+		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
+		auto& vulkanCountBuffer = (VulkanBuffer&)(*countBuffer);
+
+		SetDynamicState();
+		vkCmdDrawIndirectCount(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset + 8, vulkanCountBuffer.Buffer.Buffer, countOffset, maxDrawCount, stride);
+	}
+
 	void VulkanCommandBuffer::DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
 	{
 		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
 
 		SetDynamicState();
 		vkCmdDrawIndexedIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset + 8, drawCount, stride);
+	}
+
+	void VulkanCommandBuffer::DrawIndexedIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
+	{
+		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
+		auto& vulkanCountBuffer = (VulkanBuffer&)(*countBuffer);
+
+		SetDynamicState();
+		vkCmdDrawIndexedIndirectCount(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset + 8, vulkanCountBuffer.Buffer.Buffer, countOffset, maxDrawCount, stride);
+	}
+
+	void VulkanCommandBuffer::Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ)
+	{
+		if (!m_Context->ShaderObjectSupported && m_ComputePipelineStateChanged)
+		{
+			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_Context->PipelineManager->GetComputePipeline(m_ComputePipelineKey));
+			m_ComputePipelineStateChanged = false;
+		}
+
+		vkCmdDispatch(CommandBuffer, workX, workY, workZ);
+	}
+
+	void VulkanCommandBuffer::DispatchIndirect(const Ref<Buffer>& buffer, uint64_t offset)
+	{
+		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
+		if (!m_Context->ShaderObjectSupported && m_ComputePipelineStateChanged)
+		{
+			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_Context->PipelineManager->GetComputePipeline(m_ComputePipelineKey));
+			m_ComputePipelineStateChanged = false;
+		}
+
+		vkCmdDispatchIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset);
 	}
 
 	void VulkanCommandBuffer::SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)

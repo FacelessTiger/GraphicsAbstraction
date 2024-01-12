@@ -11,6 +11,7 @@ namespace GraphicsAbstraction {
 	class Window;
 	class Queue;
 	class Fence;
+	class Event;
 	class Image;
 
 	class ImGuiLayer

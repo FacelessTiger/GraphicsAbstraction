@@ -64,6 +64,11 @@ namespace GraphicsAbstraction {
 		uint32_t m_FirstInstance;
 	};
 
+	struct DispatchIndirectCommand
+	{
+		uint32_t workX, workY, workZ;
+	};
+
 	class CommandBuffer : public RefCounted
 	{
 	public:
@@ -71,7 +76,6 @@ namespace GraphicsAbstraction {
 
 		virtual void Clear(const Ref<Image>& image, const glm::vec4& color) = 0;
 		virtual void Present(const Ref<Swapchain>& swapchain) = 0;
-		virtual void Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ) = 0;
 
 		virtual void CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset = 0, uint32_t dstOffset = 0) = 0;
 		virtual void CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset = 0) = 0;
@@ -94,10 +98,15 @@ namespace GraphicsAbstraction {
 		virtual void DisableColorBlend() = 0;
 
 		virtual void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) = 0;
-		virtual void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance) = 0;
-
 		virtual void DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride) = 0;
+		virtual void DrawIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride) = 0;
+
+		virtual void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance) = 0;
 		virtual void DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride) = 0;
+		virtual void DrawIndexedIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride) = 0;
+
+		virtual void Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ) = 0;
+		virtual void DispatchIndirect(const Ref<Buffer>& buffer, uint64_t offset) = 0;
 	};
 
 }

@@ -4,18 +4,39 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <backends/imgui_impl_glfw.h>
-
-#include <GraphicsAbstraction/Renderer/CommandPool.h>
-#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
-#include <GraphicsAbstraction/Renderer/Fence.h>
-#include <GraphicsAbstraction/Renderer/Buffer.h>
-#include <GraphicsAbstraction/Renderer/Sampler.h>
-#include <GraphicsAbstraction/Renderer/Swapchain.h>
-#include <GraphicsAbstraction/Renderer/Shader.h>
-#include <GraphicsAbstraction/Renderer/Queue.h>
-#include <GraphicsAbstraction/Core/Window.h>
+#include <GraphicsAbstraction/GraphicsAbstraction.h>
 
 namespace GraphicsAbstraction {
+
+	namespace Utils {
+
+		ImGuiKey GAKeyToImGui(KeyCode code)
+		{
+			switch (code)
+			{
+				case Key::Space:		return ImGuiKey_Space;
+				case Key::Apostrophe:	return ImGuiKey_Apostrophe;
+				case Key::Comma:		return ImGuiKey_Comma;
+				case Key::Minus:		return ImGuiKey_Minus;
+				case Key::Period:		return ImGuiKey_Period;
+				case Key::Slash:		return ImGuiKey_Slash;
+
+				case Key::D0:			return ImGuiKey_0;
+				case Key::D1:			return ImGuiKey_1;
+				case Key::D2:			return ImGuiKey_2;
+				case Key::D3:			return ImGuiKey_3;
+				case Key::D4:			return ImGuiKey_4;
+				case Key::D5:			return ImGuiKey_5;
+				case Key::D6:			return ImGuiKey_6;
+				case Key::D7:			return ImGuiKey_7;
+				case Key::D8:			return ImGuiKey_8;
+				case Key::D9:			return ImGuiKey_9;
+			}
+
+			return ImGuiKey_None;
+		}
+
+	}
 
 	struct ImGuiLayerData
 	{
@@ -24,6 +45,8 @@ namespace GraphicsAbstraction {
 		Ref<Sampler> Sampler;
 		Ref<Buffer> IndexBuffer, VertexBuffer;
 		Ref<Image> FontImage;
+
+		Ref<Window> MainWindow;
 	};
 
 	struct PushConstant
@@ -40,6 +63,7 @@ namespace GraphicsAbstraction {
 	void ImGuiLayer::Init(Ref<CommandPool>& commandPool, Ref<Swapchain>& swapchain, Ref<Window>& window, Ref<Queue>& queue, Ref<Fence>& fence)
 	{
 		s_Data = new ImGuiLayerData();
+		s_Data->MainWindow = window;
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -69,11 +93,11 @@ namespace GraphicsAbstraction {
 		ImGui_ImplGlfw_InitForOther(glfwWindow, true);
 
 		// do init
-		GA_CORE_ASSERT(!io.BackendRendererUserData, "Imgui already has a backend!");
+		GA_CORE_ASSERT(!io.BackendRendererUserData || !io.BackendPlatformUserData, "Imgui already has a backend!");
 		io.BackendRendererUserData = s_Data;
-		io.BackendRendererName = "GraphicsAbstraction";
+		io.BackendRendererName = "GraphicsAbstraction Renderer";
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
-		io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
+		//io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
 		s_Data->VertexShader = Shader::Create("Assets/shaders/imguiVertex.hlsl", ShaderStage::Vertex);
 		s_Data->PixelShader = Shader::Create("Assets/shaders/imguiPixel.hlsl", ShaderStage::Pixel);

@@ -104,6 +104,14 @@ namespace GraphicsAbstraction {
 			}
 		});
 
+		glfwSetCharCallback(m_Window, [](GLFWwindow* window, unsigned int key)
+		{
+			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+			KeyTypedEvent event(key);
+			data.EventCallback(event);
+		});
+
 		glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, int button, int action, int mods)
 		{
 			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
@@ -159,6 +167,27 @@ namespace GraphicsAbstraction {
 	{
 		GA_PROFILE_SCOPE();
 		glfwPollEvents();
+	}
+
+	void WindowsWindow::SetSize(const glm::vec2& size)
+	{
+		m_Data.Width = size.x;
+		m_Data.Height = size.y;
+
+		glfwSetWindowSize(m_Window, m_Data.Width, m_Data.Height);
+	}
+
+	glm::vec2 WindowsWindow::GetPosition() const
+	{
+		int x, y;
+		glfwGetWindowPos(m_Window, &x, &y);
+
+		return glm::vec2(x, y);
+	}
+
+	void WindowsWindow::SetPosition(const glm::vec2& position)
+	{
+		glfwSetWindowPos(m_Window, position.x, position.y);
 	}
 
 }

@@ -56,4 +56,25 @@ namespace GraphicsAbstraction {
 		EVENT_CLASS_TYPE(KeyReleased)
 	};
 
+	class KeyTypedEvent : public Event
+	{
+	public:
+		KeyTypedEvent(uint32_t key)
+			: m_Key(key) { }
+
+		inline uint32_t GetKey() const { return m_Key; }
+
+		std::string ToString() const override
+		{
+			std::stringstream ss;
+			ss << "KeyTypedEvent: " << m_Key;
+			return ss.str();
+		}
+
+		EVENT_CLASS_TYPE(KeyTyped)
+		EVENT_CLASS_CATEGORY(EventCategoryKeyboard | EventCategoryInput)
+	private:
+		uint32_t m_Key;
+	};
+
 }

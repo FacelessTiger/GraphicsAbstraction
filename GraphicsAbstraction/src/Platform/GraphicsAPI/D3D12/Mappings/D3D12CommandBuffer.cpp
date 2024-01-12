@@ -39,17 +39,6 @@ namespace GraphicsAbstraction {
 		image->TransitionState(CommandList, D3D12_RESOURCE_STATE_PRESENT);
 	}
 
-	void D3D12CommandBuffer::Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ)
-	{
-		if (m_ComputePipelineStateChanged)
-		{
-			CommandList->SetPipelineState(m_Context->PipelineManager->GetComputePipeline(m_ComputePipelineKey));
-			m_ComputePipelineStateChanged = false;
-		}
-
-		CommandList->Dispatch(workX, workY, workZ);
-	}
-
 	void D3D12CommandBuffer::CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset)
 	{
 		auto& srcBuffer = (D3D12Buffer&)*src;
@@ -256,6 +245,17 @@ namespace GraphicsAbstraction {
 		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW, stride }), drawCount, d3d12Buffer.Resource.Get(), offset, nullptr, 0);
 	}
 
+	void D3D12CommandBuffer::DrawIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
+	{
+		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
+		auto& d3d12CountBuffer = (D3D12Buffer&)*countBuffer;
+
+		SetGraphicsPipeline();
+		d3d12Buffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+		d3d12CountBuffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW, stride }), maxDrawCount, d3d12Buffer.Resource.Get(), offset, d3d12CountBuffer.Resource.Get(), countOffset);
+	}
+
 	void D3D12CommandBuffer::DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
 	{
 		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
@@ -263,6 +263,41 @@ namespace GraphicsAbstraction {
 		SetGraphicsPipeline();
 		d3d12Buffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
 		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED, stride }), drawCount, d3d12Buffer.Resource.Get(), offset, nullptr, 0);
+	}
+
+	void D3D12CommandBuffer::DrawIndexedIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
+	{
+		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
+		auto& d3d12CountBuffer = (D3D12Buffer&)*countBuffer;
+
+		SetGraphicsPipeline();
+		d3d12Buffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+		d3d12CountBuffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED, stride }), maxDrawCount, d3d12Buffer.Resource.Get(), offset, d3d12CountBuffer.Resource.Get(), countOffset);
+	}
+
+	void D3D12CommandBuffer::Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ)
+	{
+		if (m_ComputePipelineStateChanged)
+		{
+			CommandList->SetPipelineState(m_Context->PipelineManager->GetComputePipeline(m_ComputePipelineKey));
+			m_ComputePipelineStateChanged = false;
+		}
+
+		CommandList->Dispatch(workX, workY, workZ);
+	}
+
+	void D3D12CommandBuffer::DispatchIndirect(const Ref<Buffer>& buffer, uint64_t offset)
+	{
+		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
+		if (m_ComputePipelineStateChanged)
+		{
+			CommandList->SetPipelineState(m_Context->PipelineManager->GetComputePipeline(m_ComputePipelineKey));
+			m_ComputePipelineStateChanged = false;
+		}
+
+		d3d12Buffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH, sizeof(DispatchIndirectCommand) }), 1, d3d12Buffer.Resource.Get(), offset, nullptr, 0);
 	}
 
 	void D3D12CommandBuffer::SetGraphicsPipeline()
