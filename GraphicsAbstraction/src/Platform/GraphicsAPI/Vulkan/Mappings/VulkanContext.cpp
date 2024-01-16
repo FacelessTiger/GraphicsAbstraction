@@ -294,7 +294,8 @@ namespace GraphicsAbstraction {
 		builder.AddFeature<VkPhysicalDeviceFeatures2>({
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
 			.features = {
-				.multiDrawIndirect = true
+				.multiDrawIndirect = true,
+				.fillModeNonSolid = true
 			}
 		});
 

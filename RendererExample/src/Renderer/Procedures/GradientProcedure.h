@@ -35,6 +35,7 @@ namespace GraphicsAbstraction {
 		ComputePushConstant m_ComputePC;
 		Blend m_SrcBlend;
 		Blend m_DstBlend;
+		bool m_IsWireframe = false;
 
 		Ref<Buffer> m_Buffer, m_CommandBuffer, m_ModelMatrixBuffer;
 		Ref<Shader> m_GradientShader, m_TriangleVertex, m_TrianglePixel;

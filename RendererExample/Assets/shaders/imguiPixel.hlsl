@@ -1,4 +1,4 @@
-#include "bindless.hlsl"
+#include "Cobra.hlsl"
 
 struct PushConstant
 {
@@ -19,5 +19,5 @@ struct VertexInput
 
 float4 main(VertexInput input): SV_Target
 {
-	return input.color * Texture::Create(pushConstants.texture).Sample2D<float4>(pushConstants.sampler, input.uv);
+	return input.color * Cobra::Texture::Create(pushConstants.texture).Sample2D<float4>(pushConstants.sampler, input.uv);
 }

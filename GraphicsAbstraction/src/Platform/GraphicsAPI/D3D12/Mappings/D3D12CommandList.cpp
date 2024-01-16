@@ -1,4 +1,4 @@
-#include "D3D12CommandBuffer.h"
+#include "D3D12CommandList.h"
 
 #include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Image.h>
 #include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Buffer.h>
@@ -19,11 +19,11 @@ namespace GraphicsAbstraction {
 		uint32_t instanceOffset;
 	};
 
-	D3D12CommandBuffer::D3D12CommandBuffer(ComPtr<ID3D12GraphicsCommandList> commandList)
+	D3D12CommandList::D3D12CommandList(ComPtr<ID3D12GraphicsCommandList> commandList)
 		: m_Context(D3D12Context::GetReference()), CommandList(commandList)
 	{ }
 
-	void D3D12CommandBuffer::Clear(const Ref<Image>&image, const glm::vec4& color)
+	void D3D12CommandList::Clear(const Ref<Image>&image, const glm::vec4& color)
 	{
 		auto& d3d12Image = (D3D12Image&)*image;
 
@@ -31,7 +31,7 @@ namespace GraphicsAbstraction {
 		CommandList->ClearRenderTargetView(d3d12Image.CpuHandle, glm::value_ptr(color), 0, nullptr);
 	}
 
-	void D3D12CommandBuffer::Present(const Ref<Swapchain>& swapchain)
+	void D3D12CommandList::Present(const Ref<Swapchain>& swapchain)
 	{
 		auto& d3d12Swapchain = (D3D12Swapchain&)(*swapchain);
 		auto image = d3d12Swapchain.Images[d3d12Swapchain.ImageIndex];
@@ -39,7 +39,7 @@ namespace GraphicsAbstraction {
 		image->TransitionState(CommandList, D3D12_RESOURCE_STATE_PRESENT);
 	}
 
-	void D3D12CommandBuffer::CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset)
+	void D3D12CommandList::CopyBufferRegion(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset)
 	{
 		auto& srcBuffer = (D3D12Buffer&)*src;
 		auto& dstBuffer = (D3D12Buffer&)*dst;
@@ -49,7 +49,7 @@ namespace GraphicsAbstraction {
 		CommandList->CopyBufferRegion(dstBuffer.Resource.Get(), dstOffset, srcBuffer.Resource.Get(), srcOffset, size);
 	}
 
-	void D3D12CommandBuffer::CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset)
+	void D3D12CommandList::CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset)
 	{
 		auto& d3d12Buffer = (D3D12Buffer&)*src;
 		auto& d3d12Image = (D3D12Image&)*dst;
@@ -73,7 +73,7 @@ namespace GraphicsAbstraction {
 		CommandList->CopyTextureRegion(&dstCopy, 0, 0, 0, &srcCopy, nullptr);
 	}
 
-	void D3D12CommandBuffer::CopyToImage(const Ref<Image>& src, const Ref<Image>& dst)
+	void D3D12CommandList::CopyToImage(const Ref<Image>& src, const Ref<Image>& dst)
 	{
 		auto& d3d12Src = (D3D12Image&)*src;
 		auto& d3d12Dst = (D3D12Image&)*dst;
@@ -86,7 +86,7 @@ namespace GraphicsAbstraction {
 		CommandList->CopyTextureRegion(&dstCopy, 0, 0, 0, &srcCopy, nullptr);
 	}
 
-	void D3D12CommandBuffer::RWResourceBarrier(const Ref<Image>& resource)
+	void D3D12CommandList::RWResourceBarrier(const Ref<Image>& resource)
 	{
 		auto& d3d12Image = (D3D12Image&)*resource;
 
@@ -94,7 +94,7 @@ namespace GraphicsAbstraction {
 		CommandList->ResourceBarrier(1, &barrier);
 	}
 
-	void D3D12CommandBuffer::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
+	void D3D12CommandList::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
 	{
 		auto& d3d12Image = (D3D12Image&)*colorAttachments[0];
 		auto& d3d12Depth = (D3D12Image&)*depthAttachment;
@@ -114,7 +114,7 @@ namespace GraphicsAbstraction {
 		m_GraphicsPipelineStateChanged = true;
 	}
 
-	void D3D12CommandBuffer::BindShaders(const std::vector<Ref<Shader>> shaderStages)
+	void D3D12CommandList::BindShaders(const std::vector<Ref<Shader>> shaderStages)
 	{
 		for (auto& shaderStage : shaderStages)
 		{
@@ -144,7 +144,7 @@ namespace GraphicsAbstraction {
 		}
 	}
 
-	void D3D12CommandBuffer::BindIndexBuffer(const Ref<Buffer>& buffer)
+	void D3D12CommandList::BindIndexBuffer(const Ref<Buffer>& buffer)
 	{
 		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
 		d3d12Buffer.TransitionState(CommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
@@ -157,13 +157,13 @@ namespace GraphicsAbstraction {
 		CommandList->IASetIndexBuffer(&view);
 	}
 
-	void D3D12CommandBuffer::PushConstant(const void* data, uint32_t size, uint32_t offset)
+	void D3D12CommandList::PushConstant(const void* data, uint32_t size, uint32_t offset)
 	{
 		CommandList->SetComputeRoot32BitConstants(0, size / 4, data, offset);
 		CommandList->SetGraphicsRoot32BitConstants(0, size / 4, data, offset);
 	}
 
-	void D3D12CommandBuffer::SetViewport(const glm::vec2& size)
+	void D3D12CommandList::SetViewport(const glm::vec2& size)
 	{
 		D3D12_VIEWPORT viewport = {
 			.Width = size.x,
@@ -174,7 +174,7 @@ namespace GraphicsAbstraction {
 		CommandList->RSSetViewports(1, &viewport);
 	}
 
-	void D3D12CommandBuffer::SetScissor(const glm::vec2& size, const glm::vec2& offset)
+	void D3D12CommandList::SetScissor(const glm::vec2& size, const glm::vec2& offset)
 	{
 		D3D12_RECT scissor = {
 			.left = (LONG)offset.x,
@@ -185,7 +185,13 @@ namespace GraphicsAbstraction {
 		CommandList->RSSetScissorRects(1, &scissor);
 	}
 
-	void D3D12CommandBuffer::EnableDepthTest(bool writeEnabled, CompareOperation op)
+	void D3D12CommandList::SetFillMode(FillMode mode)
+	{
+		m_GraphicsPipelineKey.FillMode = mode;
+		m_GraphicsPipelineStateChanged = true;
+	}
+
+	void D3D12CommandList::EnableDepthTest(bool writeEnabled, CompareOperation op)
 	{
 		m_GraphicsPipelineKey.DepthTestEnable = true;
 		m_GraphicsPipelineKey.DepthWriteEnable = writeEnabled;
@@ -193,14 +199,14 @@ namespace GraphicsAbstraction {
 		m_GraphicsPipelineStateChanged = true;
 	}
 
-	void D3D12CommandBuffer::DisableDepthTest()
+	void D3D12CommandList::DisableDepthTest()
 	{
 		m_GraphicsPipelineKey.DepthTestEnable = false;
 		m_GraphicsPipelineKey.DepthWriteEnable = false;
 		m_GraphicsPipelineStateChanged = true;
 	}
 
-	void D3D12CommandBuffer::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
+	void D3D12CommandList::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
 	{
 		m_GraphicsPipelineKey.BlendEnable = true;
 		m_GraphicsPipelineKey.SrcBlend = srcBlend;
@@ -212,13 +218,13 @@ namespace GraphicsAbstraction {
 		m_GraphicsPipelineStateChanged = true;
 	}
 
-	void D3D12CommandBuffer::DisableColorBlend()
+	void D3D12CommandList::DisableColorBlend()
 	{
 		m_GraphicsPipelineKey.BlendEnable = false;
 		m_GraphicsPipelineStateChanged = true;
 	}
 
-	void D3D12CommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+	void D3D12CommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 	{
 		SetGraphicsPipeline();
 
@@ -227,7 +233,7 @@ namespace GraphicsAbstraction {
 		CommandList->DrawInstanced(vertexCount, instanceCount, firstVertex, firstInstance);
 	}
 
-	void D3D12CommandBuffer::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
+	void D3D12CommandList::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
 	{
 		SetGraphicsPipeline();
 
@@ -236,7 +242,7 @@ namespace GraphicsAbstraction {
 		CommandList->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
-	void D3D12CommandBuffer::DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
+	void D3D12CommandList::DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
 	{
 		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
 
@@ -245,7 +251,7 @@ namespace GraphicsAbstraction {
 		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW, stride }), drawCount, d3d12Buffer.Resource.Get(), offset, nullptr, 0);
 	}
 
-	void D3D12CommandBuffer::DrawIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
+	void D3D12CommandList::DrawIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
 	{
 		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
 		auto& d3d12CountBuffer = (D3D12Buffer&)*countBuffer;
@@ -256,7 +262,7 @@ namespace GraphicsAbstraction {
 		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW, stride }), maxDrawCount, d3d12Buffer.Resource.Get(), offset, d3d12CountBuffer.Resource.Get(), countOffset);
 	}
 
-	void D3D12CommandBuffer::DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
+	void D3D12CommandList::DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
 	{
 		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
 
@@ -265,7 +271,7 @@ namespace GraphicsAbstraction {
 		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED, stride }), drawCount, d3d12Buffer.Resource.Get(), offset, nullptr, 0);
 	}
 
-	void D3D12CommandBuffer::DrawIndexedIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
+	void D3D12CommandList::DrawIndexedIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
 	{
 		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
 		auto& d3d12CountBuffer = (D3D12Buffer&)*countBuffer;
@@ -276,7 +282,7 @@ namespace GraphicsAbstraction {
 		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED, stride }), maxDrawCount, d3d12Buffer.Resource.Get(), offset, d3d12CountBuffer.Resource.Get(), countOffset);
 	}
 
-	void D3D12CommandBuffer::Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ)
+	void D3D12CommandList::Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ)
 	{
 		if (m_ComputePipelineStateChanged)
 		{
@@ -287,7 +293,7 @@ namespace GraphicsAbstraction {
 		CommandList->Dispatch(workX, workY, workZ);
 	}
 
-	void D3D12CommandBuffer::DispatchIndirect(const Ref<Buffer>& buffer, uint64_t offset)
+	void D3D12CommandList::DispatchIndirect(const Ref<Buffer>& buffer, uint64_t offset)
 	{
 		auto& d3d12Buffer = (D3D12Buffer&)*buffer;
 		if (m_ComputePipelineStateChanged)
@@ -300,7 +306,7 @@ namespace GraphicsAbstraction {
 		CommandList->ExecuteIndirect(m_Context->CommandSignatureManager->GetCommandSignature({ D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH, sizeof(DispatchIndirectCommand) }), 1, d3d12Buffer.Resource.Get(), offset, nullptr, 0);
 	}
 
-	void D3D12CommandBuffer::SetGraphicsPipeline()
+	void D3D12CommandList::SetGraphicsPipeline()
 	{
 		if (m_GraphicsPipelineStateChanged)
 		{

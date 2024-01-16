@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include <GraphicsAbstraction/Renderer/Image.h>
-#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
+#include <GraphicsAbstraction/Renderer/CommandList.h>
 
 #define GA_PIPELINE_EQUALITY(name) bool operator==(const name& other) const = default
 #define GA_PIPELINE_HASH(name)															\
@@ -42,6 +42,9 @@ namespace GraphicsAbstraction {
 		Blend DstBlendAlpha = Blend::Zero;
 		BlendOp BlendOpAlpha = BlendOp::Add;
 		BlendOp BlendOp = BlendOp::Add;
+
+		// Rasterization
+		FillMode FillMode = FillMode::Solid;
 
 		// vulkan specific
 		void* Renderpass = nullptr;

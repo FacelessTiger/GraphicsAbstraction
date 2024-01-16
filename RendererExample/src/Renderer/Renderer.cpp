@@ -35,7 +35,7 @@ namespace GraphicsAbstraction {
 		Ref<Swapchain> Swapchain;
 		Ref<Fence> Fence;
 		Ref<Image> DrawImage, DepthImage, DisplayImage;
-		Ref<CommandPool> CommandPools[FrameOverlap];
+		Ref<CommandAllocator> CommandAllocators[FrameOverlap];
 
 		Ref<Shader> ResizeShader;
 		Ref<Sampler> ResizeSampler;
@@ -71,9 +71,9 @@ namespace GraphicsAbstraction {
 		s_RendererData->ResizeSampler = Sampler::Create(Filter::Nearest, Filter::Nearest);
 
 		for (int i = 0; i < RendererData::FrameOverlap; i++)
-			s_RendererData->CommandPools[i] = CommandPool::Create(s_RendererData->GraphicsQueue);
+			s_RendererData->CommandAllocators[i] = CommandAllocator::Create(s_RendererData->GraphicsQueue);
 
-		ImGuiLayer::Init(s_RendererData->CommandPools[0], s_RendererData->Swapchain, window, s_RendererData->GraphicsQueue, s_RendererData->Fence);
+		ImGuiLayer::Init(s_RendererData->CommandAllocators[0], s_RendererData->Swapchain, window, s_RendererData->GraphicsQueue, s_RendererData->Fence);
 	}
 
 	void Renderer::Shutdown()
@@ -126,7 +126,7 @@ namespace GraphicsAbstraction {
 		RenderProcedurePrePayload payload = {
 			.GraphicsQueue = s_RendererData->GraphicsQueue,
 			.DrawImage = s_RendererData->DrawImage,
-			.Pool = s_RendererData->CommandPools[0],
+			.Allocator = s_RendererData->CommandAllocators[0],
 			.Fence = s_RendererData->Fence
 		};
 
@@ -148,13 +148,13 @@ namespace GraphicsAbstraction {
 		GraphicsContext::SetFrameInFlight(fif);
 		data.GraphicsQueue->Acquire(data.Swapchain, data.Fence);
 
-		auto cmd = data.CommandPools[fif]->Reset()->Begin();
+		auto cmd = data.CommandAllocators[fif]->Reset()->Begin();
 		for (auto& upload : data.ImageUploads)
 			cmd->CopyToImage(upload.src, upload.dst);
 		data.ImageUploads.clear();
 
 		for (auto& upload : data.BufferUploads)
-			cmd->CopyToBuffer(upload.src, upload.dst, upload.size, upload.srcOffset, upload.dstOffset);
+			cmd->CopyBufferRegion(upload.src, upload.dst, upload.size, upload.srcOffset, upload.dstOffset);
 		data.BufferUploads.clear();
 
 		cmd->SetViewport(data.Size);
@@ -165,8 +165,9 @@ namespace GraphicsAbstraction {
 		RenderProcedurePayload payload = {
 			.DrawImage = data.DrawImage,
 			.DepthImage = data.DepthImage,
-			.CommandBuffer = cmd,
+			.CommandList = cmd,
 			.Size = data.Size,
+			.CameraPosition = camera.GetPosition(),
 			.ViewProjection = viewProjection
 		};
 

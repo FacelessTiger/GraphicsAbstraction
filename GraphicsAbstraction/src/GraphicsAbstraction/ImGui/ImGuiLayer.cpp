@@ -60,7 +60,7 @@ namespace GraphicsAbstraction {
 
 	static ImGuiLayerData* s_Data;
 
-	void ImGuiLayer::Init(Ref<CommandPool>& commandPool, Ref<Swapchain>& swapchain, Ref<Window>& window, Ref<Queue>& queue, Ref<Fence>& fence)
+	void ImGuiLayer::Init(Ref<CommandAllocator>& commandPool, Ref<Swapchain>& swapchain, Ref<Window>& window, Ref<Queue>& queue, Ref<Fence>& fence)
 	{
 		s_Data = new ImGuiLayerData();
 		s_Data->MainWindow = window;
@@ -121,7 +121,7 @@ namespace GraphicsAbstraction {
 		ImGui::NewFrame();
 	}
 
-	void ImGuiLayer::DrawFrame(Ref<CommandBuffer>& cmd, Ref<Image> image)
+	void ImGuiLayer::DrawFrame(Ref<CommandList>& cmd, Ref<Image> image)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::Render();
@@ -161,6 +161,7 @@ namespace GraphicsAbstraction {
 		cmd->BeginRendering({ framebufferWidth, framebufferHeight }, { image });
 		cmd->BindShaders({ s_Data->VertexShader, s_Data->PixelShader });
 		cmd->EnableColorBlend(Blend::SrcAlpha, Blend::OneMinusSrcAlpha, BlendOp::Add, Blend::One, Blend::Zero, BlendOp::Add);
+		cmd->SetFillMode(FillMode::Solid);
 		cmd->DisableDepthTest();
 		cmd->SetViewport({ framebufferWidth, framebufferHeight });
 		cmd->BindIndexBuffer(s_Data->IndexBuffer);
@@ -242,7 +243,7 @@ namespace GraphicsAbstraction {
 		colors[ImGuiCol_TitleBgCollapsed] = { 0.15f, 0.1505f, 0.151f, 1.0f };
 	}
 
-	void ImGuiLayer::CreateFontTexture(Ref<CommandPool>& commandPool, Ref<Queue>& queue, Ref<Fence>& fence)
+	void ImGuiLayer::CreateFontTexture(Ref<CommandAllocator>& commandPool, Ref<Queue>& queue, Ref<Fence>& fence)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 

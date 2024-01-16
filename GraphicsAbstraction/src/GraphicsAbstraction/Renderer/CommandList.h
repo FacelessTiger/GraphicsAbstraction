@@ -35,6 +35,12 @@ namespace GraphicsAbstraction {
 		Add
 	};
 
+	enum class FillMode
+	{
+		Solid,
+		Wireframe
+	};
+
 	struct DrawIndirectCommand
 	{
 	public:
@@ -69,15 +75,15 @@ namespace GraphicsAbstraction {
 		uint32_t workX, workY, workZ;
 	};
 
-	class CommandBuffer : public RefCounted
+	class CommandList : public RefCounted
 	{
 	public:
-		virtual ~CommandBuffer() = default;
+		virtual ~CommandList() = default;
 
 		virtual void Clear(const Ref<Image>& image, const glm::vec4& color) = 0;
 		virtual void Present(const Ref<Swapchain>& swapchain) = 0;
 
-		virtual void CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset = 0, uint32_t dstOffset = 0) = 0;
+		virtual void CopyBufferRegion(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset = 0, uint32_t dstOffset = 0) = 0;
 		virtual void CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset = 0) = 0;
 		virtual void CopyToImage(const Ref<Image>& src, const Ref<Image>& dst) = 0;
 		virtual void RWResourceBarrier(const Ref<Image>& resource) = 0;
@@ -92,6 +98,7 @@ namespace GraphicsAbstraction {
 
 		virtual void SetViewport(const glm::vec2& size) = 0;
 		virtual void SetScissor(const glm::vec2& size, const glm::vec2& offset = { 0, 0 }) = 0;
+		virtual void SetFillMode(FillMode mode) = 0;
 		virtual void EnableDepthTest(bool writeEnabled, CompareOperation op) = 0;
 		virtual void DisableDepthTest() = 0;
 		virtual void EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha) = 0;

@@ -75,7 +75,7 @@ namespace GraphicsAbstraction {
 		VkPipelineRasterizationStateCreateInfo rasterizationInfo = { 
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, 
 			.rasterizerDiscardEnable = false,
-			.polygonMode = VK_POLYGON_MODE_FILL,
+			.polygonMode = Utils::GAFillModeToVulkan(key.FillMode),
 			.cullMode = VK_CULL_MODE_NONE,
 			.frontFace = VK_FRONT_FACE_CLOCKWISE,
 			.depthBiasEnable = false

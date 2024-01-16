@@ -5,8 +5,8 @@
 
 namespace GraphicsAbstraction {
 
-	class CommandPool;
-	class CommandBuffer;
+	class CommandAllocator;
+	class CommandList;
 	class Swapchain;
 	class Window;
 	class Queue;
@@ -17,14 +17,14 @@ namespace GraphicsAbstraction {
 	class ImGuiLayer
 	{
 	public:
-		static void Init(Ref<CommandPool>& commandPool, Ref<Swapchain>& swapchain, Ref<Window>& window, Ref<Queue>& queue, Ref<Fence>& fence);
+		static void Init(Ref<CommandAllocator>& commandPool, Ref<Swapchain>& swapchain, Ref<Window>& window, Ref<Queue>& queue, Ref<Fence>& fence);
 		static void Shutdown();
 
 		static void BeginFrame();
-		static void DrawFrame(Ref<CommandBuffer>& cmd, Ref<Image> image);
+		static void DrawFrame(Ref<CommandList>& cmd, Ref<Image> image);
 	private:
 		static void SetDarkThemeColors();
-		static void CreateFontTexture(Ref<CommandPool>& commandPool, Ref<Queue>& queue, Ref<Fence>& fence);
+		static void CreateFontTexture(Ref<CommandAllocator>& commandPool, Ref<Queue>& queue, Ref<Fence>& fence);
 	};
 
 }

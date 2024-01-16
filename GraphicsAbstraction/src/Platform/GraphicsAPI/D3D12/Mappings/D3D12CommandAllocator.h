@@ -1,7 +1,7 @@
 #pragma once
 
-#include <GraphicsAbstraction/Renderer/CommandPool.h>
-#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
+#include <GraphicsAbstraction/Renderer/CommandAllocator.h>
+#include <GraphicsAbstraction/Renderer/CommandList.h>
 #include <GraphicsAbstraction/Renderer/Queue.h>
 
 #include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Context.h>
@@ -12,17 +12,17 @@
 
 namespace GraphicsAbstraction {
 
-	class D3D12CommandPool : public CommandPool
+	class D3D12CommandAllocator : public CommandAllocator
 	{
 	public:
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> Allocator;
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> MainCommandList;
 	public:
-		D3D12CommandPool(const Ref<Queue>& queue);
-		virtual ~D3D12CommandPool();
+		D3D12CommandAllocator(const Ref<Queue>& queue);
+		virtual ~D3D12CommandAllocator();
 
-		CommandPool* Reset() override;
-		Ref<CommandBuffer> Begin() const override;
+		CommandAllocator* Reset() override;
+		Ref<CommandList> Begin() const override;
 	private:
 		Ref<D3D12Context> m_Context;
 	};

@@ -1,6 +1,6 @@
 #include "D3D12Queue.h"
 
-#include <Platform/GraphicsAPI/D3D12/Mappings/D3D12CommandBuffer.h>
+#include <Platform/GraphicsAPI/D3D12/Mappings/D3D12CommandList.h>
 #include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Fence.h>
 #include <Platform/GraphicsAPI/D3D12/Mappings/D3D12Swapchain.h>
 
@@ -37,9 +37,9 @@ namespace GraphicsAbstraction {
 		D3D12_CHECK(Queue->Signal(d3d12Fence.Fence.Get(), ++d3d12Fence.Value));
 	}
 
-	void D3D12Queue::Submit(const Ref<CommandBuffer>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal)
+	void D3D12Queue::Submit(const Ref<CommandList>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal)
 	{
-		auto& d3d12Cmd = (D3D12CommandBuffer&)*cmd;
+		auto& d3d12Cmd = (D3D12CommandList&)*cmd;
 		auto& d3d12Wait = (D3D12Fence&)*wait;
 		auto& d3d12Signal = (D3D12Fence&)*signal;
 

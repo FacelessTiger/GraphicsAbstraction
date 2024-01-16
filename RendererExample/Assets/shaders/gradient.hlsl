@@ -1,4 +1,4 @@
-#include "bindless.hlsl"
+#include "Cobra.hlsl"
 
 struct Data
 {
@@ -16,8 +16,8 @@ PushConstant(PushConstant, pushConstants);
 [numthreads(16, 16, 1)]
 void main(uint3 threadID: SV_DispatchThreadID, uint3 groupID: SV_GroupThreadID)
 {
-	RwTexture image = RwTexture::Create(pushConstants.image);
-	Data data = SimpleBuffer::Create(pushConstants.buffer).Load<Data>();
+	Cobra::RwTexture image = Cobra::RwTexture::Create(pushConstants.image);
+	Data data = Cobra::SimpleBuffer::Create(pushConstants.buffer).Load<Data>();
 
 	int2 texelCoord = int2(threadID.xy);
 	int2 size = image.GetDimensions<float4>();

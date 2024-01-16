@@ -1,7 +1,7 @@
 #include "GradientProcedure.h"
 
 #include <Renderer/Renderer.h>
-#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
+#include <GraphicsAbstraction/Renderer/CommandList.h>
 
 #include <imgui/imgui.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -13,6 +13,7 @@ namespace GraphicsAbstraction {
 	struct PushConstant
 	{
 		glm::mat4 projection;
+		glm::vec3 cameraPos;
 		uint32_t vertices;
 		uint32_t modelMatrices;
 	};
@@ -51,8 +52,9 @@ namespace GraphicsAbstraction {
 
 	void GradientProcedure::Process(RenderProcedurePayload& payload)
 	{
-		auto cmd = payload.CommandBuffer;
+		auto cmd = payload.CommandList;
 
+		cmd->SetFillMode(m_IsWireframe ? FillMode::Wireframe : FillMode::Solid);
 		cmd->BindShaders({ m_GradientShader });
 		cmd->PushConstant(m_ComputePC);
 		cmd->Dispatch((uint32_t)std::ceil(payload.Size.x / 16.0f), (uint32_t)std::ceil(payload.Size.y / 16.0f), 1);
@@ -63,7 +65,7 @@ namespace GraphicsAbstraction {
 		cmd->EnableDepthTest(true, CompareOperation::GreaterEqual);
 		cmd->EnableColorBlend(m_SrcBlend, m_DstBlend, BlendOp::Add, Blend::One, Blend::Zero, BlendOp::Add);
 
-		PushConstant pc = { payload.ViewProjection, m_Scene.VertexBuffer->GetHandle(), m_ModelMatrixBuffer->GetHandle() };
+		PushConstant pc = { payload.ViewProjection, payload.CameraPosition, m_Scene.VertexBuffer->GetHandle(), m_ModelMatrixBuffer->GetHandle() };
 		cmd->PushConstant(pc);
 		cmd->BindIndexBuffer(m_Scene.IndexBuffer);
 		cmd->DrawIndexedIndirect(m_CommandBuffer, 0, (uint32_t)m_Scene.Meshes.size(), (uint32_t)sizeof(DrawIndexedIndirectCommand));
@@ -134,6 +136,8 @@ namespace GraphicsAbstraction {
 			}
 			ImGui::PopID();
 		}
+
+		ImGui::Checkbox("Wireframe", &m_IsWireframe);
 
 		ImGui::End();
 	}

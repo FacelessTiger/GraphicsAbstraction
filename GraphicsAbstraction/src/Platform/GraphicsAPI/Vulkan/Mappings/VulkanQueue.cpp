@@ -1,7 +1,7 @@
 #include "VulkanQueue.h"
 
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSwapchain.h>
-#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandBuffer.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandList.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanFence.h>
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
@@ -43,11 +43,11 @@ namespace GraphicsAbstraction {
 		VK_CHECK(vkQueueSubmit(Queue, 1, &submitInfo, nullptr));
 	}
 
-	void VulkanQueue::Submit(const Ref<CommandBuffer>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal)
+	void VulkanQueue::Submit(const Ref<CommandList>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal)
 	{
 		GA_PROFILE_SCOPE();
 
-		auto& vulkanCommandBuffer = (VulkanCommandBuffer&)(*cmd);
+		auto& vulkanCommandBuffer = (VulkanCommandList&)(*cmd);
 		auto& vulkanWait = (VulkanFence&)(*wait);
 		auto& vulkanSignal = (VulkanFence&)(*signal);
 

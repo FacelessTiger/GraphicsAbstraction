@@ -3,7 +3,7 @@
 #include <GraphicsAbstraction/Core/Log.h>
 
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
-#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandBuffer.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandList.h>
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {

@@ -1,4 +1,4 @@
-#include "bindless.hlsl"
+#include "Cobra.hlsl"
 
 struct QuadData
 {
@@ -57,7 +57,7 @@ VertexOutput main(uint vertexID: SV_VertexID)
 
 	VertexOutput output;
 	output.position = mul(pushConstants.projection, float4(relativePos, quad.position.z, 1.0f));
-	output.color = UnpackUnorm4x8(quad.color);
+	output.color = Cobra::UnpackUnorm4x8(quad.color);
 	output.texture = quad.texture;
 	output.uv = uvs[relativeVertexID];
 	return output;

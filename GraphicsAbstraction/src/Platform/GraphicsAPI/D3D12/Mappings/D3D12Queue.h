@@ -18,7 +18,7 @@ namespace GraphicsAbstraction {
 		~D3D12Queue();
 
 		void Acquire(const Ref<Swapchain>& swapchain, const Ref<Fence>& fence) override;
-		void Submit(const Ref<CommandBuffer>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal);
+		void Submit(const Ref<CommandList>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal);
 		void Present(const Ref<Swapchain>& swapchain, const Ref<Fence>& wait) override;
 	private:
 		Ref<D3D12Fence> m_DeletionFence;

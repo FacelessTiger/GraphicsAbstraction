@@ -1,10 +1,6 @@
 #pragma once
 
-#include <GraphicsAbstraction/Renderer/Image.h>
-#include <GraphicsAbstraction/Renderer/Queue.h>
-#include <GraphicsAbstraction/Renderer/Fence.h>
-#include <GraphicsAbstraction/Renderer/CommandPool.h>
-#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
+#include <GraphicsAbstraction/GraphicsAbstraction.h>
 
 namespace GraphicsAbstraction {
 
@@ -12,15 +8,16 @@ namespace GraphicsAbstraction {
 	{
 		Ref<Queue> GraphicsQueue;
 		Ref<Image> DrawImage;
-		Ref<CommandPool> Pool;
+		Ref<CommandAllocator> Allocator;
 		Ref<Fence> Fence;
 	};
 
 	struct RenderProcedurePayload
 	{
 		Ref<Image> DrawImage, DepthImage;
-		Ref<CommandBuffer> CommandBuffer;
+		Ref<CommandList> CommandList;
 		const glm::vec2& Size;
+		const glm::vec3& CameraPosition;
 		const glm::mat4& ViewProjection;
 	};
 

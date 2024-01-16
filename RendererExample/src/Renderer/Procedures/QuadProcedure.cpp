@@ -30,8 +30,8 @@ namespace GraphicsAbstraction {
 		auto tempStaging = Buffer::Create(sizeof(uint32_t), BufferUsage::TransferSrc, BufferFlags::Mapped);
 		tempStaging->SetData(&white, sizeof(uint32_t));
 
-		payload.Pool->Reset();
-		auto cmd = payload.Pool->Begin();
+		payload.Allocator->Reset();
+		auto cmd = payload.Allocator->Begin();
 		cmd->CopyToImage(tempStaging, m_WhiteImage);
 		payload.GraphicsQueue->Submit(cmd, nullptr, payload.Fence);
 		payload.Fence->Wait();
@@ -39,12 +39,12 @@ namespace GraphicsAbstraction {
 
 	void QuadProcedure::Process(RenderProcedurePayload& payload)
 	{
-		auto cmd = payload.CommandBuffer;
+		auto cmd = payload.CommandList;
 
 		while (!m_QuadChanges.Empty())
 		{
 			auto change = m_QuadChanges.Pop();
-			cmd->CopyToBuffer(m_RingBuffers[change.BufferIndex].Buffer, m_QuadBuffer, change.Size, change.SrcOffset, change.DstOffset);
+			cmd->CopyBufferRegion(m_RingBuffers[change.BufferIndex].Buffer, m_QuadBuffer, change.Size, change.SrcOffset, change.DstOffset);
 		}
 		m_TotalUploadSize = 0;
 		m_BufferIndex = 0;

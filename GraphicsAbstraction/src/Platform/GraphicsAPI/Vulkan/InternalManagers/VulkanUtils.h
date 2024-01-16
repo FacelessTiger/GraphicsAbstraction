@@ -9,7 +9,7 @@
 #include <string>
 
 #include <GraphicsAbstraction/Renderer/Image.h>
-#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
+#include <GraphicsAbstraction/Renderer/CommandList.h>
 
 namespace GraphicsAbstraction::Utils {
 
@@ -64,6 +64,7 @@ namespace GraphicsAbstraction::Utils {
 	VkBlendOp GABlendOpToVulkan(BlendOp blendOp);
 	VkFormat GAImageFormatToVulkan(ImageFormat format);
 	VkImageUsageFlags GAImageUsageToVulkan(ImageUsage usage);
+	VkPolygonMode GAFillModeToVulkan(FillMode mode);
 
 	ImageFormat VulkanImageFormatToGA(VkFormat format);
 	ImageUsage VulkanImageUsageToGA(VkImageUsageFlags usage);

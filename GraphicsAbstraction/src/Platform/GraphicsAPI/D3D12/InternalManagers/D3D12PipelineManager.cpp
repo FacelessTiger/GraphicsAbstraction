@@ -49,6 +49,18 @@ namespace GraphicsAbstraction {
 			return D3D12_BLEND_OP_ADD;
 		}
 
+		D3D12_FILL_MODE GAFillModeToD3D12(FillMode mode)
+		{
+			switch (mode)
+			{
+				case FillMode::Solid:		return D3D12_FILL_MODE_SOLID;
+				case FillMode::Wireframe:	return D3D12_FILL_MODE_WIREFRAME;
+			}
+
+			GA_CORE_ASSERT(false, "Unkown fill mode!");
+			return D3D12_FILL_MODE_SOLID;
+		}
+
 	}
 
 	using namespace Microsoft::WRL;
@@ -73,7 +85,7 @@ namespace GraphicsAbstraction {
 			.PS = D3D12Shader::GetShaderByID(key.Shaders[4])->Shader,
 			.SampleMask = (UINT)~0,
 			.RasterizerState = {
-				.FillMode = D3D12_FILL_MODE_SOLID,
+				.FillMode = Utils::GAFillModeToD3D12(key.FillMode),
 				.CullMode = D3D12_CULL_MODE_NONE,
 				.DepthClipEnable = true
 			},

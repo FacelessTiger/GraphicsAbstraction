@@ -1,4 +1,4 @@
-#include "bindless.hlsl"
+#include "Cobra.hlsl"
 
 struct ImDrawVert
 {
@@ -26,12 +26,12 @@ struct VertexOutput
 
 VertexOutput main(uint vertexID: SV_VertexID)
 {
-	ImDrawVert vertex = ArrayBuffer::Create(pushConstants.vertices).Load<ImDrawVert>(vertexID);
+	ImDrawVert vertex = Cobra::ArrayBuffer::Create(pushConstants.vertices).Load<ImDrawVert>(vertexID);
 
 	VertexOutput output;
 	output.position = float4((vertex.pos * pushConstants.scale) + pushConstants.offset, 0, 1);
 	output.position.y *= -1;
-	output.color = UnpackUnorm4x8(vertex.color);
+	output.color = Cobra::UnpackUnorm4x8(vertex.color);
 	output.uv = vertex.uv;
 	return output;
 }

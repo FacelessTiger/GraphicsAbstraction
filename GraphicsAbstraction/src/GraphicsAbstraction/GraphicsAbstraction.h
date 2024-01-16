@@ -6,8 +6,8 @@
 #include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 #include <GraphicsAbstraction/Renderer/Buffer.h>
-#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
-#include <GraphicsAbstraction/Renderer/CommandPool.h>
+#include <GraphicsAbstraction/Renderer/CommandList.h>
+#include <GraphicsAbstraction/Renderer/CommandAllocator.h>
 #include <GraphicsAbstraction/Renderer/Fence.h>
 #include <GraphicsAbstraction/Renderer/GraphicsContext.h>
 #include <GraphicsAbstraction/Renderer/Image.h>

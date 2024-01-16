@@ -16,7 +16,7 @@ namespace GraphicsAbstraction {
 		virtual ~VulkanQueue() = default;
 
 		void Acquire(const Ref<Swapchain>& swapchain, const Ref<Fence>& fence) override;
-		void Submit(const Ref<CommandBuffer>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal) override;
+		void Submit(const Ref<CommandList>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal) override;
 		void Present(const Ref<Swapchain>& swapchain, const Ref<Fence>& wait) override;
 	private:
 		VulkanContext& m_Context;

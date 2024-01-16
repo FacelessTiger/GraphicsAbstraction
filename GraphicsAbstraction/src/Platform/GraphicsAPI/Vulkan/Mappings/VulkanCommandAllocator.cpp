@@ -1,18 +1,18 @@
-#include "VulkanCommandPool.h"
+#include "VulkanCommandAllocator.h"
 
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanContext.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanQueue.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanImage.h>
-#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandBuffer.h>
+#include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanCommandList.h>
 
 namespace GraphicsAbstraction {
 
-	Ref<CommandPool> CommandPool::Create(const Ref<Queue>& queue)
+	Ref<CommandAllocator> CommandAllocator::Create(const Ref<Queue>& queue)
 	{
-		return CreateRef<VulkanCommandPool>(queue);
+		return CreateRef<VulkanCommandAllocator>(queue);
 	}
 
-	VulkanCommandPool::VulkanCommandPool(const Ref<Queue>& queue)
+	VulkanCommandAllocator::VulkanCommandAllocator(const Ref<Queue>& queue)
 		: m_Context(VulkanContext::GetReference())
 	{
 		auto& vulkanQueue = (VulkanQueue&)(*queue);
@@ -36,18 +36,18 @@ namespace GraphicsAbstraction {
 		VK_CHECK(vkAllocateCommandBuffers(m_Context->Device, &cmdAllocInfo, &MainCommandBuffer));
 	}
 
-	VulkanCommandPool::~VulkanCommandPool()
+	VulkanCommandAllocator::~VulkanCommandAllocator()
 	{
 		m_Context->GetFrameDeletionQueue().Push(CommandPool);
 	}
 
-	CommandPool* VulkanCommandPool::Reset()
+	CommandAllocator* VulkanCommandAllocator::Reset()
 	{
 		vkResetCommandPool(m_Context->Device, CommandPool, 0);
 		return this;
 	}
 
-	Ref<CommandBuffer> VulkanCommandPool::Begin() const
+	Ref<CommandList> VulkanCommandAllocator::Begin() const
 	{
 		VkCommandBufferBeginInfo info = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -59,7 +59,7 @@ namespace GraphicsAbstraction {
 		vkCmdBindDescriptorSets(MainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Context->BindlessPipelineLayout, 0, 1, &m_Context->BindlessSet, 0, nullptr);
 		vkCmdBindDescriptorSets(MainCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_Context->BindlessPipelineLayout, 0, 1, &m_Context->BindlessSet, 0, nullptr);
 
-		return CreateRef<VulkanCommandBuffer>(MainCommandBuffer);
+		return CreateRef<VulkanCommandList>(MainCommandBuffer);
 	}
 
 }

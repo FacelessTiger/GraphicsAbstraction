@@ -1,4 +1,4 @@
-#include "VulkanCommandBuffer.h"
+#include "VulkanCommandList.h"
 
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanSwapchain.h>
 #include <Platform/GraphicsAPI/Vulkan/Mappings/VulkanShader.h>
@@ -8,18 +8,18 @@
 
 namespace GraphicsAbstraction {
 
-	VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBuffer buffer)
+	VulkanCommandList::VulkanCommandList(VkCommandBuffer buffer)
 		: m_Context(VulkanContext::GetReference()), CommandBuffer(buffer)
 	{
 		
 	}
 
-	VulkanCommandBuffer::~VulkanCommandBuffer()
+	VulkanCommandList::~VulkanCommandList()
 	{
 
 	}
 
-	void VulkanCommandBuffer::Clear(const Ref<Image>& image, const glm::vec4& color)
+	void VulkanCommandList::Clear(const Ref<Image>& image, const glm::vec4& color)
 	{
 		auto& vulkanImage = (VulkanImage&)(*image);
 		vulkanImage.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_GENERAL);
@@ -30,7 +30,7 @@ namespace GraphicsAbstraction {
 		vkCmdClearColorImage(CommandBuffer, vulkanImage.Image.Image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
 	}
 
-	void VulkanCommandBuffer::Present(const Ref<Swapchain>& swapchain)
+	void VulkanCommandList::Present(const Ref<Swapchain>& swapchain)
 	{
 		auto& vulkanSwapchain = (VulkanSwapchain&)(*swapchain);
 		auto image = vulkanSwapchain.Images[vulkanSwapchain.ImageIndex];
@@ -38,7 +38,7 @@ namespace GraphicsAbstraction {
 		image->TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 
-	void VulkanCommandBuffer::CopyToBuffer(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset)
+	void VulkanCommandList::CopyBufferRegion(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset, uint32_t dstOffset)
 	{
 		auto& vulkanSrc = (VulkanBuffer&)(*src);
 		auto& vulkanDst = (VulkanBuffer&)(*dst);
@@ -51,7 +51,7 @@ namespace GraphicsAbstraction {
 		vkCmdCopyBuffer(CommandBuffer, vulkanSrc.Buffer.Buffer, vulkanDst.Buffer.Buffer, 1, &copy);
 	}
 
-	void VulkanCommandBuffer::CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset)
+	void VulkanCommandList::CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset)
 	{
 		auto& vulkanSrc = (VulkanBuffer&)(*src);
 		auto& vulkanDst = (VulkanImage&)(*dst);
@@ -74,7 +74,7 @@ namespace GraphicsAbstraction {
 		vulkanDst.TransitionLayout(CommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
-	void VulkanCommandBuffer::CopyToImage(const Ref<Image>& src, const Ref<Image>& dst)
+	void VulkanCommandList::CopyToImage(const Ref<Image>& src, const Ref<Image>& dst)
 	{
 		auto& vulkanSrc = (VulkanImage&)(*src);
 		auto& vulkanDst = (VulkanImage&)(*dst);
@@ -94,7 +94,7 @@ namespace GraphicsAbstraction {
 		vkCmdCopyImage(CommandBuffer, vulkanSrc.Image.Image, vulkanSrc.Layout, vulkanDst.Image.Image, vulkanDst.Layout, 1, &copy);
 	}
 
-	void VulkanCommandBuffer::RWResourceBarrier(const Ref<Image>& resource)
+	void VulkanCommandList::RWResourceBarrier(const Ref<Image>& resource)
 	{
 		auto& vulkanImage = (VulkanImage&)(*resource);
 		if (vulkanImage.Layout == VK_IMAGE_LAYOUT_UNDEFINED) return;
@@ -112,7 +112,7 @@ namespace GraphicsAbstraction {
 		vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void VulkanCommandBuffer::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
+	void VulkanCommandList::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
 	{
 		GA_PROFILE_SCOPE();
 
@@ -228,13 +228,13 @@ namespace GraphicsAbstraction {
 		}
 	}
 
-	void VulkanCommandBuffer::EndRendering()
+	void VulkanCommandList::EndRendering()
 	{
 		if (m_Context->DynamicRenderingSupported) m_Context->vkCmdEndRenderingKHR(CommandBuffer);
 		else vkCmdEndRenderPass(CommandBuffer);
 	}
 
-	void VulkanCommandBuffer::BindShaders(const std::vector<Ref<Shader>> shaderStages)
+	void VulkanCommandList::BindShaders(const std::vector<Ref<Shader>> shaderStages)
 	{
 		GA_PROFILE_SCOPE();
 
@@ -280,18 +280,18 @@ namespace GraphicsAbstraction {
 		if (m_Context->ShaderObjectSupported) m_Context->vkCmdBindShadersEXT(CommandBuffer, (uint32_t)shaders.size(), stages.data(), shaders.data());
 	}
 
-	void VulkanCommandBuffer::BindIndexBuffer(const Ref<Buffer>& buffer)
+	void VulkanCommandList::BindIndexBuffer(const Ref<Buffer>& buffer)
 	{
 		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
 		vkCmdBindIndexBuffer(CommandBuffer, vulkanBuffer.Buffer.Buffer, 0, VK_INDEX_TYPE_UINT16);
 	}
 
-	void VulkanCommandBuffer::PushConstant(const void* data, uint32_t size, uint32_t offset)
+	void VulkanCommandList::PushConstant(const void* data, uint32_t size, uint32_t offset)
 	{
 		vkCmdPushConstants(CommandBuffer, m_Context->BindlessPipelineLayout, VK_SHADER_STAGE_ALL, offset, size, data);
 	}
 
-	void VulkanCommandBuffer::SetViewport(const glm::vec2& size)
+	void VulkanCommandList::SetViewport(const glm::vec2& size)
 	{
 		float yOffset = (size.y < 0) ? 0 : size.y;
 		VkViewport viewport = {
@@ -307,7 +307,7 @@ namespace GraphicsAbstraction {
 		else vkCmdSetViewport(CommandBuffer, 0, 1, &viewport);
 	}
 
-	void VulkanCommandBuffer::SetScissor(const glm::vec2& size, const glm::vec2& offset)
+	void VulkanCommandList::SetScissor(const glm::vec2& size, const glm::vec2& offset)
 	{
 		VkOffset2D offset2D = {
 			.x = (int32_t)offset.x,
@@ -328,7 +328,21 @@ namespace GraphicsAbstraction {
 		else vkCmdSetScissor(CommandBuffer, 0, 1, &scissor);
 	}
 
-	void VulkanCommandBuffer::EnableDepthTest(bool writeEnabled, CompareOperation op)
+	void VulkanCommandList::SetFillMode(FillMode mode)
+	{
+		if (m_Context->DynamicState3Supported)
+		{
+			m_Context->vkCmdSetPolygonModeEXT(CommandBuffer, Utils::GAFillModeToVulkan(mode));
+			m_FillModeSet = true;
+		}
+		else
+		{
+			m_GraphicsPipelineKey.FillMode = mode;
+			m_GraphicsPipelineStateChanged = true;
+		}
+	}
+
+	void VulkanCommandList::EnableDepthTest(bool writeEnabled, CompareOperation op)
 	{
 		vkCmdSetDepthBounds(CommandBuffer, 0.0f, 1.0f);
 		if (m_Context->DynamicStateSupported)
@@ -345,10 +359,9 @@ namespace GraphicsAbstraction {
 			m_GraphicsPipelineKey.DepthCompareOp = op;
 			m_GraphicsPipelineStateChanged = true;
 		}
-
 	}
 
-	void VulkanCommandBuffer::DisableDepthTest()
+	void VulkanCommandList::DisableDepthTest()
 	{
 		if (m_Context->DynamicRenderingSupported)
 		{
@@ -362,29 +375,29 @@ namespace GraphicsAbstraction {
 		}
 	}
 
-	void VulkanCommandBuffer::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
+	void VulkanCommandList::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
 	{
 		SetColorBlend(true,	srcBlend, dstBlend, blendOp, srcBlendAlpha, dstBlendAlpha, blendAlpha);
 	}
 
-	void VulkanCommandBuffer::DisableColorBlend()
+	void VulkanCommandList::DisableColorBlend()
 	{
 		SetColorBlend(false, Blend::Zero, Blend::Zero, BlendOp::Add, Blend::Zero, Blend::Zero, BlendOp::Add);
 	}
 
-	void VulkanCommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+	void VulkanCommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 	{
 		SetDynamicState();
 		vkCmdDraw(CommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 	}
 
-	void VulkanCommandBuffer::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
+	void VulkanCommandList::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
 	{
 		SetDynamicState();
 		vkCmdDrawIndexed(CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
-	void VulkanCommandBuffer::DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
+	void VulkanCommandList::DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
 	{
 		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
 
@@ -392,7 +405,7 @@ namespace GraphicsAbstraction {
 		vkCmdDrawIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset + 8, drawCount, stride);
 	}
 
-	void VulkanCommandBuffer::DrawIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
+	void VulkanCommandList::DrawIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
 	{
 		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
 		auto& vulkanCountBuffer = (VulkanBuffer&)(*countBuffer);
@@ -401,7 +414,7 @@ namespace GraphicsAbstraction {
 		vkCmdDrawIndirectCount(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset + 8, vulkanCountBuffer.Buffer.Buffer, countOffset, maxDrawCount, stride);
 	}
 
-	void VulkanCommandBuffer::DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
+	void VulkanCommandList::DrawIndexedIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)
 	{
 		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
 
@@ -409,7 +422,7 @@ namespace GraphicsAbstraction {
 		vkCmdDrawIndexedIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset + 8, drawCount, stride);
 	}
 
-	void VulkanCommandBuffer::DrawIndexedIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
+	void VulkanCommandList::DrawIndexedIndirectCount(const Ref<Buffer>& buffer, uint64_t offset, const Ref<Buffer>& countBuffer, uint64_t countOffset, uint32_t maxDrawCount, uint32_t stride)
 	{
 		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
 		auto& vulkanCountBuffer = (VulkanBuffer&)(*countBuffer);
@@ -418,7 +431,7 @@ namespace GraphicsAbstraction {
 		vkCmdDrawIndexedIndirectCount(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset + 8, vulkanCountBuffer.Buffer.Buffer, countOffset, maxDrawCount, stride);
 	}
 
-	void VulkanCommandBuffer::Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ)
+	void VulkanCommandList::Dispatch(uint32_t workX, uint32_t workY, uint32_t workZ)
 	{
 		if (!m_Context->ShaderObjectSupported && m_ComputePipelineStateChanged)
 		{
@@ -429,7 +442,7 @@ namespace GraphicsAbstraction {
 		vkCmdDispatch(CommandBuffer, workX, workY, workZ);
 	}
 
-	void VulkanCommandBuffer::DispatchIndirect(const Ref<Buffer>& buffer, uint64_t offset)
+	void VulkanCommandList::DispatchIndirect(const Ref<Buffer>& buffer, uint64_t offset)
 	{
 		auto& vulkanBuffer = (VulkanBuffer&)(*buffer);
 		if (!m_Context->ShaderObjectSupported && m_ComputePipelineStateChanged)
@@ -441,7 +454,7 @@ namespace GraphicsAbstraction {
 		vkCmdDispatchIndirect(CommandBuffer, vulkanBuffer.Buffer.Buffer, offset);
 	}
 
-	void VulkanCommandBuffer::SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
+	void VulkanCommandList::SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
 	{
 		if (m_Context->DynamicState3Supported)
 		{
@@ -472,7 +485,7 @@ namespace GraphicsAbstraction {
 		}
 	}
 
-	void VulkanCommandBuffer::SetDynamicState()
+	void VulkanCommandList::SetDynamicState()
 	{
 		GA_PROFILE_SCOPE();
 
@@ -524,7 +537,7 @@ namespace GraphicsAbstraction {
 
 		if (m_Context->DynamicState3Supported)
 		{
-			m_Context->vkCmdSetPolygonModeEXT(CommandBuffer, VK_POLYGON_MODE_FILL); 
+			if (!m_FillModeSet) m_Context->vkCmdSetPolygonModeEXT(CommandBuffer, VK_POLYGON_MODE_FILL); 
 			m_Context->vkCmdSetRasterizationSamplesEXT(CommandBuffer, VK_SAMPLE_COUNT_1_BIT); 
 			m_Context->vkCmdSetSampleMaskEXT(CommandBuffer, VK_SAMPLE_COUNT_1_BIT, &mask);
 			m_Context->vkCmdSetAlphaToCoverageEnableEXT(CommandBuffer, false);

@@ -8,7 +8,7 @@
 namespace GraphicsAbstraction {
 
 	class Swapchain;
-	class CommandBuffer;
+	class CommandList;
 	class Fence;
 
 	enum class QueueType
@@ -22,7 +22,7 @@ namespace GraphicsAbstraction {
 		virtual ~Queue() = default;
 
 		virtual void Acquire(const Ref<Swapchain>& swapchain, const Ref<Fence>& fence) = 0;
-		virtual void Submit(const Ref<CommandBuffer>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal) = 0;
+		virtual void Submit(const Ref<CommandList>& cmd, const Ref<Fence>& wait, const Ref<Fence>& signal) = 0;
 		virtual void Present(const Ref<Swapchain>& swapchain, const Ref<Fence>& wait) = 0;
 	};
 

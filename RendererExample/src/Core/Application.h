@@ -1,21 +1,6 @@
 #pragma once
 
-#include <GraphicsAbstraction/Renderer/GraphicsContext.h>
-#include <GraphicsAbstraction/Renderer/Swapchain.h>
-#include <GraphicsAbstraction/Renderer/CommandPool.h>
-#include <GraphicsAbstraction/Renderer/CommandBuffer.h>
-#include <GraphicsAbstraction/Renderer/Shader.h>
-#include <GraphicsAbstraction/Renderer/Image.h>
-#include <GraphicsAbstraction/Renderer/Buffer.h>
-#include <GraphicsAbstraction/Renderer/Queue.h>
-#include <GraphicsAbstraction/Renderer/Fence.h>
-
-
-#include <GraphicsAbstraction/ImGui/ImGuiLayer.h>
-#include <GraphicsAbstraction/Core/Window.h>
-#include <GraphicsAbstraction/Events/ApplicationEvent.h>
-#include <GraphicsAbstraction/Events/KeyEvent.h>
-#include <GraphicsAbstraction/Debug/Instrumentor.h>
+#include <GraphicsAbstraction/GraphicsAbstraction.h>
 #include <Renderer/Procedures/GradientProcedure.h>
 #include <Renderer/EditorCamera.h>
 #include <Renderer/Procedures/QuadProcedure.h>

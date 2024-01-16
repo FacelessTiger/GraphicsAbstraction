@@ -84,6 +84,18 @@ namespace GraphicsAbstraction::Utils {
 		return ret;
 	}
 
+	VkPolygonMode GAFillModeToVulkan(FillMode mode)
+	{
+		switch (mode)
+		{
+			case FillMode::Solid:		return VK_POLYGON_MODE_FILL;
+			case FillMode::Wireframe:	return VK_POLYGON_MODE_LINE;
+		}
+
+		GA_CORE_ASSERT(false, "Unknown fill mode!");
+		return (VkPolygonMode)0;
+	}
+
 	ImageFormat VulkanImageFormatToGA(VkFormat format)
 	{
 		switch (format)

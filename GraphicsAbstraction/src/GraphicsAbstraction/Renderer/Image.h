@@ -9,7 +9,7 @@
 namespace GraphicsAbstraction {
 
 	class GraphicsContext;
-	class CommandBuffer;
+	class CommandList;
 
 	enum class ImageFormat
 	{

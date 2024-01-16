@@ -106,7 +106,7 @@ namespace GraphicsAbstraction {
 				//meshAsset.Surfaces.push_back(surface);
 			}
 
-			constexpr bool overrideColors = true;
+			constexpr bool overrideColors = false;
 			if (overrideColors)
 			{
 				for (Vertex& vertex : vertices) vertex.color = glm::vec4(vertex.normal, 1.0f);
