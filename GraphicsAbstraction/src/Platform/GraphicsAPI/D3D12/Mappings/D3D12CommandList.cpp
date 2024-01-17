@@ -94,6 +94,14 @@ namespace GraphicsAbstraction {
 		CommandList->ResourceBarrier(1, &barrier);
 	}
 
+	void D3D12CommandList::RWResourceBarrier(const Ref<Buffer>& resource)
+	{
+		auto& d3d12Buffer = (D3D12Buffer&)*resource;
+
+		auto barrier = CD3DX12_RESOURCE_BARRIER::UAV(d3d12Buffer.Resource.Get());
+		CommandList->ResourceBarrier(1, &barrier);
+	}
+
 	void D3D12CommandList::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
 	{
 		auto& d3d12Image = (D3D12Image&)*colorAttachments[0];

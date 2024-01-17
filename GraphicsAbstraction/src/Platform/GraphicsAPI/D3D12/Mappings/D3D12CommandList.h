@@ -24,6 +24,7 @@ namespace GraphicsAbstraction {
 		void CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset = 0) override;
 		void CopyToImage(const Ref<Image>& src, const Ref<Image>& dst) override;
 		void RWResourceBarrier(const Ref<Image>& resource) override;
+		void RWResourceBarrier(const Ref<Buffer>& resource) override;
 
 		void BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment = nullptr) override;
 		void EndRendering() override { }

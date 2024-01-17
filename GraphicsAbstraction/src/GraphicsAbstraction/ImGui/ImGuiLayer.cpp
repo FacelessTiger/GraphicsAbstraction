@@ -8,36 +8,6 @@
 
 namespace GraphicsAbstraction {
 
-	namespace Utils {
-
-		ImGuiKey GAKeyToImGui(KeyCode code)
-		{
-			switch (code)
-			{
-				case Key::Space:		return ImGuiKey_Space;
-				case Key::Apostrophe:	return ImGuiKey_Apostrophe;
-				case Key::Comma:		return ImGuiKey_Comma;
-				case Key::Minus:		return ImGuiKey_Minus;
-				case Key::Period:		return ImGuiKey_Period;
-				case Key::Slash:		return ImGuiKey_Slash;
-
-				case Key::D0:			return ImGuiKey_0;
-				case Key::D1:			return ImGuiKey_1;
-				case Key::D2:			return ImGuiKey_2;
-				case Key::D3:			return ImGuiKey_3;
-				case Key::D4:			return ImGuiKey_4;
-				case Key::D5:			return ImGuiKey_5;
-				case Key::D6:			return ImGuiKey_6;
-				case Key::D7:			return ImGuiKey_7;
-				case Key::D8:			return ImGuiKey_8;
-				case Key::D9:			return ImGuiKey_9;
-			}
-
-			return ImGuiKey_None;
-		}
-
-	}
-
 	struct ImGuiLayerData
 	{
 		Ref<Shader> VertexShader;

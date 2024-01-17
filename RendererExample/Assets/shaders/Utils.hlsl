@@ -1,5 +1,15 @@
 namespace Cobra {
 
+	struct DrawIndexedIndirectCommand
+	{
+		uint reserved, reserved2;
+		uint indexCount;
+		uint instanceCount;
+		uint firstIndex;
+		uint vertexOffset;
+		uint firstInstance;
+	};
+
 	float4 UnpackUnorm4x8(uint value)
 	{
 	    uint4 Packed = uint4(value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, value >> 24);

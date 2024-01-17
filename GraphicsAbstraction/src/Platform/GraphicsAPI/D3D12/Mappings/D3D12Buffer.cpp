@@ -17,7 +17,7 @@ namespace GraphicsAbstraction {
 		else heapType = D3D12_HEAP_TYPE_UPLOAD;
 		auto heapProperties = CD3DX12_HEAP_PROPERTIES(heapType);
 
-		auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(size);
+		auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(size, (usage & BufferUsage::IndirectBuffer) ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE);
 		D3D12_CHECK(m_Context->Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&Resource)));
 		
 		if (flags & BufferFlags::Mapped)
@@ -31,7 +31,8 @@ namespace GraphicsAbstraction {
 
 		if (usage & BufferUsage::StorageBuffer)
 		{
-			auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_Context->BindlessDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), Handle.GetValue(), m_Context->Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+			uint32_t offsetSize = m_Context->Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_Context->BindlessDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), Handle.GetValue(), offsetSize);
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC shaderViewDesc = {
 				.Format = DXGI_FORMAT_R32_TYPELESS,
@@ -43,6 +44,20 @@ namespace GraphicsAbstraction {
 				}
 			};
 			m_Context->Device->CreateShaderResourceView(Resource.Get(), &shaderViewDesc, handle);
+
+			if (usage & BufferUsage::IndirectBuffer)
+			{
+				handle.Offset(1, offsetSize);
+				D3D12_UNORDERED_ACCESS_VIEW_DESC unorderedViewDesc = {
+					.Format = DXGI_FORMAT_R32_TYPELESS,
+					.ViewDimension = D3D12_UAV_DIMENSION_BUFFER,
+					.Buffer = {
+						.NumElements = size / 4,
+						.Flags = D3D12_BUFFER_UAV_FLAG_RAW
+					}
+				};
+				m_Context->Device->CreateUnorderedAccessView(Resource.Get(), nullptr, &unorderedViewDesc, handle);
+			}
 		}
 	}
 

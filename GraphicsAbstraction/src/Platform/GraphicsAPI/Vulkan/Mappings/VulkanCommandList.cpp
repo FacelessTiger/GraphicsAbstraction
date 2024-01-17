@@ -112,6 +112,20 @@ namespace GraphicsAbstraction {
 		vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
+	void VulkanCommandList::RWResourceBarrier(const Ref<Buffer>& resource)
+	{
+		auto& vulkanBuffer = (VulkanBuffer&)(*resource);
+
+		VkBufferMemoryBarrier barrier = {
+			.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+			.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+			.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+			.buffer = vulkanBuffer.Buffer.Buffer,
+			.size = VK_WHOLE_SIZE
+		};
+		vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+	}
+
 	void VulkanCommandList::BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment)
 	{
 		GA_PROFILE_SCOPE();

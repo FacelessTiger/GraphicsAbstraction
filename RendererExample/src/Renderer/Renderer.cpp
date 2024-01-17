@@ -177,7 +177,7 @@ namespace GraphicsAbstraction {
 		DownsampleConstant dpc = { data.DrawImage->GetSampledHandle(), data.DisplayImage->GetStorageHandle(), data.ResizeSampler->GetHandle() };
 		cmd->PushConstant(dpc);
 		cmd->BindShaders({ data.ResizeShader });
-		cmd->Dispatch((uint32_t)std::ceil(data.DisplayImage->GetWidth() / 16.0f), (uint32_t)std::ceil(data.DisplayImage->GetHeight() / 16.0f), 1);
+		cmd->Dispatch((uint32_t)std::ceil(data.DisplayImage->GetWidth() / 32.0f), (uint32_t)std::ceil(data.DisplayImage->GetHeight() / 32.0f), 1);
 		cmd->RWResourceBarrier(data.DisplayImage);
 
 		if (!data.SeperateDisplayImage) cmd->CopyToImage(data.DisplayImage, data.Swapchain->GetCurrent());

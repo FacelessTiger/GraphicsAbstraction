@@ -39,13 +39,52 @@ namespace Cobra {
 			return ret;
 		}
 
-		template <typename ReadStructure>
-		ReadStructure Load(uint index)
+		template <typename T>
+		T Load(uint index)
 		{
 			ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.handle.GetReadIndex());
-			ReadStructure result = buffer.Load<ReadStructure>(index * sizeof(ReadStructure));
+			T result = buffer.Load<T>(index * sizeof(T));
 
 			return result;
+		}
+
+		template <typename T>
+		uint GetDimensions()
+		{
+			ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.handle.GetReadIndex());
+
+			uint dimension;
+			buffer.GetDimensions(dimension);
+			return dimension / sizeof(T);
+		}
+	};
+
+	struct RWArrayBuffer
+	{
+		RenderResourceHandle handle;
+
+		static RWArrayBuffer Create(uint index)
+		{
+			RWArrayBuffer ret;
+			ret.handle.index = index;
+
+			return ret;
+		}
+
+		template <typename T>
+		T Load(uint index)
+		{
+			ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.handle.GetReadIndex());
+			T result = buffer.Load<T>(index * sizeof(T));
+
+			return result;
+		}
+
+		template <typename T>
+		void Store(uint index, T value)
+		{
+			RWByteAddressBuffer buffer = DESCRIPTOR_HEAP(RWByteBufferHandle, this.handle.GetWriteIndex());
+			buffer.Store<T>(index * sizeof(T), value);
 		}
 	};
 

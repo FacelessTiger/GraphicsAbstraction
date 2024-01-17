@@ -8,7 +8,7 @@ struct PushConstant
 };
 PushConstant(PushConstant, pushConstants);
 
-[numthreads(16, 16, 1)]
+[numthreads(32, 32, 1)]
 void main(uint3 dispatchThreadID: SV_DispatchThreadID)
 {
 	Cobra::Texture srcImage = Cobra::Texture::Create(pushConstants.srcImage);

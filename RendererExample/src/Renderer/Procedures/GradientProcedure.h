@@ -8,18 +8,6 @@
 
 namespace GraphicsAbstraction {
 
-	struct Data
-	{
-		glm::vec4 data1;
-		glm::vec4 data2;
-	};
-
-	struct ComputePushConstant
-	{
-		uint32_t image;
-		uint32_t buffer;
-	};
-
 	class GradientProcedure : public RenderProcedure
 	{
 	public:
@@ -31,14 +19,11 @@ namespace GraphicsAbstraction {
 
 		void OnImGui();
 	private:
-		Data m_Data;
-		ComputePushConstant m_ComputePC;
-		Blend m_SrcBlend;
-		Blend m_DstBlend;
 		bool m_IsWireframe = false;
+		bool m_CullDirty = true;
 
-		Ref<Buffer> m_Buffer, m_CommandBuffer, m_ModelMatrixBuffer;
-		Ref<Shader> m_GradientShader, m_TriangleVertex, m_TrianglePixel;
+		Ref<Buffer> m_CullInputBuffer, m_CommandBuffer, m_ObjectBuffer;
+		Ref<Shader> m_TriangleVertex, m_TrianglePixel, m_CullShader;
 		std::vector<glm::vec3> m_Positions;
 		Scene m_Scene;
 	};

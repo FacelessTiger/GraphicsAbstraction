@@ -19,9 +19,11 @@ namespace Cobra {
         DEFINE_TEXTURE_TYPES_AND_FORMATS_SLOTS(RWTexture3D, 2, 0)
 
         [[vk::binding(0, 0)]] ByteAddressBuffer g_ByteAddressBuffer[];
+        [[vk::binding(0, 0)]] RWByteAddressBuffer g_RWByteAddressBuffer[];
         [[vk::binding(1, 0)]] SamplerState g_SamplerState[];
 
         struct ByteBufferHandle { uint internalIndex; };
+        struct RWByteBufferHandle { uint internalIndex; };
 
         template <typename T> struct Texture2DHandle { uint internalIndex; };
         template <typename T> struct RWTexture2DHandle { uint internalIndex; };
@@ -42,6 +44,7 @@ namespace Cobra {
         struct VulkanResourceDescriptorHeapInternal
         {
         	ByteAddressBuffer operator[](ByteBufferHandle identifier) { return g_ByteAddressBuffer[NonUniformResourceIndex(identifier.internalIndex)]; }
+            RWByteAddressBuffer operator[](RWByteBufferHandle identifier) { return g_RWByteAddressBuffer[NonUniformResourceIndex(identifier.internalIndex)]; }
 
         	TEXTURE_TYPE_TEMPLATE_SPECIALIZATION_DECL_MULTI(Texture2D)
             TEXTURE_TYPE_TEMPLATE_SPECIALIZATION_DECL_MULTI(RWTexture2D)

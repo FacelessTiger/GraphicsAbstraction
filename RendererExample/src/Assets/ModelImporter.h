@@ -19,30 +19,19 @@ namespace GraphicsAbstraction {
 		glm::vec4 color;
 	};
 
-	struct GeoSurface
-	{
-		uint32_t StartIndex;
-		uint32_t Count;
-	};
-
 	struct Mesh
 	{
-		//std::string Name;
 		uint32_t StartIndex;
 		uint32_t Count;
 
-		std::vector<glm::vec2> Positions;
-		std::vector<uint32_t> Indices;
-
-		//std::vector<GeoSurface> Surfaces;
-		//Ref<Buffer> VertexBuffer, IndexBuffer;
+		Ref<Buffer> VertexBuffer;
 	};
 
 	struct Scene
 	{
 		std::vector<Mesh> Meshes;
 
-		Ref<Buffer> IndexBuffer, VertexBuffer;
+		Ref<Buffer> IndexBuffer;
 	};
 
 	class ModelImporter

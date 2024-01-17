@@ -33,11 +33,7 @@ namespace GraphicsAbstraction {
 		Scene scene;
 		for (fastgltf::Mesh& mesh : gltf.meshes)
 		{
-			//Mesh meshAsset;
-			//meshAsset.Name = mesh.name;
-
-			//indices.clear();
-			//vertices.clear();
+			vertices.clear();
 
 			for (auto&& p : mesh.primitives)
 			{
@@ -60,7 +56,7 @@ namespace GraphicsAbstraction {
 				// load vertex positions
 				{
 					fastgltf::Accessor& positionAccessor = gltf.accessors[p.findAttribute("POSITION")->second];
-					//vertices.resize(vertices.size() + positionAccessor.count);
+					vertices.resize(vertices.size() + positionAccessor.count);
 
 					fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, positionAccessor, [&](glm::vec3 pos, size_t index) {
 						Vertex vertex = {
@@ -70,7 +66,7 @@ namespace GraphicsAbstraction {
 							.uvY = 0,
 							.color = glm::vec4(1.0f),
 						};
-						vertices.push_back(vertex);
+						vertices[index + initialVertex] = vertex;
 					});
 				}
 
@@ -102,8 +98,14 @@ namespace GraphicsAbstraction {
 					});
 				}
 
+				uint32_t vertexBufferSize = (uint32_t)(vertices.size() * sizeof(Vertex));
+				meshAsset.VertexBuffer = Buffer::Create(vertexBufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
+
+				auto staging = Buffer::Create(vertexBufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
+				staging->SetData(vertices.data());
+				Renderer::CopyNextFrame(staging, meshAsset.VertexBuffer, vertexBufferSize);
+
 				scene.Meshes.push_back(meshAsset);
-				//meshAsset.Surfaces.push_back(surface);
 			}
 
 			constexpr bool overrideColors = false;
@@ -113,19 +115,13 @@ namespace GraphicsAbstraction {
 			}
 		}
 
-		// Load mesh buffers
-		uint32_t vertexBufferSize = (uint32_t)(vertices.size() * sizeof(Vertex));
-		scene.VertexBuffer = Buffer::Create(vertexBufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
-
 		uint32_t indexBufferSize = (uint16_t)(indices.size() * sizeof(uint16_t));
 		scene.IndexBuffer = Buffer::Create(indexBufferSize, BufferUsage::IndexBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
 
-		auto staging = Buffer::Create(vertexBufferSize + indexBufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
-		staging->SetData(vertices.data(), vertexBufferSize);
-		staging->SetData(indices.data(), indexBufferSize, vertexBufferSize);
+		auto staging = Buffer::Create(indexBufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
+		staging->SetData(indices.data());
+		Renderer::CopyNextFrame(staging, scene.IndexBuffer, indexBufferSize);
 
-		Renderer::CopyNextFrame(staging, scene.VertexBuffer, vertexBufferSize);
-		Renderer::CopyNextFrame(staging, scene.IndexBuffer, indexBufferSize, vertexBufferSize);
 		return scene;
 	}
 

@@ -87,6 +87,7 @@ namespace GraphicsAbstraction {
 		virtual void CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset = 0) = 0;
 		virtual void CopyToImage(const Ref<Image>& src, const Ref<Image>& dst) = 0;
 		virtual void RWResourceBarrier(const Ref<Image>& resource) = 0;
+		virtual void RWResourceBarrier(const Ref<Buffer>& resource) = 0;
 
 		virtual void BeginRendering(const glm::vec2& region, const std::vector<Ref<Image>>& colorAttachments, const Ref<Image>& depthAttachment = nullptr) = 0;
 		virtual void EndRendering() = 0;

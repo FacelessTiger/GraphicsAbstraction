@@ -9,12 +9,17 @@ struct Vertex
 	float4 color;
 };
 
+struct Object
+{
+	float4x4 modelMatrix;
+	uint vertices;
+};
+
 struct PushConstant
 {
 	float4x4 projection;
 	float3 cameraPos;
-	uint vertices;
-	uint modelMatrices;
+	uint objects;
 };
 PushConstant(PushConstant, pushConstants);
 
@@ -29,15 +34,15 @@ struct VertexOutput
 
 VertexOutput main(uint vertexID: SV_VertexID, uint instanceIndex: SV_InstanceID)
 {
-	Vertex vertex = Cobra::ArrayBuffer::Create(pushConstants.vertices).Load<Vertex>(vertexID);
-	float4x4 modelMatrix = Cobra::ArrayBuffer::Create(pushConstants.modelMatrices).Load<float4x4>(instanceIndex);
+	Object object = Cobra::ArrayBuffer::Create(pushConstants.objects).Load<Object>(instanceIndex);
+	Vertex vertex = Cobra::ArrayBuffer::Create(object.vertices).Load<Vertex>(vertexID);
 
-	float4 worldPos = mul(float4(vertex.position, 1.0f), modelMatrix);
+	float4 worldPos = mul(float4(vertex.position, 1.0f), object.modelMatrix);
 
 	VertexOutput output;
 	output.position = mul(pushConstants.projection, worldPos);
 	output.worldPosition = worldPos.xyz;
-	output.normal = mul(vertex.normal, (float3x3)transpose(Cobra::Inverse(modelMatrix)));
+	output.normal = mul(vertex.normal, (float3x3)transpose(Cobra::Inverse(object.modelMatrix)));
 	output.color = vertex.color.xyz;
 	output.uv = float2(vertex.uvX, vertex.uvY);
 	return output;
