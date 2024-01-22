@@ -2,23 +2,22 @@ VULKAN_SDK = os.getenv("VULKAN_SDK")
 VULKAN_EXTENSION_LAYERS = os.getenv("VK_LAYER_PATH");
 
 IncludeDir = {}
-IncludeDir["stb_image"] = "%{wks.location}/GraphicsAbstraction/vendor/stb_image"
-IncludeDir["GLFW"] = "%{wks.location}/GraphicsAbstraction/vendor/GLFW/include"
-IncludeDir["ImGui"] = "%{wks.location}/GraphicsAbstraction/vendor/imgui"
-IncludeDir["glm"] = "%{wks.location}/GraphicsAbstraction/vendor/glm"
-IncludeDir["spdlog"] = "%{wks.location}/GraphicsAbstraction/vendor/spdlog/include"
+IncludeDir["stb_image"] = "%{wks.location}/vendor/stb_image"
+IncludeDir["GLFW"] = "%{wks.location}/vendor/GLFW/include"
+IncludeDir["ImGui"] = "%{wks.location}/vendor/imgui"
+IncludeDir["glm"] = "%{wks.location}/vendor/glm"
+IncludeDir["spdlog"] = "%{wks.location}/vendor/spdlog/include"
 IncludeDir["VulkanSDK"] = "%{VULKAN_SDK}/Include"
-IncludeDir["tracy"] = "%{wks.location}/GraphicsAbstraction/vendor/tracy/public"
-IncludeDir["vma"] = "%{wks.location}/GraphicsAbstraction/vendor/vma/include"
-IncludeDir["DXC"] = "%{wks.location}/GraphicsAbstraction/vendor/DXC/include"
-IncludeDir["xxHash"] = "%{wks.location}/GraphicsAbstraction/vendor/xxHash"
-IncludeDir["fastgltf"] = "%{wks.location}/GraphicsAbstraction/vendor/fastgltf/include"
-IncludeDir["AgilitySDK"] = "%{wks.location}/GraphicsAbstraction/vendor/AgilitySDK/include"
+IncludeDir["vma"] = "%{wks.location}/vendor/vma/include"
+IncludeDir["DXC"] = "%{wks.location}/vendor/DXC/include"
+IncludeDir["xxHash"] = "%{wks.location}/vendor/xxHash"
+IncludeDir["fastgltf"] = "%{wks.location}/vendor/fastgltf/include"
+IncludeDir["AgilitySDK"] = "%{wks.location}/vendor/AgilitySDK/include"
 
 LibraryDir = {}
 
 LibraryDir["VulkanSDK"] = "%{VULKAN_SDK}/Lib"
-LibraryDir["DXC"] = "%{wks.location}/GraphicsAbstraction/vendor/DXC/lib"
+LibraryDir["DXC"] = "%{wks.location}/vendor/DXC/lib"
 
 Library = {}
 

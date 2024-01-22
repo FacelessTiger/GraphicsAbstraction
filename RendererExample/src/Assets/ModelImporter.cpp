@@ -1,7 +1,7 @@
 #include "ModelImporter.h"
 
-#include <GraphicsAbstraction/Core/Log.h>
-#include <GraphicsAbstraction/Core/Assert.h>
+#include <Core/Log.h>
+#include <Core/Assert.h>
 
 #include <Renderer/Renderer.h>
 
@@ -105,6 +105,17 @@ namespace GraphicsAbstraction {
 				staging->SetData(vertices.data());
 				Renderer::CopyNextFrame(staging, meshAsset.VertexBuffer, vertexBufferSize);
 
+				glm::vec3 minPos = vertices[initialVertex].position;
+				glm::vec3 maxPos = vertices[initialVertex].position;
+				for (int i = initialVertex; i < vertices.size(); i++)
+				{
+					minPos = glm::min(minPos, vertices[i].position);
+					maxPos = glm::max(maxPos, vertices[i].position);
+				}
+
+				meshAsset.Bounds.origin = (maxPos + minPos) / 2.0f;
+				meshAsset.Bounds.extents = (maxPos - minPos) / 2.0f;
+				meshAsset.Bounds.sphereRadius = glm::length(meshAsset.Bounds.extents);
 				scene.Meshes.push_back(meshAsset);
 			}
 

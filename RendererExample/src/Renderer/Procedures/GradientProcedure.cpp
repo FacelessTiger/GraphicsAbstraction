@@ -3,7 +3,7 @@
 #include <Renderer/Renderer.h>
 #include <GraphicsAbstraction/Renderer/CommandList.h>
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -13,10 +13,13 @@ namespace GraphicsAbstraction {
 	struct CullMesh
 	{
 		DrawIndexedIndirectCommand command;
+		Bounds bounds;
+		glm::mat4 modelMatrix;
 	};
 
 	struct CullPushConstant
 	{
+		glm::mat4 viewProj;
 		uint32_t inputBuffer;
 		uint32_t outputBuffer;
 	};
@@ -40,24 +43,26 @@ namespace GraphicsAbstraction {
 		m_TriangleVertex = Shader::Create("Assets/shaders/TriangleVertex.hlsl", ShaderStage::Vertex);
 		m_TrianglePixel = Shader::Create("Assets/shaders/TrianglePixel.hlsl", ShaderStage::Pixel);
 		m_CullShader = Shader::Create("Assets/shaders/Cull.hlsl", ShaderStage::Compute);
-		m_Scene = ModelImporter::LoadModels("Assets/models/donut.glb");
+		m_Scene = ModelImporter::LoadModels("Assets/models/basicmesh.glb");
 
 		m_ObjectBuffer = Buffer::Create((uint32_t)(sizeof(Object) * m_Scene.Meshes.size()), BufferUsage::StorageBuffer, BufferFlags::Mapped);
-		m_CommandBuffer = Buffer::Create((uint32_t)(sizeof(DrawIndexedIndirectCommand) * m_Scene.Meshes.size()), BufferUsage::StorageBuffer | BufferUsage::IndirectBuffer, BufferFlags::DeviceLocal);
-		m_CullInputBuffer = Buffer::Create((uint32_t)(sizeof(DrawIndexedIndirectCommand) * m_Scene.Meshes.size()), BufferUsage::StorageBuffer, BufferFlags::Mapped);
+		m_CommandBuffer = Buffer::Create((uint32_t)(sizeof(DrawIndexedIndirectCommand) * m_Scene.Meshes.size()) + 4, BufferUsage::StorageBuffer | BufferUsage::IndirectBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
+		m_CullInputBuffer = Buffer::Create((uint32_t)(sizeof(CullMesh) * m_Scene.Meshes.size()), BufferUsage::StorageBuffer, BufferFlags::Mapped);
 
 		for (uint32_t i = 0; i < m_Scene.Meshes.size(); i++)
 		{
 			Mesh& mesh = m_Scene.Meshes[i];
 
-			CullMesh cullMesh = {
-				.command = { mesh.Count, 1, mesh.StartIndex, 0, (uint32_t)i }
-			};
-			m_CullInputBuffer->SetData(&cullMesh, sizeof(CullMesh), i * sizeof(CullMesh));
-
 			m_Positions.push_back({0, 0, 0});
 			glm::mat4 rotation = glm::toMat4(glm::quat({ 0.0f, 0.0f, 0.0f }));
 			glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), { 0.0, 0.0f, 0.0f }) * rotation * glm::scale(glm::mat4(1.0f), { 1.0f, 1.0f, 1.0f });
+
+			CullMesh cullMesh = {
+				.command = { mesh.Count, 1, mesh.StartIndex, 0, (uint32_t)i },
+				.bounds = mesh.Bounds,
+				.modelMatrix = modelMatrix
+			};
+			m_CullInputBuffer->SetData(&cullMesh, sizeof(CullMesh), i * sizeof(CullMesh));
 
 			Object object = {
 				.modelMatrix = modelMatrix,
@@ -73,13 +78,18 @@ namespace GraphicsAbstraction {
 
 		if (m_CullDirty)
 		{
-			CullPushConstant cpc = { m_CullInputBuffer->GetHandle(), m_CommandBuffer->GetHandle() };
+			uint32_t zero = 0;
+			auto temp = Buffer::Create(sizeof(uint32_t), BufferUsage::StorageBuffer | BufferUsage::TransferSrc, BufferFlags::Mapped);
+			temp->SetData(&zero);
+			cmd->CopyBufferRegion(temp, m_CommandBuffer, sizeof(uint32_t));
+
+			CullPushConstant cpc = { payload.ViewProjection, m_CullInputBuffer->GetHandle(), m_CommandBuffer->GetHandle() };
 			cmd->PushConstant(cpc);
 			cmd->BindShaders({ m_CullShader });
-			cmd->Dispatch((uint32_t)std::ceil(m_Scene.Meshes.size() / 32.0f), 1, 1);
+			cmd->Dispatch((uint32_t)std::ceil(m_Scene.Meshes.size() / 16.0f), 1, 1);
 			cmd->RWResourceBarrier(m_CommandBuffer);
 
-			m_CullDirty = false;
+			//m_CullDirty = false;
 		}
 
 		cmd->BindShaders({ m_TriangleVertex, m_TrianglePixel });
@@ -92,7 +102,7 @@ namespace GraphicsAbstraction {
 		PushConstant pc = { payload.ViewProjection, payload.CameraPosition, m_ObjectBuffer->GetHandle() };
 		cmd->PushConstant(pc);
 		cmd->BindIndexBuffer(m_Scene.IndexBuffer);
-		cmd->DrawIndexedIndirect(m_CommandBuffer, 0, (uint32_t)m_Scene.Meshes.size(), (uint32_t)sizeof(DrawIndexedIndirectCommand));
+		cmd->DrawIndexedIndirectCount(m_CommandBuffer, 4, m_CommandBuffer, 0, m_Scene.Meshes.size(), (uint32_t)sizeof(DrawIndexedIndirectCommand));
 
 		cmd->EndRendering();
 

@@ -19,10 +19,18 @@ namespace GraphicsAbstraction {
 		glm::vec4 color;
 	};
 
+	struct Bounds
+	{
+		glm::vec3 origin;
+		float sphereRadius;
+		glm::vec3 extents;
+	};
+
 	struct Mesh
 	{
 		uint32_t StartIndex;
 		uint32_t Count;
+		Bounds Bounds;
 
 		Ref<Buffer> VertexBuffer;
 	};

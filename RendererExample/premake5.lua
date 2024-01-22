@@ -20,22 +20,33 @@ project "RendererExample"
 	includedirs
 	{
 		"src",
-		"%{wks.location}/GraphicsAbstraction/src",
-		"%{wks.location}/GraphicsAbstraction/vendor",
+		"%{wks.location}/include",
+		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.spdlog}",
 		"%{IncludeDir.stb_image}",
-		"%{IncludeDir.glm}",
 		"%{IncludeDir.fastgltf}"
 	}
 
 	links
 	{
+		"CobraRHIShared",
 		"GLFW",
-		"GraphicsAbstraction",
-		"fastgltf"
+		"fastgltf",
+		"ImGui"
 	}
+
+	filter "options:vulkan"
+		links
+		{
+			"CobraRHIVulkan"
+		}
+
+	filter "options:directx"
+		links
+		{
+			"CobraRHIDirectX"
+		}
 
 	filter "configurations:Debug"
 		defines "GA_DEBUG"
@@ -44,18 +55,6 @@ project "RendererExample"
 
 	filter "configurations:Release"
 		defines "GA_RELEASE"
-
-	filter "configurations:Debug or Release"
-		includedirs
-		{
-			"%{IncludeDir.tracy}"
-		}
-
-		defines
-		{
-			"TRACY_ENABLE",
-			"TRACY_ON_DEMAND"
-		}
 
 	filter "configurations:Dist"
 		defines "GA_DIST"

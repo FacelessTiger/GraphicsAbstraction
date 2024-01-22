@@ -1,9 +1,9 @@
 #include "EditorCamera.h"
 
-#include <GraphicsAbstraction/Core/Core.h>
-#include <GraphicsAbstraction/Core/Input.h>
 #include <GraphicsAbstraction/Core/KeyCodes.h>
 #include <GraphicsAbstraction/Core/MouseButtonCodes.h>
+#include <Core/Core.h>
+#include <Core/Input.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>

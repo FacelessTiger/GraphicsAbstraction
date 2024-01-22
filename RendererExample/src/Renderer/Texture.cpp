@@ -3,8 +3,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include <GraphicsAbstraction/Core/Assert.h>
 #include <GraphicsAbstraction/Renderer/Buffer.h>
+#include <Core/Assert.h>
 #include <Renderer/Renderer.h>
 
 namespace GraphicsAbstraction {

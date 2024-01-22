@@ -11,7 +11,7 @@ struct Vertex
 
 struct Object
 {
-	float4x4 modelMatrix;
+	row_major float4x4 modelMatrix;
 	uint vertices;
 };
 

@@ -1,21 +1,18 @@
 [submodule "VulkanAbstractionPractice/vendor/GLFW"]
-	path = GraphicsAbstraction/vendor/GLFW
+	path = vendor/GLFW
 	url = https://github.com/FacelessTiger/GLFW
 [submodule "VulkanAbstractionPractice/vendor/glm"]
-	path = GraphicsAbstraction/vendor/glm
+	path = vendor/glm
 	url = https://github.com/g-truc/glm.git
 [submodule "VulkanAbstractionPractice/vendor/imgui"]
-	path = GraphicsAbstraction/vendor/imgui
+	path = vendor/imgui
 	url = https://github.com/FacelessTiger/imgui
 [submodule "GraphicsAbstraction/vendor/spdlog"]
-	path = GraphicsAbstraction/vendor/spdlog
+	path = vendor/spdlog
 	url = https://github.com/gabime/spdlog
-[submodule "GraphicsAbstraction/vendor/tracy"]
-	path = GraphicsAbstraction/vendor/tracy
-	url = https://github.com/FacelessTiger/tracy
 [submodule "GraphicsAbstraction/vendor/vma"]
-	path = GraphicsAbstraction/vendor/vma
+	path = vendor/vma
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
 [submodule "GraphicsAbstraction/vendor/fastgltf"]
-	path = GraphicsAbstraction/vendor/fastgltf
+	path = vendor/fastgltf
 	url = https://github.com/spnda/fastgltf.git

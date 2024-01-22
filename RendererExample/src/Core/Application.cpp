@@ -1,19 +1,18 @@
 #include "Application.h"
 
-#include <GraphicsAbstraction/Core/Core.h>
+#include <Core/Core.h>
 #include <Renderer/Renderer.h>
+
+#include <GraphicsAbstraction/Core/DirectXExport.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 #include <glm/gtx//transform.hpp>
 
-//#define TINYOBJLOADER_IMPLEMENTATION
-//#include <tiny_obj_loader.h>
-
 #include <unordered_map>
 #include <filesystem>
 #include <chrono>
-#include <imgui/imgui.h>
+#include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace GraphicsAbstraction {
@@ -63,6 +62,7 @@ namespace GraphicsAbstraction {
 	void Application::OnEvent(Event& e)
 	{
 		m_EditorCamera.OnEvent(e);
+		ImGuiLayer::OnEvent(e);
 
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<WindowCloseEvent>(GA_BIND_EVENT_FN(Application::OnWindowClose));

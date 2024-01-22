@@ -81,10 +81,19 @@ namespace Cobra {
 		}
 
 		template <typename T>
-		void Store(uint index, T value)
+		void Store(uint index, T value, uint offset = 0)
 		{
 			RWByteAddressBuffer buffer = DESCRIPTOR_HEAP(RWByteBufferHandle, this.handle.GetWriteIndex());
-			buffer.Store<T>(index * sizeof(T), value);
+			buffer.Store<T>(index * sizeof(T) + offset, value);
+		}
+
+		uint InterlockedAdd(uint dest, uint value)
+		{
+			RWByteAddressBuffer buffer = DESCRIPTOR_HEAP(RWByteBufferHandle, this.handle.GetWriteIndex());
+
+			uint originalValue;
+			buffer.InterlockedAdd(dest, value, originalValue);
+			return originalValue;
 		}
 	};
 
