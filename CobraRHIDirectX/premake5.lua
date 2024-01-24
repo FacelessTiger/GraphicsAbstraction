@@ -3,7 +3,6 @@ project "CobraRHIDirectX"
 	language "C++"
 	cppdialect "C++20"
 	staticruntime "off"
-	editandcontinue "off"
 
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
@@ -30,7 +29,7 @@ project "CobraRHIDirectX"
 	{
 		"src",
 		"%{wks.location}/include",
-		"%{IncludeDir.DXC}",
+		"%{wks.location}/CobraRHIShared/src",
 		"%{IncludeDir.AgilitySDK}",
 
 		"%{IncludeDir.glm}",
@@ -41,7 +40,6 @@ project "CobraRHIDirectX"
 	links
 	{
 		"CobraRHIShared",
-		"GLFW",
 		"%{Library.DirectX}",
 		"%{Library.DXGI}",
 		"%{Library.DXCompiler}"

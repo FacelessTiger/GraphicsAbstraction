@@ -12,9 +12,9 @@ namespace GraphicsAbstraction {
 
 	struct CullMesh
 	{
+		glm::mat4 modelMatrix;
 		DrawIndexedIndirectCommand command;
 		Bounds bounds;
-		glm::mat4 modelMatrix;
 	};
 
 	struct CullPushConstant
@@ -22,6 +22,7 @@ namespace GraphicsAbstraction {
 		glm::mat4 viewProj;
 		uint32_t inputBuffer;
 		uint32_t outputBuffer;
+		uint32_t countBuffer;
 	};
 
 	struct Object
@@ -40,14 +41,18 @@ namespace GraphicsAbstraction {
 
 	void GradientProcedure::PreProcess(RenderProcedurePrePayload& payload)
 	{
-		m_TriangleVertex = Shader::Create("Assets/shaders/TriangleVertex.hlsl", ShaderStage::Vertex);
-		m_TrianglePixel = Shader::Create("Assets/shaders/TrianglePixel.hlsl", ShaderStage::Pixel);
-		m_CullShader = Shader::Create("Assets/shaders/Cull.hlsl", ShaderStage::Compute);
+		m_TriangleVertex = Shader::Create("Assets/shaders/TriangleVertex.hlsl", ShaderStage::Vertex, nullptr);
+		m_TrianglePixel = Shader::Create("Assets/shaders/TrianglePixel.hlsl", ShaderStage::Pixel, nullptr);
+		m_CullShader = Shader::Create("Assets/shaders/Cull.hlsl", ShaderStage::Compute, nullptr);
 		m_Scene = ModelImporter::LoadModels("Assets/models/basicmesh.glb");
 
 		m_ObjectBuffer = Buffer::Create((uint32_t)(sizeof(Object) * m_Scene.Meshes.size()), BufferUsage::StorageBuffer, BufferFlags::Mapped);
-		m_CommandBuffer = Buffer::Create((uint32_t)(sizeof(DrawIndexedIndirectCommand) * m_Scene.Meshes.size()) + 4, BufferUsage::StorageBuffer | BufferUsage::IndirectBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
+		m_CommandBuffer = Buffer::Create((uint32_t)(sizeof(DrawIndexedIndirectCommand) * m_Scene.Meshes.size()) + 4, BufferUsage::StorageBuffer | BufferUsage::IndirectBuffer | BufferUsage::TransferDst | BufferUsage::TransferSrc, BufferFlags::DeviceLocal);
 		m_CullInputBuffer = Buffer::Create((uint32_t)(sizeof(CullMesh) * m_Scene.Meshes.size()), BufferUsage::StorageBuffer, BufferFlags::Mapped);
+
+		uint32_t zero = 0;
+		m_ZeroBuffer = Buffer::Create(sizeof(uint32_t), BufferUsage::StorageBuffer | BufferUsage::TransferSrc | BufferUsage::TransferDst, BufferFlags::Mapped);
+		m_ZeroBuffer->SetData(&zero);
 
 		for (uint32_t i = 0; i < m_Scene.Meshes.size(); i++)
 		{
@@ -58,9 +63,9 @@ namespace GraphicsAbstraction {
 			glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), { 0.0, 0.0f, 0.0f }) * rotation * glm::scale(glm::mat4(1.0f), { 1.0f, 1.0f, 1.0f });
 
 			CullMesh cullMesh = {
+				.modelMatrix = modelMatrix,
 				.command = { mesh.Count, 1, mesh.StartIndex, 0, (uint32_t)i },
-				.bounds = mesh.Bounds,
-				.modelMatrix = modelMatrix
+				.bounds = mesh.Bounds
 			};
 			m_CullInputBuffer->SetData(&cullMesh, sizeof(CullMesh), i * sizeof(CullMesh));
 
@@ -78,10 +83,7 @@ namespace GraphicsAbstraction {
 
 		if (m_CullDirty)
 		{
-			uint32_t zero = 0;
-			auto temp = Buffer::Create(sizeof(uint32_t), BufferUsage::StorageBuffer | BufferUsage::TransferSrc, BufferFlags::Mapped);
-			temp->SetData(&zero);
-			cmd->CopyBufferRegion(temp, m_CommandBuffer, sizeof(uint32_t));
+			cmd->CopyBufferRegion(m_ZeroBuffer, m_CommandBuffer, sizeof(uint32_t));
 
 			CullPushConstant cpc = { payload.ViewProjection, m_CullInputBuffer->GetHandle(), m_CommandBuffer->GetHandle() };
 			cmd->PushConstant(cpc);

@@ -1,4 +1,4 @@
-#include "Cobra.hlsl"
+#include "Cobra"
 
 struct Bounds
 {
@@ -9,14 +9,14 @@ struct Bounds
 
 struct CullMesh
 {
+	row_major float4x4 modelMatrix;
 	Cobra::DrawIndexedIndirectCommand command;
 	Bounds bounds;
-	row_major float4x4 modelMatrix;
 };
 
 struct PushConstant
 {
-	float4x4 viewProj;
+	row_major float4x4 viewProj;
 	uint inputBuffer;
 	uint outputBuffer;
 };
@@ -41,7 +41,7 @@ bool IsVisible(CullMesh mesh)
 	float4x4 matrix = mul(mesh.modelMatrix, pushConstants.viewProj);
 	for (int i = 0; i < 8; i++)
 	{
-		float4 v = mul(matrix, float4(mesh.bounds.origin + (corners[i] * mesh.bounds.extents), 1.0));
+		float4 v = mul(float4(mesh.bounds.origin + (corners[i] * mesh.bounds.extents), 1.0), matrix);
 		v.x /= v.w;
 		v.y /= v.w;
 		v.z /= v.w;
@@ -50,8 +50,8 @@ bool IsVisible(CullMesh mesh)
 		vMax = max((float3)v, vMax);
 	}
 
-	if (vMin.z > 1.0 || vMax.z < 0.0 || vMin.x > 1.0 || vMax.x < 1.0 || vMin.y > 1.0 || vMax.y < -1.0)
-		return true;
+	if (vMin.z > 1.0 || vMax.z < 0.0 || vMin.x > 1.0 || vMax.x < -1.0 || vMin.y > 1.0 || vMax.y < -1.0)
+		return false;
 	else
 		return true;
 }

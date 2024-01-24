@@ -3,7 +3,6 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
-#include <GLFW/glfw3.h>
 #include <iostream>
 
 namespace GraphicsAbstraction {
@@ -40,6 +39,11 @@ namespace GraphicsAbstraction {
 		return queue;
 	}
 
+	ShaderCompiledType GraphicsContext::GetShaderCompiledType()
+	{
+		return ShaderCompiledType::Spirv;
+	}
+
 	void GraphicsContext::SetFrameInFlight(uint32_t fif)
 	{
 		auto impl = Impl<GraphicsContext>::Reference;
@@ -49,7 +53,7 @@ namespace GraphicsAbstraction {
 
 	Impl<GraphicsContext>::Impl(uint32_t frameInFlightCount)
 	{
-		m_RefCount--; // Kinda cheating, but its okey ;P
+		//m_RefCount--; // Kinda cheating, but its okey ;P
 		SetupInstance();
 		SetupPhysicalDevice();
 		SetupLogicalDevice();
@@ -167,6 +171,7 @@ namespace GraphicsAbstraction {
 
 		for (auto& property : properties)
 		{
+			// Shader object requires dynamic rendering, and we can act as if dynamic state 1-3 is enabled since it uses the same commands
 			if (!std::strcmp(property.extensionName, VK_EXT_SHADER_OBJECT_EXTENSION_NAME))
 			{
 				g_ShaderObjectSupported = true;

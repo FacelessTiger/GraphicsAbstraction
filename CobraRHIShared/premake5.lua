@@ -3,14 +3,16 @@ project "CobraRHIShared"
 	language "C++"
 	cppdialect "C++20"
 	staticruntime "off"
-	editandcontinue "off"
 
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
 
 	files
 	{
-		"src/ImGuiLayer.cpp"
+		"src/ImGuiLayer.cpp",
+		"src/CobraIncludeHandler.h",
+		"src/DxcCompiler.h",
+		"src/DxcCompiler.cpp"
 	}
 
 	includedirs
@@ -19,7 +21,12 @@ project "CobraRHIShared"
 		"%{wks.location}/include",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.ImGui}",
-		"%{IncludeDir.GLFW}"
+		"%{IncludeDir.DXC}"
+	}
+
+	links
+	{
+		"%{Library.DXCompiler}"
 	}
 
 	filter "system:windows"

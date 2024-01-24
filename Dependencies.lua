@@ -3,7 +3,6 @@ VULKAN_EXTENSION_LAYERS = os.getenv("VK_LAYER_PATH");
 
 IncludeDir = {}
 IncludeDir["stb_image"] = "%{wks.location}/vendor/stb_image"
-IncludeDir["GLFW"] = "%{wks.location}/vendor/GLFW/include"
 IncludeDir["ImGui"] = "%{wks.location}/vendor/imgui"
 IncludeDir["glm"] = "%{wks.location}/vendor/glm"
 IncludeDir["spdlog"] = "%{wks.location}/vendor/spdlog/include"

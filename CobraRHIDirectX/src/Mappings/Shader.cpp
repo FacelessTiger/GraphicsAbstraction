@@ -1,4 +1,5 @@
 #include <DirectXRHI.h>
+#include <DxcCompiler.h>
 
 #include <filesystem>
 #include <fstream>
@@ -22,20 +23,20 @@ namespace GraphicsAbstraction {
 
 	}
 
-	using namespace Microsoft::WRL;
-
-	static bool s_Initialized = false;
-	static ComPtr<IDxcUtils> s_Utils;
-	static ComPtr<IDxcCompiler3> s_Compiler;
-	static ComPtr<IDxcIncludeHandler> s_IncludeHandler;
-
 	static uint32_t s_IDCounter = 1;
 	static std::unordered_map<uint32_t, Impl<Shader>*> s_ShaderList;
 
-	Ref<Shader> Shader::Create(const std::string& path, ShaderStage stage)
+	Ref<Shader> Shader::Create(const std::vector<uint32_t>& data, ShaderStage stage)
 	{
 		auto shader = CreateRef<Shader>();
-		shader->impl = new Impl<Shader>(path, stage);
+		shader->impl = new Impl<Shader>(data, stage);
+		return shader;
+	}
+
+	Ref<Shader> Shader::Create(const std::string& path, ShaderStage stage, std::vector<uint32_t>* compiledData)
+	{
+		auto shader = CreateRef<Shader>();
+		shader->impl = new Impl<Shader>(path, stage, compiledData);
 		return shader;
 	}
 
@@ -45,77 +46,27 @@ namespace GraphicsAbstraction {
 		delete impl;
 	}
 
-	Impl<Shader>::Impl(const std::string& path, ShaderStage stage)
+	Impl<Shader>::Impl(const std::vector<uint32_t>& data, ShaderStage stage)
 		: Stage(stage), ID(s_IDCounter++)
 	{
-		if (!s_Initialized)
-		{
-			D3D12_CHECK(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&s_Utils)));
-			D3D12_CHECK(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&s_Compiler)));
-			D3D12_CHECK(s_Utils->CreateDefaultIncludeHandler(&s_IncludeHandler));
-
-			s_Initialized = true;
-		}
-		
-		std::string file = ReadAndPreProcessFile(path);
-		ComPtr<IDxcBlobEncoding> sourceBlob;
-
-		if (s_Utils->CreateBlob(file.c_str(), file.size(), DXC_CP_UTF8, &sourceBlob))
-		{
-			assert(false && ("Could not open file " + path).c_str());
-		}
-
-		std::wstring wstring = std::filesystem::path(path).wstring();
-		LPCWSTR filePath = wstring.c_str();
-
-		// Note: Zi causes debug information
-		std::vector<LPCWSTR> arguments = {
-			filePath, DXC_ARG_WARNINGS_ARE_ERRORS,
-			L"-E", L"main",
-			L"-T", Utils::ShaderStageToDXC(stage),
-			L"-Zi", L"-Od"
+		Source = data;
+		Shader = {
+			.pShaderBytecode = Source.data(),
+			.BytecodeLength = Source.size() * sizeof(uint32_t)
 		};
+		s_ShaderList[ID] = this;
+	}
 
-		DxcBuffer buffer = {
-			.Ptr = sourceBlob->GetBufferPointer(),
-			.Size = sourceBlob->GetBufferSize(),
-			.Encoding = DXC_CP_ACP,
-		};
-
-		ComPtr<IDxcResult> result;
-		D3D12_CHECK(s_Compiler->Compile(&buffer, arguments.data(), arguments.size(), s_IncludeHandler.Get(), IID_PPV_ARGS(&result)));
-
-		HRESULT status;
-		result->GetStatus(&status);
-		if (FAILED(status) && result)
-		{
-			ComPtr<IDxcBlobEncoding> errorBlob;
-			result->GetErrorBuffer(&errorBlob);
-
-			assert(false && (const char*)errorBlob->GetBufferPointer());
-		}
-		result->GetResult(&Blob);
-
-//#define OUTPUT_PDB
-#ifdef OUTPUT_PDB
-		ComPtr<IDxcBlob> debugBlob;
-		ComPtr<IDxcBlobUtf16> debugDataPath;
-		D3D12_CHECK(result->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&debugBlob), &debugDataPath));
-
-		
-		auto pdbPath = std::filesystem::path(path).parent_path().wstring() + L"/" + debugDataPath->GetStringPointer();
-		std::ofstream out(pdbPath, std::ios::out | std::ios::binary);
-		if (out.is_open())
-		{
-			out.write((char*)debugBlob->GetBufferPointer(), debugBlob->GetBufferSize());
-			out.flush();
-			out.close();
-		}
-#endif
+	Impl<Shader>::Impl(const std::string& path, ShaderStage stage, std::vector<uint32_t>* compiledData)
+		: Stage(stage), ID(s_IDCounter++)
+	{
+		std::string source = ReadAndPreProcessFile(path);
+		Source = DxcCompiler::CompileSource(path, source, stage, {}, {});
+		if (compiledData) *compiledData = Source;
 
 		Shader = {
-			.pShaderBytecode = Blob->GetBufferPointer(),
-			.BytecodeLength = Blob->GetBufferSize()
+			.pShaderBytecode = Source.data(),
+			.BytecodeLength = Source.size() * sizeof(uint32_t)
 		};
 		s_ShaderList[ID] = this;
 	}

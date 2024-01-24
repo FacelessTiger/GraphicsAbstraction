@@ -11,7 +11,6 @@
 
 #include <d3d12.h>
 #include <d3dx12/d3dx12.h>
-#include <dxc/dxcapi.h>
 #include <dxgi1_6.h>
 #include <comdef.h>
 #include <codecvt>
@@ -170,9 +169,10 @@ namespace GraphicsAbstraction {
 		uint32_t ID;
 
 		ShaderStage Stage;
-		ComPtr<IDxcBlob> Blob;
+		std::vector<uint32_t> Source;
 
-		Impl(const std::string& path, ShaderStage stage);
+		Impl(const std::vector<uint32_t>& data, ShaderStage stage);
+		Impl(const std::string& path, ShaderStage stage, std::vector<uint32_t>* compiledData);
 		static Impl<GraphicsAbstraction::Shader>* GetShaderByID(uint32_t id);
 
 		std::string ReadAndPreProcessFile(const std::string& path);

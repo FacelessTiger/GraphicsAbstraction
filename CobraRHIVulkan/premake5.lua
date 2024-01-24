@@ -3,7 +3,6 @@ project "CobraRHIVulkan"
 	language "C++"
 	cppdialect "C++20"
 	staticruntime "off"
-	editandcontinue "off"
 
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
@@ -30,8 +29,8 @@ project "CobraRHIVulkan"
 	{
 		"src",
 		"%{wks.location}/include",
+		"%{wks.location}/CobraRHIShared/src",
 		"%{IncludeDir.VulkanSDK}",
-		"%{IncludeDir.DXC}",
 		"%{IncludeDir.vma}",
 
 		"%{IncludeDir.glm}",
@@ -42,7 +41,6 @@ project "CobraRHIVulkan"
 	links
 	{
 		"CobraRHIShared",
-		"GLFW",
 		"%{Library.Vulkan}",
 		"%{Library.DXCompiler}"
 	}

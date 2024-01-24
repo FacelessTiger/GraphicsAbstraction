@@ -16,8 +16,8 @@ namespace GraphicsAbstraction {
 
 	void QuadProcedure::PreProcess(RenderProcedurePrePayload& payload)
 	{
-		m_Vertex = Shader::Create("Assets/shaders/quadVertex.hlsl", ShaderStage::Vertex);
-		m_Pixel = Shader::Create("Assets/shaders/quadPixel.hlsl", ShaderStage::Pixel);
+		m_Vertex = Shader::Create("Assets/shaders/quadVertex.hlsl", ShaderStage::Vertex, nullptr);
+		m_Pixel = Shader::Create("Assets/shaders/quadPixel.hlsl", ShaderStage::Pixel, nullptr);
 		m_RingBuffers.reserve(10); // TODO: TEMP SOLUTION, BAD!!!!!!!
 
 		m_QuadBuffer = Buffer::Create(m_BufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);

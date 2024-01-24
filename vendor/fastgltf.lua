@@ -3,13 +3,16 @@ project "fastgltf"
 	language "C++"
 	cppdialect "C++20"
 	systemversion "latest"
-	staticruntime "off"
 
 	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
-	http.download("https://raw.githubusercontent.com/simdjson/simdjson/v3.3.0/singleheader/simdjson.h", "fastgltf/deps/simdjson.h", { timeout = 10 })
-	http.download("https://raw.githubusercontent.com/simdjson/simdjson/v3.3.0/singleheader/simdjson.cpp", "fastgltf/deps/simdjson.cpp", { timeout = 10 })
+	if not os.isfile("fastgltf/deps/simdjson.h") then
+		http.download("https://raw.githubusercontent.com/simdjson/simdjson/v3.3.0/singleheader/simdjson.h", "fastgltf/deps/simdjson.h", { timeout = 10 })
+	end
+	if not os.isfile("fastgltf/deps/simdjson.cpp") then
+		http.download("https://raw.githubusercontent.com/simdjson/simdjson/v3.3.0/singleheader/simdjson.cpp", "fastgltf/deps/simdjson.cpp", { timeout = 10 })
+	end
 
 	files
 	{

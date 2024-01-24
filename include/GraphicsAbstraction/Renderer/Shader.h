@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include <string>
 
 #include <GraphicsAbstraction/Core/Core.h>
@@ -16,7 +17,8 @@ namespace GraphicsAbstraction {
 
 	struct GA_DLL_LINK Shader : public RefCounted
 	{
-		GA_RHI_TEMPLATE(Shader, const std::string& path, ShaderStage stage);
+		static Ref<Shader> Create(const std::vector<uint32_t>& data, ShaderStage stage);
+		GA_RHI_TEMPLATE(Shader, const std::string& path, ShaderStage stage, std::vector<uint32_t>* compiledData);
 	};
 
 }

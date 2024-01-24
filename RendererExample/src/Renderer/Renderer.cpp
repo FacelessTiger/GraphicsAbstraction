@@ -67,7 +67,7 @@ namespace GraphicsAbstraction {
 		if (seperateDisplayImage) displayImageUsage |= ImageUsage::Sampled;
 		s_RendererData->DisplayImage = Image::Create(window->GetSize(), ImageFormat::R8G8B8A8_UNORM, displayImageUsage);
 
-		s_RendererData->ResizeShader = Shader::Create("Assets/shaders/resizeImage.hlsl", ShaderStage::Compute);
+		s_RendererData->ResizeShader = Shader::Create("Assets/shaders/resizeImage.hlsl", ShaderStage::Compute, nullptr);
 		s_RendererData->ResizeSampler = Sampler::Create(Filter::Nearest, Filter::Nearest);
 
 		for (int i = 0; i < RendererData::FrameOverlap; i++)

@@ -1,4 +1,4 @@
-#include "Cobra.hlsl"
+#include "Cobra"
 
 struct PushConstant
 {

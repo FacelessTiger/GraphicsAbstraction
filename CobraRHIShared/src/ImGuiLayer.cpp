@@ -1,6 +1,8 @@
 #define GA_DLL_LINK
 #include <GraphicsAbstraction/ImGui/ImGuiLayer.h>
 
+#include <iostream>
+
 #include <array>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
@@ -153,6 +155,7 @@ namespace GraphicsAbstraction {
 		uint32_t sampler;
 	};
 
+#include "ImGuiShaders.inl"
 	static ImGuiLayerData* s_Data;
 
 	void ImGuiLayer::Init(Ref<CommandAllocator>& commandPool, Ref<Swapchain>& swapchain, Ref<Window>& window, Ref<Queue>& queue, Ref<Fence>& fence)
@@ -191,9 +194,14 @@ namespace GraphicsAbstraction {
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 		//io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
-		s_Data->VertexShader = Shader::Create("Assets/shaders/imguiVertex.hlsl", ShaderStage::Vertex);
-		s_Data->PixelShader = Shader::Create("Assets/shaders/imguiPixel.hlsl", ShaderStage::Pixel);
+		std::vector<uint32_t> compiledVertex;
+		//s_Data->VertexShader = Shader::Create("Assets/shaders/imguiVertex.hlsl", ShaderStage::Vertex, &compiledVertex);
+		s_Data->VertexShader = Shader::Create((GraphicsContext::GetShaderCompiledType() == ShaderCompiledType::Spirv) ? s_VertexSpirv : s_VertexDxil, ShaderStage::Vertex);
+		s_Data->PixelShader = Shader::Create((GraphicsContext::GetShaderCompiledType() == ShaderCompiledType::Spirv) ? s_PixelSpirv : s_PixelDxil, ShaderStage::Pixel);
 		s_Data->Sampler = Sampler::Create(Filter::Linear, Filter::Linear);
+
+		for (uint32_t data : compiledVertex)
+			std::cout << std::hex << "0x" << data << ", ";
 
 		s_Data->IndexBuffer = Buffer::Create(sizeof(uint32_t), BufferUsage::IndexBuffer, BufferFlags::Mapped);
 		s_Data->VertexBuffer = Buffer::Create(sizeof(ImDrawVert), BufferUsage::StorageBuffer, BufferFlags::Mapped);

@@ -3,7 +3,6 @@ project "RendererExample"
 	language "C++"
 	cppdialect "C++20"
 	staticruntime "off"
-	editandcontinue "Off"
 
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
@@ -31,7 +30,6 @@ project "RendererExample"
 	links
 	{
 		"CobraRHIShared",
-		"GLFW",
 		"fastgltf",
 		"ImGui"
 	}

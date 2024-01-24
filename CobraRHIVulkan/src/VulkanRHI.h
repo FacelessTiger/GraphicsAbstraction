@@ -209,11 +209,10 @@ namespace GraphicsAbstraction {
 		Ref<Impl<GraphicsContext>> Context;
 		std::string Path;
 
-		Impl(const std::string& path, ShaderStage stage);
+		Impl(const std::vector<uint32_t>& data, ShaderStage stage);
+		Impl(const std::string& path, ShaderStage stage, std::vector<uint32_t>* compiledData);
 		static Impl<Shader>* GetShaderByID(uint32_t id);
 
-		std::vector<uint32_t> CompileOrGetVulkanBinaries();
-		std::vector<uint32_t> CompileVulkanBinaries();
 		void CreatePipelineShaderStage(const std::vector<uint32_t>& data);
 	};
 

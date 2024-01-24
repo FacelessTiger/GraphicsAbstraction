@@ -1,4 +1,4 @@
-#include "Cobra.hlsl"
+#include "Cobra"
 
 static const float PI = 3.14159265f;
 
@@ -64,7 +64,7 @@ float4 main(VertexInput input): SV_Target
 {
 	// material/light info to be passed in
 	float3 lightPos = float3(0.0, 0.75, 0.5);
-	float3 lightColor = float3(1.0, 0.0, 0.0);
+	float3 lightColor = float3(23.47, 0, 0);
 
 	float metallic = 0.5;
 	float roughness = 0.5;

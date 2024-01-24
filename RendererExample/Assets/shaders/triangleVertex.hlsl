@@ -1,4 +1,4 @@
-#include "Cobra.hlsl"
+#include "Cobra"
 
 struct Vertex
 {
@@ -17,7 +17,7 @@ struct Object
 
 struct PushConstant
 {
-	float4x4 projection;
+	row_major float4x4 projection;
 	float3 cameraPos;
 	uint objects;
 };
@@ -40,7 +40,7 @@ VertexOutput main(uint vertexID: SV_VertexID, uint instanceIndex: SV_InstanceID)
 	float4 worldPos = mul(float4(vertex.position, 1.0f), object.modelMatrix);
 
 	VertexOutput output;
-	output.position = mul(pushConstants.projection, worldPos);
+	output.position = mul(worldPos, pushConstants.projection);
 	output.worldPosition = worldPos.xyz;
 	output.normal = mul(vertex.normal, (float3x3)transpose(Cobra::Inverse(object.modelMatrix)));
 	output.color = vertex.color.xyz;

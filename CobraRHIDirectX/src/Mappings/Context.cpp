@@ -38,6 +38,11 @@ namespace GraphicsAbstraction {
 		return queue;
 	}
 
+	ShaderCompiledType GraphicsContext::GetShaderCompiledType()
+	{
+		return ShaderCompiledType::Dxil;
+	}
+
 	void GraphicsContext::SetFrameInFlight(uint32_t fif)
 	{
 		auto impl = Impl<GraphicsContext>::Reference;
