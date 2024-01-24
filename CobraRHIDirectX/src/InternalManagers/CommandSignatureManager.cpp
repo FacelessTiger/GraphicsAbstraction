@@ -15,7 +15,6 @@ namespace GraphicsAbstraction {
 
 	ID3D12CommandSignature* CommandSignatureManager::GetCommandSignature(const CommandSignatureKey& key)
 	{
-		GA_PROFILE_SCOPE();
 		if (m_CommandSignatures.find(key) != m_CommandSignatures.end()) return m_CommandSignatures[key].Get();
 
 		D3D12_INDIRECT_ARGUMENT_DESC args[2];

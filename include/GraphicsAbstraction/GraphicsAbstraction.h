@@ -1,7 +1,7 @@
 #pragma once
 
 #include <GraphicsAbstraction/Core/Window.h>
-#include <GraphicsAbstraction/Debug/Instrumentor.h>
+#include <GraphicsAbstraction/ImGui/ImGuiLayer.h>
 
 #include <GraphicsAbstraction/Renderer/Buffer.h>
 #include <GraphicsAbstraction/Renderer/CommandList.h>
@@ -15,8 +15,6 @@
 #include <GraphicsAbstraction/Renderer/Swapchain.h>
 
 #include <GraphicsAbstraction/Events/ApplicationEvent.h>
-#include <GraphicsAbstraction/ImGui/ImGuiLayer.h>
-
 #include <GraphicsAbstraction/Events/KeyEvent.h>
 #include <GraphicsAbstraction/Events/MouseEvent.h>
 #include <GraphicsAbstraction/Events/ApplicationEvent.h>

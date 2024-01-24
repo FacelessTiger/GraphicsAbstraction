@@ -1,7 +1,6 @@
 #include "RenderInfoManager.h"
 
 #include <VulkanRHI.h>
-#include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {
 
@@ -19,7 +18,6 @@ namespace GraphicsAbstraction {
 
 	RenderInfo RenderInfoManager::GetRenderInfo(const RenderInfoKey& key)
 	{
-		GA_PROFILE_SCOPE();
 		VkRenderPass renderpass;
 		VkFramebuffer framebuffer;
 

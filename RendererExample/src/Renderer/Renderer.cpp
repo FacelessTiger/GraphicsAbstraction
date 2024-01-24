@@ -1,6 +1,7 @@
 #include "Renderer.h"
 
 #include <Renderer/Procedures/RenderProcedure.h>
+#include <Assets/ShaderManager.h>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace GraphicsAbstraction {
@@ -37,7 +38,6 @@ namespace GraphicsAbstraction {
 		Ref<Image> DrawImage, DepthImage, DisplayImage;
 		Ref<CommandAllocator> CommandAllocators[FrameOverlap];
 
-		Ref<Shader> ResizeShader;
 		Ref<Sampler> ResizeSampler;
 
 		std::vector<RenderProcedure*> RenderProcedures;
@@ -56,6 +56,7 @@ namespace GraphicsAbstraction {
 		s_RendererData->SeperateDisplayImage = seperateDisplayImage;
 
 		GraphicsContext::Init(RendererData::FrameOverlap);
+		ShaderManager::Init();
 
 		s_RendererData->GraphicsQueue = GraphicsContext::GetQueue(QueueType::Graphics);
 		s_RendererData->Swapchain = Swapchain::Create(window, window->GetSize());
@@ -67,7 +68,6 @@ namespace GraphicsAbstraction {
 		if (seperateDisplayImage) displayImageUsage |= ImageUsage::Sampled;
 		s_RendererData->DisplayImage = Image::Create(window->GetSize(), ImageFormat::R8G8B8A8_UNORM, displayImageUsage);
 
-		s_RendererData->ResizeShader = Shader::Create("Assets/shaders/resizeImage.hlsl", ShaderStage::Compute, nullptr);
 		s_RendererData->ResizeSampler = Sampler::Create(Filter::Nearest, Filter::Nearest);
 
 		for (int i = 0; i < RendererData::FrameOverlap; i++)
@@ -136,8 +136,6 @@ namespace GraphicsAbstraction {
 
 	void Renderer::Render(const EditorCamera& camera)
 	{
-		GA_PROFILE_SCOPE();
-
 		auto& data = *s_RendererData;
 		ImGuiLayer::BeginFrame();
 
@@ -176,7 +174,7 @@ namespace GraphicsAbstraction {
 
 		DownsampleConstant dpc = { data.DrawImage->GetSampledHandle(), data.DisplayImage->GetStorageHandle(), data.ResizeSampler->GetHandle() };
 		cmd->PushConstant(dpc);
-		cmd->BindShaders({ data.ResizeShader });
+		cmd->BindShaders({ ShaderManager::Get("ResizeImage", ShaderStage::Compute) });
 		cmd->Dispatch((uint32_t)std::ceil(data.DisplayImage->GetWidth() / 32.0f), (uint32_t)std::ceil(data.DisplayImage->GetHeight() / 32.0f), 1);
 		cmd->RWResourceBarrier(data.DisplayImage);
 

@@ -68,7 +68,6 @@ namespace GraphicsAbstraction {
 
 	ID3D12PipelineState* PipelineManager::GetGraphicsPipeline(const GraphicsPipelineKey& key)
 	{
-		GA_PROFILE_SCOPE();
 		if (m_GraphicsPipelines.find(key) != m_GraphicsPipelines.end()) return m_GraphicsPipelines[key].Get();
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {
@@ -123,7 +122,6 @@ namespace GraphicsAbstraction {
 
 	ID3D12PipelineState* PipelineManager::GetComputePipeline(const ComputePipelineKey& key)
 	{
-		GA_PROFILE_SCOPE();
 		if (m_ComputePipelines.find(key) != m_ComputePipelines.end()) return m_ComputePipelines[key].Get();
 
 		D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {

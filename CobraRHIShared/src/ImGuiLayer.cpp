@@ -2,6 +2,7 @@
 #include <GraphicsAbstraction/ImGui/ImGuiLayer.h>
 
 #include <iostream>
+#include <chrono>
 
 #include <array>
 #include <glm/gtc/type_ptr.hpp>
@@ -144,6 +145,7 @@ namespace GraphicsAbstraction {
 		Ref<Image> FontImage;
 
 		Ref<Window> MainWindow;
+		std::chrono::steady_clock::time_point LastTime;
 	};
 
 	struct PushConstant
@@ -194,14 +196,9 @@ namespace GraphicsAbstraction {
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 		//io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
-		std::vector<uint32_t> compiledVertex;
-		//s_Data->VertexShader = Shader::Create("Assets/shaders/imguiVertex.hlsl", ShaderStage::Vertex, &compiledVertex);
 		s_Data->VertexShader = Shader::Create((GraphicsContext::GetShaderCompiledType() == ShaderCompiledType::Spirv) ? s_VertexSpirv : s_VertexDxil, ShaderStage::Vertex);
 		s_Data->PixelShader = Shader::Create((GraphicsContext::GetShaderCompiledType() == ShaderCompiledType::Spirv) ? s_PixelSpirv : s_PixelDxil, ShaderStage::Pixel);
 		s_Data->Sampler = Sampler::Create(Filter::Linear, Filter::Linear);
-
-		for (uint32_t data : compiledVertex)
-			std::cout << std::hex << "0x" << data << ", ";
 
 		s_Data->IndexBuffer = Buffer::Create(sizeof(uint32_t), BufferUsage::IndexBuffer, BufferFlags::Mapped);
 		s_Data->VertexBuffer = Buffer::Create(sizeof(ImDrawVert), BufferUsage::StorageBuffer, BufferFlags::Mapped);
@@ -216,9 +213,14 @@ namespace GraphicsAbstraction {
 
 	void ImGuiLayer::BeginFrame()
 	{
-		auto size = s_Data->MainWindow->GetSize();
 		ImGuiIO& io = ImGui::GetIO();
+
+		auto size = s_Data->MainWindow->GetSize();
 		io.DisplaySize = { size.x, size.y };
+
+		auto now = std::chrono::steady_clock::now();
+		io.DeltaTime = std::max(std::chrono::duration_cast<std::chrono::milliseconds>(now - s_Data->LastTime).count() / 1000.0f, 0.00001f); // std::chrono moment :skull_emoji:
+		s_Data->LastTime = now;
 
 		ImGui::NewFrame();
 	}

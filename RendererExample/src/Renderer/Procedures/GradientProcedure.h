@@ -22,9 +22,8 @@ namespace GraphicsAbstraction {
 		bool m_IsWireframe = false;
 		bool m_CullDirty = true;
 
-		Ref<Buffer> m_CullInputBuffer, m_CommandBuffer, m_ZeroBuffer, m_ObjectBuffer;
-		Ref<Shader> m_TriangleVertex, m_TrianglePixel, m_CullShader;
-		std::vector<glm::vec3> m_Positions;
+		Ref<Buffer> m_CullInputBuffer, m_CommandBuffer, m_ZeroBuffer, m_ObjectBuffer, m_MaterialBuffer, m_LightBuffer;
+		std::vector<glm::vec3> m_Positions, m_LightPositions, m_LightColors;
 		Scene m_Scene;
 	};
 

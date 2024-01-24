@@ -46,6 +46,11 @@ namespace GraphicsAbstraction {
 		delete impl;
 	}
 
+	ShaderStage Shader::GetStage() const
+	{
+		return impl->Stage;
+	}
+
 	Impl<Shader>::Impl(const std::vector<uint32_t>& data, ShaderStage stage)
 		: Stage(stage), ID(s_IDCounter++)
 	{

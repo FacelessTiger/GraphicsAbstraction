@@ -2,12 +2,29 @@
 
 static const float PI = 3.14159265f;
 
+struct Material
+{
+	float3 albedo;
+	float metallic;
+	float roughness;
+	float ao;
+};
+
+struct Light
+{
+	float3 position;
+	float padding;
+	float3 color;
+	float padding2;
+};
+
 struct PushConstant
 {
-	float4x4 projection;
+	row_major float4x4 projection;
 	float3 cameraPos;
-	uint vertices;
-	uint modelMatrices;
+	uint objects;
+	uint materials;
+	uint lights;
 };
 PushConstant(PushConstant, pushConstants);
 
@@ -16,7 +33,7 @@ struct VertexInput
 	float4 position: SV_Position;
 	float3 worldPosition: POSITION0;
 	float3 normal: NORMAL0;
-	float3 color: COLOR0;
+	Material material: COLOR0;
 	float2 uv: TEXCOORD0;
 };
 
@@ -62,30 +79,30 @@ float GeometrySmith(float3 n, float3 v, float3 l, float roughness)
 
 float4 main(VertexInput input): SV_Target
 {
-	// material/light info to be passed in
-	float3 lightPos = float3(0.0, 0.75, 0.5);
-	float3 lightColor = float3(23.47, 0, 0);
+	Cobra::ArrayBuffer lights = Cobra::ArrayBuffer::Create(pushConstants.lights);
 
-	float metallic = 0.5;
-	float roughness = 0.5;
-	float ao = 1.0;
-	///////////
+	float3 albedo = input.material.albedo;
+	float metallic = input.material.metallic;
+	float roughness = input.material.roughness;
+	float ao = input.material.ao;
 
 	float3 n = normalize(input.normal);
 	float3 v = normalize(pushConstants.cameraPos - input.worldPosition);
 
 	float3 f0 = 0.04;
-	f0 = lerp(f0, input.color, metallic);
+	f0 = lerp(f0, albedo, metallic);
 
 	float3 lo = 0.0;
-	for (int i = 0; i < 1; i++) // per light
+	for (int i = 0; i < lights.GetDimensions<Light>(); i++)
 	{
-		float3 l = normalize(lightPos - input.worldPosition);
+		Light light = lights.Load<Light>(i);
+
+		float3 l = normalize(light.position - input.worldPosition);
 		float3 h = normalize(v + l);
 
-		float distance = length(lightPos - input.worldPosition);
+		float distance = length(light.position - input.worldPosition);
 		float attenuation = 1.0 / (distance * distance);
-		float3 radiance = lightColor * attenuation;
+		float3 radiance = light.color * attenuation;
 
 		float ndf = DistributionGGX(n, h, roughness);
 		float g = GeometrySmith(n, v, l, roughness);
@@ -100,10 +117,10 @@ float4 main(VertexInput input): SV_Target
 		float3 specular = numerator / denominator;
 
 		float nDotL = max(dot(n, l), 0.0);
-		lo += (kD * input.color / PI + specular) * radiance * nDotL;
+		lo += (kD * albedo / PI + specular) * radiance * nDotL;
 	}
 
-	float3 ambient = 0.03 * input.color * ao;
+	float3 ambient = 0.03 * albedo * ao;
 	float3 color = ambient + lo;
 
 	color = color / (color + 1.0);

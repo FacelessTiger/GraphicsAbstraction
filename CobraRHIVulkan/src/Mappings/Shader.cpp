@@ -31,6 +31,19 @@ namespace GraphicsAbstraction {
 			return (VkShaderStageFlagBits)0;
 		}
 
+		static ShaderStage VulkanStageToGA(VkShaderStageFlagBits stage)
+		{
+			switch (stage)
+			{
+				case VK_SHADER_STAGE_VERTEX_BIT:	return ShaderStage::Vertex;
+				case VK_SHADER_STAGE_FRAGMENT_BIT:	return ShaderStage::Pixel;
+				case VK_SHADER_STAGE_COMPUTE_BIT:	return ShaderStage::Compute;
+			}
+
+			assert(false && "Unknown shader type!");
+			return (ShaderStage)0;
+		}
+
 	}
 
 	Ref<Shader> Shader::Create(const std::vector<uint32_t>& data, ShaderStage stage)
@@ -54,6 +67,11 @@ namespace GraphicsAbstraction {
 
 		s_ShaderList.erase(impl->ID);
 		delete impl;
+	}
+
+	ShaderStage Shader::GetStage() const
+	{
+		return Utils::VulkanStageToGA(impl->Stage);
 	}
 
 	Impl<Shader>::Impl(const std::vector<uint32_t>& data, ShaderStage stage)

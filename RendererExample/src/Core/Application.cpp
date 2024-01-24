@@ -2,6 +2,7 @@
 
 #include <Core/Core.h>
 #include <Renderer/Renderer.h>
+#include <Assets/ShaderManager.h>
 
 #include <GraphicsAbstraction/Core/DirectXExport.h>
 
@@ -22,8 +23,6 @@ namespace GraphicsAbstraction {
 	Application::Application()
 		: m_EditorCamera(70.0f, 16.0f / 9.0f, 0.1f)
 	{
-		GA_PROFILE_SCOPE();
-
 		GA_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
 
@@ -55,7 +54,6 @@ namespace GraphicsAbstraction {
 
 	Application::~Application()
 	{
-		GA_PROFILE_SCOPE();
 		Renderer::Shutdown();
 	}
 
@@ -73,7 +71,6 @@ namespace GraphicsAbstraction {
 	{
 		while (m_Running)
 		{
-			GA_PROFILE_SCOPE();
 			auto t1 = std::chrono::high_resolution_clock::now();
 
 			if (!m_Minimized)
@@ -86,7 +83,6 @@ namespace GraphicsAbstraction {
 
 			auto t2 = std::chrono::high_resolution_clock::now();
 			m_FrameTime = std::chrono::duration<double, std::milli>(t2 - t1).count();
-			GA_FRAME_MARK();
 		}
 	}
 
@@ -157,8 +153,8 @@ namespace GraphicsAbstraction {
 		ImGui::Begin("Settings");
 		ImGui::Text("%.3fms %ifps", m_FrameTime, (int)(1.0 / m_FrameTime * 1000.0));
 		if (ImGui::Checkbox("Vsync", &m_Vsync))
-			Renderer::SetVsync(m_Vsync);
-
+			Renderer::SetVsync(m_Vsync);		
+		if (ImGui::Button("Serialize shaders")) ShaderManager::Serialize();
 		ImGui::End();
 
 		ImGui::End();

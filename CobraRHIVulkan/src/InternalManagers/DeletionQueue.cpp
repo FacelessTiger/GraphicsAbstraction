@@ -1,7 +1,6 @@
 #include "DeletionQueue.h"
 
 #include <VulkanRHI.h>
-#include <GraphicsAbstraction/Debug/Instrumentor.h>
 
 namespace GraphicsAbstraction {
 
@@ -16,8 +15,6 @@ namespace GraphicsAbstraction {
 
 	void DeletionQueue::Flush()
 	{
-		GA_PROFILE_SCOPE();
-		
 		for (auto commandPool : m_CommandPools)
 			vkDestroyCommandPool(m_Context.Device, commandPool, nullptr);
 		m_CommandPools.clear();
