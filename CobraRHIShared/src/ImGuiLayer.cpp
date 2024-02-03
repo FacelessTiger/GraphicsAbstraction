@@ -268,7 +268,7 @@ namespace GraphicsAbstraction {
 		cmd->SetFillMode(FillMode::Solid);
 		cmd->DisableDepthTest();
 		cmd->SetViewport({ framebufferWidth, framebufferHeight });
-		cmd->BindIndexBuffer(s_Data->IndexBuffer);
+		cmd->BindIndexBuffer(s_Data->IndexBuffer, IndexType::Uint16);
 
 		PushConstant pc;
 		pc.scale = { 2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y };
@@ -331,6 +331,11 @@ namespace GraphicsAbstraction {
 
 		dispatcher.Dispatch<MouseButtonReleasedEvent>([&](MouseButtonReleasedEvent& e) {
 			io.AddMouseButtonEvent(e.GetMouseButton(), false);
+			return true;
+		});
+
+		dispatcher.Dispatch<MouseScrolledEvent>([&](MouseScrolledEvent& e) {
+			io.AddMouseWheelEvent(e.GetXOffset(), e.GetYOffset());
 			return true;
 		});
 

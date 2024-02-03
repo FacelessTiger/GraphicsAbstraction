@@ -2,14 +2,20 @@
 
 #include <Core/Log.h>
 #include <Core/Assert.h>
+#include <Scene/Scene.h>
+#include <Scene/Entity.h>
+#include <Assets/Mesh.h>
+#include <Assets/Material.h>
+#include <Assets/AssetManager.h>
 
+#include <glm/gtx/quaternion.hpp>
 #include <Renderer/Renderer.h>
 
 namespace GraphicsAbstraction {
 
-	Scene ModelImporter::LoadModels(const std::filesystem::path path)
+	TempScene ModelImporter::LoadModels(const std::filesystem::path path, Ref<Scene>& tempScene)
 	{
-		fastgltf::GltfDataBuffer data;
+		/*fastgltf::GltfDataBuffer data;
 		data.loadFromFile(path);
 
 		fastgltf::Asset gltf;
@@ -27,20 +33,48 @@ namespace GraphicsAbstraction {
 			GA_CORE_ASSERT(false);
 		}
 
-		std::vector<uint16_t> indices;
+		std::vector<uint32_t> indices;
 		std::vector<Vertex> vertices;
 
-		Scene scene;
+		std::vector<CullMesh> cullInputs;
+		std::vector<Object> objects;
+		std::vector<OldMaterial> materials;
+
+		std::vector<AssetHandle> builtInMeshes;
+		std::vector<AssetHandle> builtInMaterials;
+
+		TempScene scene;
+		for (fastgltf::Material& mat : gltf.materials)
+		{
+			Ref<Material> builtInMaterial = CreateRef<Material>();
+			builtInMaterial->Name = mat.name;
+			builtInMaterials.push_back(AssetManager::AddAsset(builtInMaterial));
+
+			OldMaterial material;
+			material.albedo.x = mat.pbrData.baseColorFactor[0];
+			material.albedo.y = mat.pbrData.baseColorFactor[1];
+			material.albedo.z = mat.pbrData.baseColorFactor[2];
+
+			material.metallic = mat.pbrData.metallicFactor;
+			material.roughness = mat.pbrData.roughnessFactor;
+			material.ao = 1.0f;
+			materials.push_back(material);
+		}
+
+		uint32_t i = 0;
 		for (fastgltf::Mesh& mesh : gltf.meshes)
 		{
+			Ref<Mesh> builtInMesh = CreateRef<Mesh>();
+			builtInMesh->Name = mesh.name;
+
 			vertices.clear();
+
+			uint32_t meshIndex = scene.Meshes.size();
+			scene.Meshes.push_back({});
 
 			for (auto&& p : mesh.primitives)
 			{
-				Mesh meshAsset;
-				meshAsset.StartIndex = (uint32_t)indices.size();
-				meshAsset.Count = (uint32_t)gltf.accessors[p.indicesAccessor.value()].count;
-
+				DrawIndexedIndirectCommand command((uint32_t)gltf.accessors[p.indicesAccessor.value()].count, 1, (uint32_t)indices.size(), 0, i);
 				size_t initialVertex = vertices.size();
 
 				// load indexes
@@ -48,7 +82,7 @@ namespace GraphicsAbstraction {
 					fastgltf::Accessor& indexAccessor = gltf.accessors[p.indicesAccessor.value()];
 					//indices.reserve(indices.size() + indexAccessor.count);
 
-					fastgltf::iterateAccessor<uint16_t>(gltf, indexAccessor, [&](uint16_t index) {
+					fastgltf::iterateAccessor<uint16_t>(gltf, indexAccessor, [&](uint32_t index) {
 						indices.push_back(index + (uint32_t)initialVertex);
 					});
 				}
@@ -99,11 +133,15 @@ namespace GraphicsAbstraction {
 				}
 
 				uint32_t vertexBufferSize = (uint32_t)(vertices.size() * sizeof(Vertex));
-				meshAsset.VertexBuffer = Buffer::Create(vertexBufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
+				auto vertexBuffer = Buffer::Create(vertexBufferSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
 
 				auto staging = Buffer::Create(vertexBufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
 				staging->SetData(vertices.data());
-				Renderer::CopyNextFrame(staging, meshAsset.VertexBuffer, vertexBufferSize);
+				Renderer::CopyNextFrame(staging, vertexBuffer, vertexBufferSize);
+
+				scene.VertexBuffers.push_back(vertexBuffer);
+				objects.push_back({ vertexBuffer->GetHandle(), (uint32_t)*p.materialIndex, meshIndex });
+				builtInMesh->Primitives.push_back({ builtInMaterials[*p.materialIndex] });
 
 				glm::vec3 minPos = vertices[initialVertex].position;
 				glm::vec3 maxPos = vertices[initialVertex].position;
@@ -112,28 +150,88 @@ namespace GraphicsAbstraction {
 					minPos = glm::min(minPos, vertices[i].position);
 					maxPos = glm::max(maxPos, vertices[i].position);
 				}
+				
+				CullMesh meshAsset = { .command = command };
+				meshAsset.bounds.origin = (maxPos + minPos) / 2.0f;
+				meshAsset.bounds.extents = (maxPos - minPos) / 2.0f;
+				meshAsset.bounds.sphereRadius = glm::length(meshAsset.bounds.extents);
+				cullInputs.push_back(meshAsset);
 
-				meshAsset.Bounds.origin = (maxPos + minPos) / 2.0f;
-				meshAsset.Bounds.extents = (maxPos - minPos) / 2.0f;
-				meshAsset.Bounds.sphereRadius = glm::length(meshAsset.Bounds.extents);
-				scene.Meshes.push_back(meshAsset);
+				i++;
 			}
 
-			constexpr bool overrideColors = false;
-			if (overrideColors)
+			builtInMeshes.push_back(AssetManager::AddAsset(builtInMesh));
+		}
+
+		uint32_t indexBufferSize = (uint32_t)(indices.size() * sizeof(uint32_t));
+		uint32_t cullInputSize = (uint32_t)(cullInputs.size() * sizeof(CullMesh));
+		uint32_t objectsSize = (uint32_t)(objects.size() * sizeof(Object));
+		uint32_t materialsSize = (uint32_t)(materials.size() * sizeof(OldMaterial));
+		scene.IndexBuffer = Buffer::Create(indexBufferSize, BufferUsage::IndexBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
+		scene.CullInput = Buffer::Create(cullInputSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
+		scene.Objects = Buffer::Create(objectsSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
+		scene.Materials = Buffer::Create(materialsSize, BufferUsage::StorageBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
+
+		auto staging = Buffer::Create(indexBufferSize + cullInputSize + objectsSize + materialsSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
+		staging->SetData(indices.data(), indexBufferSize);
+		staging->SetData(cullInputs.data(), cullInputSize, indexBufferSize);
+		staging->SetData(objects.data(), objectsSize, indexBufferSize + cullInputSize);
+		staging->SetData(materials.data(), materialsSize, indexBufferSize + cullInputSize + objectsSize);
+		Renderer::CopyNextFrame(staging, scene.IndexBuffer, indexBufferSize);
+		Renderer::CopyNextFrame(staging, scene.CullInput, cullInputSize, indexBufferSize);
+		Renderer::CopyNextFrame(staging, scene.Objects, objectsSize, indexBufferSize + cullInputSize);
+		Renderer::CopyNextFrame(staging, scene.Materials, materialsSize, indexBufferSize + cullInputSize + objectsSize);
+
+		for (fastgltf::Node& node : gltf.nodes)
+		{
+			Entity entity = tempScene->CreateEntity(node.name.c_str());
+			std::shared_ptr<Node> newNode = std::make_shared<Node>();
+			if (node.meshIndex.has_value())
 			{
-				for (Vertex& vertex : vertices) vertex.color = glm::vec4(vertex.normal, 1.0f);
+				entity.AddComponent<MeshComponent>(builtInMeshes[*node.meshIndex]);
+				scene.Meshes[*node.meshIndex].Node = newNode;
+			}
+
+			scene.Nodes.push_back(newNode);
+			std::visit(fastgltf::visitor { [&](fastgltf::Node::TransformMatrix matrix) {
+				memcpy(&newNode->LocalTransform, matrix.data(), sizeof(matrix));
+			}, 
+			[&](fastgltf::Node::TRS transform) {
+				glm::vec3 tl(transform.translation[0], transform.translation[1], transform.translation[2]);
+				glm::quat rot(transform.rotation[3], transform.rotation[0], transform.rotation[1], transform.rotation[2]);
+				glm::vec3 sc(transform.scale[0], transform.scale[1], transform.scale[2]);
+
+				glm::mat4 tm = glm::translate(glm::mat4(1.0f), tl);
+				glm::mat4 rm = glm::toMat4(rot);
+				glm::mat4 sm = glm::scale(glm::mat4(1.0f), sc);
+
+				newNode->LocalTransform = tm * rm * sm;
+			} },
+			node.transform);
+		}
+
+		for (int i = 0; i < gltf.nodes.size(); i++)
+		{
+			fastgltf::Node& node = gltf.nodes[i];
+			std::shared_ptr<Node>& sceneNode = scene.Nodes[i];
+
+			for (auto& c : node.children)
+			{
+				sceneNode->Children.push_back(scene.Nodes[c]);
+				scene.Nodes[c]->Parent = sceneNode;
 			}
 		}
 
-		uint32_t indexBufferSize = (uint16_t)(indices.size() * sizeof(uint16_t));
-		scene.IndexBuffer = Buffer::Create(indexBufferSize, BufferUsage::IndexBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
+		for (auto& node : scene.Nodes)
+		{
+			if (node->Parent.lock() == nullptr)
+			{
+				scene.TopNodes.push_back(node);
+				node->RefreshTransform(glm::mat4(1.0f));
+			}
+		}*/
 
-		auto staging = Buffer::Create(indexBufferSize, BufferUsage::TransferSrc, BufferFlags::Mapped);
-		staging->SetData(indices.data());
-		Renderer::CopyNextFrame(staging, scene.IndexBuffer, indexBufferSize);
-
-		return scene;
+		return TempScene();
 	}
 
 }

@@ -1,4 +1,4 @@
-#define GA_DLL_LINK
+//#define GA_DLL_LINK
 #include <GraphicsAbstraction/Core/Window.h>
 #include <GraphicsAbstraction/Core/MouseButtonCodes.h>
 #include <GraphicsAbstraction/Core/KeyCodes.h>

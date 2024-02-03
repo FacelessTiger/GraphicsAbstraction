@@ -4,9 +4,11 @@ static const float PI = 3.14159265f;
 
 struct Material
 {
-	float3 albedo;
-	float metallic;
-	float roughness;
+	float3 albedoFactor;
+	uint albedoTexture;
+	uint metallicRoughnessTexture;
+	float metallicFactor;
+	float roughnessFactor;
 	float ao;
 };
 
@@ -25,6 +27,9 @@ struct PushConstant
 	uint objects;
 	uint materials;
 	uint lights;
+	uint lightCount;
+	uint models;
+	uint sampler;
 };
 PushConstant(PushConstant, pushConstants);
 
@@ -80,10 +85,11 @@ float GeometrySmith(float3 n, float3 v, float3 l, float roughness)
 float4 main(VertexInput input): SV_Target
 {
 	Cobra::ArrayBuffer lights = Cobra::ArrayBuffer::Create(pushConstants.lights);
+	float4 metallicRoughnessSample = Cobra::Texture::Create(input.material.metallicRoughnessTexture).Sample2D<float4>(pushConstants.sampler, input.uv);
 
-	float3 albedo = input.material.albedo;
-	float metallic = input.material.metallic;
-	float roughness = input.material.roughness;
+	float3 albedo = (float3)Cobra::Texture::Create(input.material.albedoTexture).Sample2D<float4>(pushConstants.sampler, input.uv) * input.material.albedoFactor;
+	float metallic = metallicRoughnessSample.b * input.material.metallicFactor;
+	float roughness = metallicRoughnessSample.g * input.material.roughnessFactor;
 	float ao = input.material.ao;
 
 	float3 n = normalize(input.normal);
@@ -93,7 +99,7 @@ float4 main(VertexInput input): SV_Target
 	f0 = lerp(f0, albedo, metallic);
 
 	float3 lo = 0.0;
-	for (int i = 0; i < lights.GetDimensions<Light>(); i++)
+	for (int i = 0; i < pushConstants.lightCount; i++)
 	{
 		Light light = lights.Load<Light>(i);
 

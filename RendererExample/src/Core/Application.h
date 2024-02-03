@@ -1,9 +1,9 @@
 #pragma once
 
 #include <GraphicsAbstraction/GraphicsAbstraction.h>
-#include <Renderer/Procedures/GradientProcedure.h>
 #include <Renderer/EditorCamera.h>
-#include <Renderer/Procedures/QuadProcedure.h>
+#include <Panels/SceneHierarchyPanel.h>
+#include <Panels/AssetPanel.h>
 #include <Renderer/Texture.h>
 
 #include <memory>
@@ -35,6 +35,7 @@ namespace GraphicsAbstraction {
 		inline static Application& Get() { return *s_Instance; }
 	private:
 		void Run();
+		void LoadGLTF(const std::filesystem::path path);
 
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
@@ -49,11 +50,12 @@ namespace GraphicsAbstraction {
 		double m_FrameTime = 0.0;
 
 		Ref<Window> m_Window;
+		Ref<Scene> m_Scene;
 		EditorCamera m_EditorCamera;
 
-		QuadProcedure* m_QuadProcedure;
-		std::unordered_map<uint32_t, Quad> m_QuadData; // in actual engine the renderer would communicate via UUID's
-		std::shared_ptr<Texture> m_TestTexure;
+		AssetHandle m_WhiteTexture;
+		SceneHierarchyPanel m_SceneHierarchyPanel;
+		AssetPanel m_AssetPanel;
 	};
 
 }

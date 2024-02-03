@@ -23,6 +23,7 @@ project "RendererExample"
 		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.entt}",
 		"%{IncludeDir.stb_image}",
 		"%{IncludeDir.fastgltf}"
 	}

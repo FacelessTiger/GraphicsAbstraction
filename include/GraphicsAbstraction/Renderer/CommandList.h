@@ -41,6 +41,12 @@ namespace GraphicsAbstraction {
 		Wireframe
 	};
 
+	enum class IndexType
+	{
+		Uint16,
+		Uint32
+	};
+
 	struct DrawIndirectCommand
 	{
 	public:
@@ -93,7 +99,7 @@ namespace GraphicsAbstraction {
 		void EndRendering();
 
 		void BindShaders(const std::vector<Ref<Shader>> shaderStages);
-		void BindIndexBuffer(const Ref<Buffer>& buffer);
+		void BindIndexBuffer(const Ref<Buffer>& buffer, IndexType type);
 		void PushConstant(const void* data, uint32_t size, uint32_t offset);
 		template<typename T> void PushConstant(const T& data, uint32_t offset = 0) { PushConstant(&data, sizeof(T), offset); };
 

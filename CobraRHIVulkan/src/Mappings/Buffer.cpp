@@ -69,7 +69,7 @@ namespace GraphicsAbstraction {
 			.usage = VMA_MEMORY_USAGE_AUTO,
 			.requiredFlags = (flags & BufferFlags::DeviceLocal) ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT : (VkMemoryPropertyFlags)0
 		};
-
+		
 		vmaCreateBuffer(Context->Allocator, &bufferInfo, &vmaAllocInfo, &Buffer.Buffer, &Buffer.Allocation, &Buffer.Info);
 		if (usage & BufferUsage::StorageBuffer) UpdateDescriptor();
 	}

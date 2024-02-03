@@ -5,20 +5,22 @@ struct Bounds
 	float3 origin;
 	float sphereRadius;
 	float3 extents;
+	uint transform;
 };
 
 struct CullMesh
 {
-	row_major float4x4 modelMatrix;
-	Cobra::DrawIndexedIndirectCommand command;
 	Bounds bounds;
+	Cobra::DrawIndexedIndirectCommand command;
 };
 
 struct PushConstant
 {
 	row_major float4x4 viewProj;
 	uint inputBuffer;
+	uint inputCount;
 	uint outputBuffer;
+	uint models;
 };
 PushConstant(PushConstant, pushConstants);
 
@@ -38,7 +40,9 @@ bool IsVisible(CullMesh mesh)
 	float3 vMin = float3(1.5, 1.5, 1.5);
 	float3 vMax = float3(-1.5, -1.5, -1.5);
 
-	float4x4 matrix = mul(mesh.modelMatrix, pushConstants.viewProj);
+	float4x4 modelMatrix = Cobra::ArrayBuffer::Create(pushConstants.models).Load<float4x4>(mesh.bounds.transform);
+	float4x4 matrix = mul(modelMatrix, pushConstants.viewProj);
+
 	for (int i = 0; i < 8; i++)
 	{
 		float4 v = mul(float4(mesh.bounds.origin + (corners[i] * mesh.bounds.extents), 1.0), matrix);
@@ -57,12 +61,13 @@ bool IsVisible(CullMesh mesh)
 }
 
 [numthreads(16, 1, 1)]
-void main(uint groupIndex: SV_GroupIndex)
+void main(uint3 dd: SV_DispatchThreadID)
 {
+	uint groupIndex = dd.x;
 	Cobra::ArrayBuffer inputBuffer = Cobra::ArrayBuffer::Create(pushConstants.inputBuffer);
 	Cobra::RWArrayBuffer outputBuffer = Cobra::RWArrayBuffer::Create(pushConstants.outputBuffer);
 
-	if (groupIndex < inputBuffer.GetDimensions<CullMesh>())
+	if (groupIndex < pushConstants.inputCount)
 	{
 		CullMesh mesh = inputBuffer.Load<CullMesh>(groupIndex);
 		if (IsVisible(mesh))

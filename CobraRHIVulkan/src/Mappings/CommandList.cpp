@@ -263,9 +263,9 @@ namespace GraphicsAbstraction {
 		if (g_ShaderObjectSupported) impl->Context->vkCmdBindShadersEXT(impl->CommandBuffer, (uint32_t)shaders.size(), stages.data(), shaders.data());
 	}
 
-	void CommandList::BindIndexBuffer(const Ref<Buffer>& buffer)
+	void CommandList::BindIndexBuffer(const Ref<Buffer>& buffer, IndexType type)
 	{
-		vkCmdBindIndexBuffer(impl->CommandBuffer, buffer->impl->Buffer.Buffer, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindIndexBuffer(impl->CommandBuffer, buffer->impl->Buffer.Buffer, 0, (type == IndexType::Uint16) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 	}
 
 	void CommandList::PushConstant(const void* data, uint32_t size, uint32_t offset)

@@ -11,16 +11,18 @@ struct Vertex
 
 struct Object
 {
-	row_major float4x4 modelMatrix;
 	uint vertices;
 	uint material;
+	uint transform;
 };
 
 struct Material
 {
-	float3 albedo;
-	float metallic;
-	float rougness;
+	float3 albedoFactor;
+	uint albedoTexture;
+	uint metallicRoughnessTexture;
+	float metallicFactor;
+	float roughnessFactor;
 	float ao;
 };
 
@@ -31,6 +33,9 @@ struct PushConstant
 	uint objects;
 	uint materials;
 	uint lights;
+	uint lightCount;
+	uint models;
+	uint sampler;
 };
 PushConstant(PushConstant, pushConstants);
 
@@ -48,13 +53,14 @@ VertexOutput main(uint vertexID: SV_VertexID, uint instanceIndex: SV_InstanceID)
 	Object object = Cobra::ArrayBuffer::Create(pushConstants.objects).Load<Object>(instanceIndex);
 	Vertex vertex = Cobra::ArrayBuffer::Create(object.vertices).Load<Vertex>(vertexID);
 	Material material = Cobra::ArrayBuffer::Create(pushConstants.materials).Load<Material>(object.material);
+	float4x4 modelMatrix = Cobra::ArrayBuffer::Create(pushConstants.models).Load<float4x4>(object.transform);
 
-	float4 worldPos = mul(float4(vertex.position, 1.0f), object.modelMatrix);
+	float4 worldPos = mul(float4(vertex.position, 1.0f), modelMatrix);
 
 	VertexOutput output;
 	output.position = mul(worldPos, pushConstants.projection);
 	output.worldPosition = worldPos.xyz;
-	output.normal = mul(vertex.normal, (float3x3)transpose(Cobra::Inverse(object.modelMatrix)));
+	output.normal = mul(vertex.normal, (float3x3)transpose(Cobra::Inverse(modelMatrix)));
 	output.material = material;
 	output.uv = float2(vertex.uvX, vertex.uvY);
 	return output;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <filesystem>
-#include <GraphicsAbstraction/Renderer/Buffer.h>
+#include <GraphicsAbstraction/GraphicsAbstraction.h>
 
 #include <glm/glm.hpp>
 #include <fastgltf/parser.hpp>
@@ -10,42 +10,51 @@
 
 namespace GraphicsAbstraction {
 
-	struct Vertex
+	class Scene;
+
+	struct OldMaterial
 	{
-		glm::vec3 position;
-		float uvX;
-		glm::vec3 normal;
-		float uvY;
-		glm::vec4 color;
+		glm::vec3 albedo;
+		float metallic;
+		float roughness;
+		float ao;
 	};
 
-	struct Bounds
+	struct Node
 	{
-		glm::vec3 origin;
-		float sphereRadius;
-		glm::vec3 extents;
+		std::weak_ptr<Node> Parent;
+		std::vector<std::shared_ptr<Node>> Children;
+
+		glm::mat4 LocalTransform;
+		glm::mat4 WorldTransform;
+
+		void RefreshTransform(const glm::mat4& parentMatrix)
+		{
+			WorldTransform = parentMatrix * LocalTransform;
+			for (auto c : Children)
+				c->RefreshTransform(WorldTransform);
+		}
 	};
 
-	struct Mesh
+	struct CockMesh : public Node
 	{
-		uint32_t StartIndex;
-		uint32_t Count;
-		Bounds Bounds;
-
-		Ref<Buffer> VertexBuffer;
+		std::shared_ptr<Node> Node;
 	};
 
-	struct Scene
+	struct TempScene
 	{
-		std::vector<Mesh> Meshes;
+		Ref<Buffer> IndexBuffer, Objects, Materials, CullInput;
+		std::vector<Ref<Buffer>> VertexBuffers;
 
-		Ref<Buffer> IndexBuffer;
+		std::vector<CockMesh> Meshes;
+		std::vector<std::shared_ptr<Node>> Nodes;
+		std::vector<std::shared_ptr<Node>> TopNodes;
 	};
 
 	class ModelImporter
 	{
 	public:
-		static Scene LoadModels(const std::filesystem::path path);
+		static TempScene LoadModels(const std::filesystem::path path, Ref<Scene>& tempScene);
 	};
 
 }

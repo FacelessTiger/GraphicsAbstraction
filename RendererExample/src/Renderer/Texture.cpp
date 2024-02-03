@@ -17,11 +17,33 @@ namespace GraphicsAbstraction {
 		unsigned char* data = stbi_load(filename, &width, &height, &channels, 4);
 		GA_CORE_ASSERT(data);
 
+		CreateVulkanImage(data, width, height);
+		stbi_image_free(data);
+	}
+
+	Texture::Texture(uint8_t* data, uint32_t size)
+	{
+		int width, height, channels;
+
+		stbi_set_flip_vertically_on_load(true);
+		unsigned char* imageData = stbi_load_from_memory(data, size, &width, &height, &channels, 4);
+		GA_CORE_ASSERT(imageData);
+
+		CreateVulkanImage(imageData, width, height);
+		stbi_image_free(imageData);
+	}
+
+	Texture::Texture(uint8_t* data, uint32_t width, uint32_t height)
+	{
+		CreateVulkanImage(data, width, height);
+	}
+
+	void Texture::CreateVulkanImage(unsigned char* data, int width, int height)
+	{
 		m_Image = Image::Create({ width, height }, ImageFormat::R8G8B8A8_UNORM, ImageUsage::Sampled | ImageUsage::TransferDst);
 		auto stagingBuffer = Buffer::Create(width * height * 4, BufferUsage::TransferSrc, BufferFlags::Mapped);
 		stagingBuffer->SetData(data);
 
-		stbi_image_free(data);
 		Renderer::CopyNextFrame(stagingBuffer, m_Image);
 	}
 

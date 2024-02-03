@@ -124,13 +124,13 @@ namespace GraphicsAbstraction {
 		}
 	}
 
-	void CommandList::BindIndexBuffer(const Ref<Buffer>& buffer)
+	void CommandList::BindIndexBuffer(const Ref<Buffer>& buffer, IndexType type)
 	{
 		buffer->impl->TransitionState(impl->CommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		D3D12_INDEX_BUFFER_VIEW view = {
 			.BufferLocation = buffer->impl->Resource->GetGPUVirtualAddress(),
 			.SizeInBytes = buffer->impl->Size,
-			.Format = DXGI_FORMAT_R16_UINT
+			.Format = (type == IndexType::Uint16) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT
 		};
 		impl->CommandList->IASetIndexBuffer(&view);
 	}
