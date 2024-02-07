@@ -130,8 +130,6 @@ namespace GraphicsAbstraction {
 		std::vector<AssetHandle> builtInMeshes;
 		std::vector<AssetHandle> builtInMaterials;
 		std::vector<AssetHandle> builtInTextures;
-		std::unordered_map<AssetHandle, std::vector<Submesh>> submeshMap;
-		std::unordered_map<AssetHandle, std::vector<uint32_t>> indicesMap;
 
 		for (fastgltf::Image& image : gltf.images)
 		{
@@ -267,10 +265,8 @@ namespace GraphicsAbstraction {
 				});
 			}
 
-			AssetHandle handle = AssetManager::AddAsset(builtInMesh);
-			builtInMeshes.push_back(handle);
-			submeshMap[handle] = submeshes;
-			indicesMap[handle] = indices;
+			builtInMesh->RenderHandle = Renderer::UploadMesh(submeshes, indices);
+			builtInMeshes.push_back(AssetManager::AddAsset(builtInMesh));
 		}
 
 		std::vector<Entity> sceneNodes;
@@ -298,8 +294,8 @@ namespace GraphicsAbstraction {
 				AssetHandle meshHandle = builtInMeshes[*node.meshIndex];
 				Mesh& mesh = (Mesh&)*AssetManager::GetAsset(meshHandle);
 
-				mesh.RenderHandle = Renderer::UploadMesh(submeshMap[meshHandle], indicesMap[meshHandle], entity.GetWorldTransform());
-				entity.AddComponent<MeshComponent>(meshHandle);
+				UUID modelID = Renderer::UploadModel(mesh.RenderHandle, entity.GetWorldTransform());
+				entity.AddComponent<MeshComponent>(meshHandle, modelID);
 			}
 		}
 

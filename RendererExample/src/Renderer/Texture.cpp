@@ -41,10 +41,7 @@ namespace GraphicsAbstraction {
 	void Texture::CreateVulkanImage(unsigned char* data, int width, int height)
 	{
 		m_Image = Image::Create({ width, height }, ImageFormat::R8G8B8A8_UNORM, ImageUsage::Sampled | ImageUsage::TransferDst);
-		auto stagingBuffer = Buffer::Create(width * height * 4, BufferUsage::TransferSrc, BufferFlags::Mapped);
-		stagingBuffer->SetData(data);
-
-		Renderer::CopyNextFrame(stagingBuffer, m_Image);
+		Renderer::CopyImage(data, m_Image, width * height * 4);
 	}
 
 }

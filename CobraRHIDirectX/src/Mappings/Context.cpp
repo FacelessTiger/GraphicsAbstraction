@@ -63,6 +63,12 @@ namespace GraphicsAbstraction {
 		SetupDevice(adapter);
 		SetupBindless();
 
+		D3D12MA::ALLOCATOR_DESC desc = {
+			.pDevice = Device.Get(),
+			.pAdapter = adapter.Get()
+		};
+		D3D12_CHECK(D3D12MA::CreateAllocator(&desc, &Allocator));
+
 		PipelineManager = new GraphicsAbstraction::PipelineManager(*this);
 		CommandSignatureManager = new GraphicsAbstraction::CommandSignatureManager(*this);
 		FrameDeletionQueues.resize(frameInFlightCount, *this);

@@ -31,15 +31,16 @@ project "CobraRHIDirectX"
 		"%{wks.location}/include",
 		"%{wks.location}/CobraRHIShared/src",
 		"%{IncludeDir.AgilitySDK}",
+		"%{IncludeDir.D3D12MA}",
 
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.xxHash}"
 	}
 
 	links
 	{
 		"CobraRHIShared",
+		"D3D12MA",
 		"%{Library.DirectX}",
 		"%{Library.DXGI}",
 		"%{Library.DXCompiler}"

@@ -98,11 +98,11 @@ namespace GraphicsAbstraction {
 			clearPointer = &clear;
 		}
 
-		auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+		D3D12MA::ALLOCATION_DESC allocDesc = { .HeapType = D3D12_HEAP_TYPE_DEFAULT };
 		auto resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(d3d12Format, Width, Height, 1, 1, 1, 0, Utils::GAImageUsageToD3D12Flags(Usage));
 
 		State = Utils::GAImageUsageToD3D12(Usage);
-		D3D12_CHECK(Context->Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, State, clearPointer, IID_PPV_ARGS(&Image)));
+		D3D12_CHECK(Context->Allocator->CreateResource(&allocDesc, &resourceDesc, State, clearPointer, &Allocation, IID_PPV_ARGS(&Image)));
 
 		CreateViews(d3d12Format);
 	}

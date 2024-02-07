@@ -18,7 +18,7 @@ namespace GraphicsAbstraction {
 	{
 	public:
 		std::vector<Primitive> Primitives;
-		uint32_t RenderHandle;
+		UUID RenderHandle;
 	public:
 		virtual ~Mesh() = default;
 

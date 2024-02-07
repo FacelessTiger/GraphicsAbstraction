@@ -34,7 +34,6 @@ project "CobraRHIVulkan"
 		"%{IncludeDir.vma}",
 
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.xxHash}"
 	}
 

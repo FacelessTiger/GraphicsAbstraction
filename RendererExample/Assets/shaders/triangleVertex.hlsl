@@ -9,11 +9,21 @@ struct Vertex
 	float4 color;
 };
 
-struct Object
+struct Primitive
 {
-	uint vertices;
-	uint material;
-	uint transform;
+	float3 origin;
+	float sphereRadius;
+	float3 extents;
+	uint indexCount;
+	uint indexOffset;
+	uint materialOffset; // TODO: I feel like this should be tied to the draw data instead
+	uint verticesOffset;
+};
+
+struct DrawData
+{
+	uint transformOffset;
+	uint primitiveOffset;
 };
 
 struct Material
@@ -30,11 +40,10 @@ struct PushConstant
 {
 	row_major float4x4 projection;
 	float3 cameraPos;
-	uint objects;
-	uint materials;
-	uint lights;
+	uint scene;
+	uint drawsOffset;
+	uint lightOffset;
 	uint lightCount;
-	uint models;
 	uint sampler;
 };
 PushConstant(PushConstant, pushConstants);
@@ -50,10 +59,13 @@ struct VertexOutput
 
 VertexOutput main(uint vertexID: SV_VertexID, uint instanceIndex: SV_InstanceID)
 {
-	Object object = Cobra::ArrayBuffer::Create(pushConstants.objects).Load<Object>(instanceIndex);
-	Vertex vertex = Cobra::ArrayBuffer::Create(object.vertices).Load<Vertex>(vertexID);
-	Material material = Cobra::ArrayBuffer::Create(pushConstants.materials).Load<Material>(object.material);
-	float4x4 modelMatrix = Cobra::ArrayBuffer::Create(pushConstants.models).Load<float4x4>(object.transform);
+	Cobra::RawBuffer scene = Cobra::RawBuffer::Create(pushConstants.scene);
+	DrawData draw = scene.Load<DrawData>((sizeof(DrawData) * instanceIndex) + pushConstants.drawsOffset);
+	Primitive primitive = scene.Load<Primitive>(draw.primitiveOffset);
+	float4x4 modelMatrix = scene.Load<float4x4>(draw.transformOffset);
+
+	Vertex vertex = scene.Load<Vertex>((sizeof(Vertex) * vertexID) + primitive.verticesOffset);
+	Material material = scene.Load<Material>(primitive.materialOffset);
 
 	float4 worldPos = mul(float4(vertex.position, 1.0f), modelMatrix);
 

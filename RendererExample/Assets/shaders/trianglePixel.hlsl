@@ -24,11 +24,10 @@ struct PushConstant
 {
 	row_major float4x4 projection;
 	float3 cameraPos;
-	uint objects;
-	uint materials;
-	uint lights;
+	uint draws;
+	uint scene;
+	uint lightOffset;
 	uint lightCount;
-	uint models;
 	uint sampler;
 };
 PushConstant(PushConstant, pushConstants);
@@ -84,7 +83,7 @@ float GeometrySmith(float3 n, float3 v, float3 l, float roughness)
 
 float4 main(VertexInput input): SV_Target
 {
-	Cobra::ArrayBuffer lights = Cobra::ArrayBuffer::Create(pushConstants.lights);
+	Cobra::RawBuffer scene = Cobra::RawBuffer::Create(pushConstants.scene);
 	float4 metallicRoughnessSample = Cobra::Texture::Create(input.material.metallicRoughnessTexture).Sample2D<float4>(pushConstants.sampler, input.uv);
 
 	float3 albedo = (float3)Cobra::Texture::Create(input.material.albedoTexture).Sample2D<float4>(pushConstants.sampler, input.uv) * input.material.albedoFactor;
@@ -101,7 +100,7 @@ float4 main(VertexInput input): SV_Target
 	float3 lo = 0.0;
 	for (int i = 0; i < pushConstants.lightCount; i++)
 	{
-		Light light = lights.Load<Light>(i);
+		Light light = scene.Load<Light>((i * sizeof(Light)) + pushConstants.lightOffset);
 
 		float3 l = normalize(light.position - input.worldPosition);
 		float3 h = normalize(v + l);

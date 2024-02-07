@@ -1,30 +1,33 @@
 #include "Cobra"
 
-struct Bounds
+struct Primitive
 {
 	float3 origin;
 	float sphereRadius;
 	float3 extents;
-	uint transform;
+	uint indexCount;
+	uint indexOffset;
+	uint materialOffset; // TODO: I feel like this should be tied to the draw data instead
+	uint verticesOffset;
 };
 
-struct CullMesh
+struct DrawData
 {
-	Bounds bounds;
-	Cobra::DrawIndexedIndirectCommand command;
+	uint transformOffset;
+	uint primitiveOffset;
 };
 
 struct PushConstant
 {
 	row_major float4x4 viewProj;
-	uint inputBuffer;
+	uint sceneBuffer;
 	uint inputCount;
-	uint outputBuffer;
-	uint models;
+	uint inputOffset;
+	uint outputOffset;
 };
 PushConstant(PushConstant, pushConstants);
 
-bool IsVisible(CullMesh mesh)
+bool IsVisible(Primitive primitive, float4x4 transform)
 {
 	const float3 corners[8] = {
 		float3( 1,  1,  1),
@@ -40,12 +43,10 @@ bool IsVisible(CullMesh mesh)
 	float3 vMin = float3(1.5, 1.5, 1.5);
 	float3 vMax = float3(-1.5, -1.5, -1.5);
 
-	float4x4 modelMatrix = Cobra::ArrayBuffer::Create(pushConstants.models).Load<float4x4>(mesh.bounds.transform);
-	float4x4 matrix = mul(modelMatrix, pushConstants.viewProj);
-
+	float4x4 matrix = mul(transform, pushConstants.viewProj);
 	for (int i = 0; i < 8; i++)
 	{
-		float4 v = mul(float4(mesh.bounds.origin + (corners[i] * mesh.bounds.extents), 1.0), matrix);
+		float4 v = mul(float4(primitive.origin + (corners[i] * primitive.extents), 1.0), matrix);
 		v.x /= v.w;
 		v.y /= v.w;
 		v.z /= v.w;
@@ -64,16 +65,20 @@ bool IsVisible(CullMesh mesh)
 void main(uint3 dd: SV_DispatchThreadID)
 {
 	uint groupIndex = dd.x;
-	Cobra::ArrayBuffer inputBuffer = Cobra::ArrayBuffer::Create(pushConstants.inputBuffer);
-	Cobra::RWArrayBuffer outputBuffer = Cobra::RWArrayBuffer::Create(pushConstants.outputBuffer);
+	Cobra::RWRawBuffer sceneBuffer = Cobra::RWRawBuffer::Create(pushConstants.sceneBuffer);
 
 	if (groupIndex < pushConstants.inputCount)
 	{
-		CullMesh mesh = inputBuffer.Load<CullMesh>(groupIndex);
-		if (IsVisible(mesh))
+		DrawData draw = sceneBuffer.Load<DrawData>((sizeof(DrawData) * groupIndex) + pushConstants.inputOffset);
+		Primitive primitive = sceneBuffer.Load<Primitive>(draw.primitiveOffset);
+
+		float4x4 transform = sceneBuffer.Load<float4x4>(draw.transformOffset);
+		if (IsVisible(primitive, transform))
 		{
-			uint index = outputBuffer.InterlockedAdd(0, 1);
-			outputBuffer.Store<Cobra::DrawIndexedIndirectCommand>(index, mesh.command, 4);
+			uint index = sceneBuffer.InterlockedAdd(pushConstants.outputOffset, 1);
+
+			Cobra::DrawIndexedIndirectCommand command = Cobra::DrawIndexedIndirectCommand::Create(primitive.indexCount, 1, primitive.indexOffset, 0, groupIndex);
+			sceneBuffer.Store<Cobra::DrawIndexedIndirectCommand>((index * sizeof(Cobra::DrawIndexedIndirectCommand)) + pushConstants.outputOffset + 4, command);
 		}
 	}
 }

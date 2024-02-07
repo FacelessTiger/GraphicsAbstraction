@@ -21,7 +21,7 @@ namespace GraphicsAbstraction {
 	{
 		std::vector<Vertex> Vertices;
 		uint32_t IndexCount, IndexOffset;
-		uint32_t MaterialHandle;
+		UUID MaterialHandle;
 	};
 
 	class Renderer
@@ -30,22 +30,25 @@ namespace GraphicsAbstraction {
 		static void Init(Ref<Window>& window, bool seperateDisplayImage);
 		static void Shutdown();
 
-		static uint32_t UploadMaterial(const Ref<Material>& material);
-		static uint32_t UploadMesh(const std::vector<Submesh>& submeshes, const std::vector<uint32_t>& indices, const glm::mat4& initialModel);
-		static uint32_t UploadLight(const glm::vec3& position, const glm::vec3& color);
+		static UUID UploadMaterial(const Ref<Material>& material);
+		static UUID UploadMesh(const std::vector<Submesh>& submeshes, const std::vector<uint32_t>& indices);
+		static UUID UploadModel(UUID meshHandle, const glm::mat4& initialModel);
+		static UUID UploadLight(const glm::vec3& position, const glm::vec3& color);
 
-		static void UpdateLight(uint32_t lightHandle, const glm::vec3& position, const glm::vec3& color);
-		static void UpdateTransform(uint32_t meshHandle, const glm::mat4& transform);
+		static void UpdateLight(UUID lightHandle, const glm::vec3& position, const glm::vec3& color);
+		static void UpdateTransform(UUID modelHandle, const glm::mat4& transform);
+
+		static void RemoveLight(UUID lightHandle);
 		static void Render(const EditorCamera& camera);
 
 		static void SetImGuiCallback(std::function<void()> callback);
 		static void Resize(uint32_t width, uint32_t height);
 		static void SetVsync(bool vsync);
 
-		static void CopyNextFrame(const Ref<Buffer>& srcBuffer, const Ref<Image>& dstImage);
-		static void CopyNextFrame(const Ref<Buffer>& srcBuffer, const Ref<Buffer>& dstBuffer, uint32_t size, uint32_t srcOffset = 0, uint32_t dstOffset = 0);
+		static void CopyImage(void* src, Ref<Image> dstImage, uint32_t size);
 		static Ref<Image> GetDrawImage();
 	private:
+		static void ImmediateSubmit();
 		static void Draw(Ref<CommandList>& cmd, const EditorCamera& camera);
 	};
 

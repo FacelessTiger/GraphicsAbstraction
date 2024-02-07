@@ -238,4 +238,20 @@ namespace GraphicsAbstraction {
 		Impl(Filter min, Filter mag);
 	};
 
+	template<>
+	struct Impl<VirtualAllocation>
+	{
+		VmaVirtualAllocation Allocation;
+
+		Impl(VmaVirtualAllocation allocation);
+	};
+
+	template<>
+	struct Impl<VirtualAllocator>
+	{
+		VmaVirtualBlock Block;
+
+		Impl(uint32_t size);
+	};
+
 }

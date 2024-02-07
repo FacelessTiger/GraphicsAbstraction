@@ -7,7 +7,7 @@ namespace GraphicsAbstraction {
 	class Material : public Asset
 	{
 	public:
-		uint32_t RenderHandle;
+		UUID RenderHandle;
 		glm::vec3 AlbedoFactor;
 		AssetHandle AlbedoTexture;
 		AssetHandle MetallicRoughnessTexture;

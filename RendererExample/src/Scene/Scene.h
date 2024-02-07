@@ -15,11 +15,7 @@ namespace GraphicsAbstraction {
 		virtual ~Scene() = default;
 
 		Entity CreateEntity(const std::string& name = std::string());
-
 		Entity GetEntityByUUID(UUID uuid);
-	private:
-		template<typename T>
-		void OnComponentAdded(Entity entity, T& component);
 	private:
 		friend class Entity;
 		friend class SceneHierarchyPanel;

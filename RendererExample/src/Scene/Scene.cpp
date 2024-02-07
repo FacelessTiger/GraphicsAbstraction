@@ -27,36 +27,4 @@ namespace GraphicsAbstraction {
 		return {};
 	}
 
-	template<typename T>
-	void Scene::OnComponentAdded(Entity entity, T& component)
-	{
-		static_assert(sizeof(T) == 0);
-	}
-
-	template<>
-	void Scene::OnComponentAdded<IDComponent>(Entity entity, IDComponent& component)
-	{ }
-
-	template<>
-	void Scene::OnComponentAdded<RelationshipComponent>(Entity entity, RelationshipComponent& component)
-	{ }
-
-	template<>
-	void Scene::OnComponentAdded<TagComponent>(Entity entity, TagComponent& component)
-	{ }
-
-	template<>
-	void Scene::OnComponentAdded<TransformComponent>(Entity entity, TransformComponent& component)
-	{ }
-
-	template<>
-	void Scene::OnComponentAdded<MeshComponent>(Entity entity, MeshComponent& component)
-	{ }
-
-	template<>
-	void Scene::OnComponentAdded(Entity entity, LightComponent& component)
-	{
-		component.RenderHandle = Renderer::UploadLight(glm::vec3(0), component.Color);
-	}
-
 }

@@ -40,10 +40,10 @@ namespace GraphicsAbstraction {
 		D3D12_HEAP_TYPE heapType;
 		if (flags & BufferFlags::DeviceLocal) heapType = (flags & BufferFlags::Mapped) ? D3D12_HEAP_TYPE_GPU_UPLOAD : D3D12_HEAP_TYPE_DEFAULT;
 		else heapType = D3D12_HEAP_TYPE_UPLOAD;
-		auto heapProperties = CD3DX12_HEAP_PROPERTIES(heapType);
+		D3D12MA::ALLOCATION_DESC allocDesc = { .HeapType = heapType };
 
 		auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(size, (usage & BufferUsage::IndirectBuffer) ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE);
-		D3D12_CHECK(Context->Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&Resource)));
+		D3D12_CHECK(Context->Allocator->CreateResource(&allocDesc, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, &Allocation, IID_PPV_ARGS(&Resource)));
 		
 		if (flags & BufferFlags::Mapped)
 		{

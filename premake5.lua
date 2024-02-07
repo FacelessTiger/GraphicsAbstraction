@@ -33,6 +33,7 @@ group "Dependencies"
 	include "vendor/premake"
 	include "vendor/imgui"
 	include "vendor/fastgltf.lua"
+	include "vendor/D3D12MA.lua"
 group ""
 
 group "Core"

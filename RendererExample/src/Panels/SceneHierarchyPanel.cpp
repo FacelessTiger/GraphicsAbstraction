@@ -92,8 +92,8 @@ namespace GraphicsAbstraction {
 		}
 	}
 
-	template<typename T, typename UIFunction>
-	static void DrawComponent(const std::string& name, Entity entity, UIFunction uiFunction)
+	template<typename T, typename UIFunction, typename RemoveCallback>
+	static void DrawComponent(const std::string& name, Entity entity, UIFunction uiFunction, RemoveCallback removeCallback)
 	{
 		const ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_FramePadding;
 		if (entity.HasComponent<T>())
@@ -130,8 +130,17 @@ namespace GraphicsAbstraction {
 			}
 
 			if (removeComponent)
+			{
+				removeCallback(component);
 				entity.RemoveComponent<T>();
+			}
 		}
+	}
+
+	template<typename T, typename UIFunction>
+	static void DrawComponent(const std::string& name, Entity entity, UIFunction uiFunction)
+	{
+		DrawComponent<T>(name, entity, uiFunction, [](T&) { });
 	}
 
 	static bool DrawVec3Control(const std::string& label, glm::vec3& values, float resetValue = 0.0f, float columnWidth = 100.0f)
@@ -229,7 +238,11 @@ namespace GraphicsAbstraction {
 
 		if (ImGui::BeginPopup("AddComponent"))
 		{
-			DisplayAddComponentEntry<LightComponent>("Light");
+			DisplayAddComponentEntry<LightComponent>("Light", [&](LightComponent& component)
+			{
+				TransformComponent& transform = m_SelectionContext.GetComponent<TransformComponent>();
+				component.RenderHandle = Renderer::UploadLight(transform.Translation, component.Color);
+			});
 			/*DisplayAddComponentEntry<CameraComponent>("Camera");
 			DisplayAddComponentEntry<ScriptComponent>("Script");
 			DisplayAddComponentEntry<SpriteRendererComponent>("Sprite Renderer");
@@ -260,8 +273,7 @@ namespace GraphicsAbstraction {
 			{
 				if (entity.HasComponent<MeshComponent>())
 				{
-					Mesh& mesh = (Mesh&)*AssetManager::GetAsset(entity.GetComponent<MeshComponent>().Mesh);
-					Renderer::UpdateTransform(mesh.RenderHandle, entity.GetWorldTransform());
+					Renderer::UpdateTransform(entity.GetComponent<MeshComponent>().RenderHandle, entity.GetWorldTransform());
 				}
 
 				if (entity.HasComponent<LightComponent>())
@@ -281,24 +293,27 @@ namespace GraphicsAbstraction {
 				ImGui::Text("Material name: %s", AssetManager::GetAsset(primitive.Material)->Name.c_str());
 		});
 
-		DrawComponent<LightComponent>("Light", entity, [&](LightComponent& component)
-		{
+		DrawComponent<LightComponent>("Light", entity, 
+		[&](LightComponent& component) {
 			if (DrawVec3Control("Color", component.Color, 1.0f))
 			{
 				TransformComponent& transform = entity.GetComponent<TransformComponent>();
 				Renderer::UpdateLight(component.RenderHandle, transform.Translation, component.Color);
 			}
+		},
+		[&](LightComponent& component) {
+			Renderer::RemoveLight(component.RenderHandle);
 		});
 	}
 
-	template<typename T>
-	inline void SceneHierarchyPanel::DisplayAddComponentEntry(const std::string& entryName)
+	template<typename T, typename OnAdded>
+	inline void SceneHierarchyPanel::DisplayAddComponentEntry(const std::string& entryName, OnAdded onAdded)
 	{
 		if (!m_SelectionContext.HasComponent<T>())
 		{
 			if (ImGui::MenuItem(entryName.c_str()))
 			{
-				m_SelectionContext.AddComponent<T>();
+				onAdded(m_SelectionContext.AddComponent<T>());
 				ImGui::CloseCurrentPopup();
 			}
 		}

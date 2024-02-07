@@ -63,18 +63,19 @@ namespace GraphicsAbstraction {
 	struct MeshComponent
 	{
 		AssetHandle Mesh = 0;
+		UUID RenderHandle;
 
 		MeshComponent() = default;
 		MeshComponent(const MeshComponent&) = default;
-		MeshComponent(AssetHandle mesh)
-			: Mesh(mesh)
+		MeshComponent(AssetHandle mesh, UUID renderHandle)
+			: Mesh(mesh), RenderHandle(renderHandle)
 		{ }
 	};
 
 	struct LightComponent
 	{
 		glm::vec3 Color = { 1.0f, 1.0f, 1.0f };
-		uint32_t RenderHandle;
+		UUID RenderHandle;
 
 		LightComponent() = default;
 		LightComponent(const LightComponent&) = default;

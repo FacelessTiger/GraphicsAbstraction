@@ -94,6 +94,67 @@ namespace Cobra {
 	#endif
 	};
 
+	struct RawBuffer
+	{
+		RenderResourceHandle handle;
+
+		static RawBuffer Create(uint index)
+		{
+			RawBuffer ret;
+			ret.handle.index = index;
+
+			return ret;
+		}
+
+		template <typename T>
+		T Load(uint index)
+		{
+			ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.handle.GetReadIndex());
+			T result = buffer.Load<T>(index);
+
+			return result;
+		}
+	};
+
+	struct RWRawBuffer
+	{
+		RenderResourceHandle handle;
+
+		static RWRawBuffer Create(uint index)
+		{
+			RWRawBuffer ret;
+			ret.handle.index = index;
+
+			return ret;
+		}
+
+		template <typename T>
+		T Load(uint index)
+		{
+			ByteAddressBuffer buffer = DESCRIPTOR_HEAP(ByteBufferHandle, this.handle.GetReadIndex());
+			T result = buffer.Load<T>(index);
+
+			return result;
+		}
+
+		template <typename T>
+		void Store(uint index, T value)
+		{
+			RWByteAddressBuffer buffer = DESCRIPTOR_HEAP(RWByteBufferHandle, this.handle.GetWriteIndex());
+			buffer.Store<T>(index, value);
+		}
+
+		uint InterlockedAdd(uint dest, uint value)
+		{
+			RWByteAddressBuffer buffer = DESCRIPTOR_HEAP(RWByteBufferHandle, this.handle.GetWriteIndex());
+
+			uint originalValue;
+			buffer.InterlockedAdd(dest, value, originalValue);
+			return originalValue;
+		}
+	};
+	
+
 	struct ArrayBuffer
 	{
 		RenderResourceHandle handle;
@@ -163,7 +224,6 @@ namespace Cobra {
 			return originalValue;
 		}
 	};
-
 
 	struct SimpleBuffer
 	{
@@ -272,6 +332,20 @@ namespace Cobra {
 		uint firstIndex;
 		uint vertexOffset;
 		uint firstInstance;
+
+		static DrawIndexedIndirectCommand Create(uint indexCount, uint instanceCount, uint firstIndex, uint vertexOffset, uint firstInstance)
+		{
+			DrawIndexedIndirectCommand ret;
+			ret.indexCount = indexCount;
+			ret.instanceCount = instanceCount;
+			ret.firstIndex = firstIndex;
+			ret.vertexOffset = vertexOffset;
+			ret.firstInstance = firstInstance;
+			ret.reserved = vertexOffset;
+			ret.reserved2 = firstInstance;
+
+			return ret;
+		};
 	};
 
 	float4 UnpackUnorm4x8(uint value)

@@ -10,6 +10,7 @@
 #include <InternalManagers/Utils.h>
 
 #include <d3d12.h>
+#include <D3D12MemAlloc.h>
 #include <d3dx12/d3dx12.h>
 #include <dxgi1_6.h>
 #include <comdef.h>
@@ -38,6 +39,7 @@ namespace GraphicsAbstraction {
 		static Ref<Impl<GraphicsContext>> Reference;
 		ComPtr<ID3D12Device2> Device;
 		ComPtr<ID3D12CommandQueue> GraphicsQueue;
+		ComPtr<D3D12MA::Allocator> Allocator;
 
 		ComPtr<ID3D12RootSignature> BindlessRootSignature;
 		ComPtr<ID3D12DescriptorHeap> BindlessDescriptorHeap, BindlessSamplerHeap;
@@ -72,6 +74,7 @@ namespace GraphicsAbstraction {
 	struct Impl<Image>
 	{
 		ComPtr<ID3D12Resource> Image;
+		ComPtr<D3D12MA::Allocation> Allocation;
 		D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle;
 		ResourceHandle Handle;
 
@@ -96,6 +99,7 @@ namespace GraphicsAbstraction {
 	struct Impl<Buffer>
 	{
 		ComPtr<ID3D12Resource> Resource;
+		ComPtr<D3D12MA::Allocation> Allocation;
 		ResourceHandle Handle;
 		D3D12_RESOURCE_STATES State = D3D12_RESOURCE_STATE_COMMON;
 
@@ -196,6 +200,22 @@ namespace GraphicsAbstraction {
 		Ref<Impl<GraphicsContext>> Context;
 
 		Impl(Filter min, Filter mag);
+	};
+
+	template<>
+	struct Impl<VirtualAllocation>
+	{
+		D3D12MA::VirtualAllocation Allocation;
+
+		Impl(D3D12MA::VirtualAllocation allocation);
+	};
+
+	template<>
+	struct Impl<VirtualAllocator>
+	{
+		ComPtr<D3D12MA::VirtualBlock> Block;
+
+		Impl(uint32_t size);
 	};
 
 }
