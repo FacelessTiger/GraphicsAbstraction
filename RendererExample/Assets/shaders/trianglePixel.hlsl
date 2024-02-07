@@ -24,8 +24,8 @@ struct PushConstant
 {
 	row_major float4x4 projection;
 	float3 cameraPos;
-	uint draws;
 	uint scene;
+	uint drawsOffset;
 	uint lightOffset;
 	uint lightCount;
 	uint sampler;
