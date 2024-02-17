@@ -80,6 +80,7 @@ namespace GraphicsAbstraction {
 
 		for (auto& deletionQueue : FrameDeletionQueues)
 			deletionQueue.Flush();
+		Allocator.Reset();
 
 		delete PipelineManager;
 		delete CommandSignatureManager;
@@ -129,10 +130,13 @@ namespace GraphicsAbstraction {
 			pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 
 			D3D12_MESSAGE_SEVERITY infoSeverity = D3D12_MESSAGE_SEVERITY_INFO;
+			D3D12_MESSAGE_ID denyID = D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE;
 
 			D3D12_INFO_QUEUE_FILTER filter = {};
 			filter.DenyList.NumSeverities = 1;
 			filter.DenyList.pSeverityList = &infoSeverity;
+			filter.DenyList.NumIDs = 1;
+			filter.DenyList.pIDList = &denyID;
 			D3D12_CHECK(pInfoQueue->PushStorageFilter(&filter));
 		}
 #endif

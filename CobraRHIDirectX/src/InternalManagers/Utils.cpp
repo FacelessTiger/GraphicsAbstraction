@@ -9,6 +9,7 @@ namespace GraphicsAbstraction::Utils {
 		switch (format)
 		{
 			case ImageFormat::Unknown:				return DXGI_FORMAT_UNKNOWN;
+			case ImageFormat::R32_SINT:				return DXGI_FORMAT_R32_SINT;
 			case ImageFormat::R16G16B16A16_SFLOAT:	return DXGI_FORMAT_R16G16B16A16_FLOAT;
 			case ImageFormat::R8G8B8A8_UNORM:		return DXGI_FORMAT_R8G8B8A8_UNORM;
 			case ImageFormat::B8G8R8A8_SRGB:		return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;

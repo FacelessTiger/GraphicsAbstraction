@@ -87,9 +87,11 @@ namespace GraphicsAbstraction {
 		virtual ~CommandList();
 
 		void Clear(const Ref<Image>& image, const glm::vec4& color);
+		void Clear(const Ref<Image>& image, const glm::ivec4& color);
 		void Present(const Ref<Swapchain>& swapchain);
 		
 		void CopyBufferRegion(const Ref<Buffer>& src, const Ref<Buffer>& dst, uint32_t size, uint32_t srcOffset = 0, uint32_t dstOffset = 0);
+		void CopyImageToBuffer(const Ref<Image>& src, const Ref<Buffer>& dst);
 		void CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset = 0);
 		void CopyToImage(const Ref<Image>& src, const Ref<Image>& dst);
 		void RWResourceBarrier(const Ref<Image>& resource);
@@ -108,8 +110,8 @@ namespace GraphicsAbstraction {
 		void SetFillMode(FillMode mode);
 		void EnableDepthTest(bool writeEnabled, CompareOperation op);
 		void DisableDepthTest();
-		void EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha);
-		void DisableColorBlend();
+		void EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha, uint32_t attachment = 0);
+		void DisableColorBlend(uint32_t attachment = 0);
 
 		void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 		void DrawIndirect(const Ref<Buffer>& buffer, uint64_t offset, uint32_t drawCount, uint32_t stride);

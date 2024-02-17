@@ -11,9 +11,12 @@ namespace GraphicsAbstraction {
 
 	void DeletionQueue::Flush()
 	{
-		for (auto resource : m_Resources)
-			resource.Reset();
-		m_Resources.clear();
+		for (auto resource : m_AResources)
+		{
+			resource.Allocation.Reset();
+			resource.Resource.Reset();
+		}
+		m_AResources.clear();
 
 		for (auto allocator : m_Allocators)
 			allocator.Reset();

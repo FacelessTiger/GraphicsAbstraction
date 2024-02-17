@@ -40,7 +40,7 @@ namespace GraphicsAbstraction {
 
 	Image::~Image()
 	{
-		impl->Context->GetFrameDeletionQueue().Push(impl->Image);
+		if (!impl->ExternalAllocation) impl->Context->GetFrameDeletionQueue().Push(impl->AResource);
 		delete impl;
 	}
 
@@ -49,7 +49,7 @@ namespace GraphicsAbstraction {
 		impl->Width = (uint32_t)size.x;
 		impl->Height = (uint32_t)size.y;
 
-		impl->Context->GetFrameDeletionQueue().Push(impl->Image);
+		impl->Context->GetFrameDeletionQueue().Push(impl->AResource);
 		impl->Create();
 	}
 
@@ -66,13 +66,15 @@ namespace GraphicsAbstraction {
 	}
 
 	Impl<Image>::Impl(ComPtr<ID3D12Resource> image, D3D12_RESOURCE_STATES state, ImageFormat format, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
-		: Context(Impl<GraphicsContext>::Reference), Image(image), State(state), Format(format), CpuHandle(cpuHandle)
-	{ }
+		: Context(Impl<GraphicsContext>::Reference), State(state), Format(format), CpuHandle(cpuHandle), ExternalAllocation(true)
+	{
+		AResource.Resource = image;
+	}
 
 	void Impl<Image>::TransitionState(ComPtr<ID3D12GraphicsCommandList> commandList, D3D12_RESOURCE_STATES newState)
 	{
 		if (State == newState) return;
-		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(Image.Get(), State, newState, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(AResource.Resource.Get(), State, newState, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
 		commandList->ResourceBarrier(1, &barrier);
 		State = newState;
@@ -102,7 +104,7 @@ namespace GraphicsAbstraction {
 		auto resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(d3d12Format, Width, Height, 1, 1, 1, 0, Utils::GAImageUsageToD3D12Flags(Usage));
 
 		State = Utils::GAImageUsageToD3D12(Usage);
-		D3D12_CHECK(Context->Allocator->CreateResource(&allocDesc, &resourceDesc, State, clearPointer, &Allocation, IID_PPV_ARGS(&Image)));
+		D3D12_CHECK(Context->Allocator->CreateResource(&allocDesc, &resourceDesc, State, clearPointer, &AResource.Allocation, IID_PPV_ARGS(&AResource.Resource)));
 
 		CreateViews(d3d12Format);
 	}
@@ -122,7 +124,7 @@ namespace GraphicsAbstraction {
 				.Format = d3d12Format,
 				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
 			};
-			Context->Device->CreateDepthStencilView(Image.Get(), &depthDesc, CpuHandle);
+			Context->Device->CreateDepthStencilView(AResource.Resource.Get(), &depthDesc, CpuHandle);
 		}
 
 		if (Usage & ImageUsage::ColorAttachment)
@@ -138,7 +140,7 @@ namespace GraphicsAbstraction {
 				.Format = d3d12Format,
 				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D
 			};
-			Context->Device->CreateRenderTargetView(Image.Get(), &desc, CpuHandle);
+			Context->Device->CreateRenderTargetView(AResource.Resource.Get(), &desc, CpuHandle);
 		}
 
 		uint32_t incrementSize = Context->Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -154,7 +156,7 @@ namespace GraphicsAbstraction {
 					.MipLevels = 1
 				}
 			};
-			Context->Device->CreateShaderResourceView(Image.Get(), &shaderViewDesc, handle);
+			Context->Device->CreateShaderResourceView(AResource.Resource.Get(), &shaderViewDesc, handle);
 		}
 
 		if (Usage & ImageUsage::Storage)
@@ -165,7 +167,7 @@ namespace GraphicsAbstraction {
 				.Format = d3d12Format,
 				.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D
 			};
-			Context->Device->CreateUnorderedAccessView(Image.Get(), nullptr, &unorderedViewDesc, handle);
+			Context->Device->CreateUnorderedAccessView(AResource.Resource.Get(), nullptr, &unorderedViewDesc, handle);
 		}
 	}
 

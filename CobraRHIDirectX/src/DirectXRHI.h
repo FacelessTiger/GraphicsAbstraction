@@ -73,8 +73,7 @@ namespace GraphicsAbstraction {
 	template<>
 	struct Impl<Image>
 	{
-		ComPtr<ID3D12Resource> Image;
-		ComPtr<D3D12MA::Allocation> Allocation;
+		Utils::AllocatedResource AResource;
 		D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle;
 		ResourceHandle Handle;
 
@@ -85,6 +84,7 @@ namespace GraphicsAbstraction {
 
 		Ref<Impl<GraphicsContext>> Context;
 		ComPtr<ID3D12DescriptorHeap> Heap; // only used for depthstencil and color attachment
+		bool ExternalAllocation = false;
 
 		Impl(const glm::vec2& size, ImageFormat format, ImageUsage usage);
 		Impl(ComPtr<ID3D12Resource> image, D3D12_RESOURCE_STATES state, ImageFormat format, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
@@ -98,8 +98,7 @@ namespace GraphicsAbstraction {
 	template<>
 	struct Impl<Buffer>
 	{
-		ComPtr<ID3D12Resource> Resource;
-		ComPtr<D3D12MA::Allocation> Allocation;
+		Utils::AllocatedResource AResource;
 		ResourceHandle Handle;
 		D3D12_RESOURCE_STATES State = D3D12_RESOURCE_STATE_COMMON;
 

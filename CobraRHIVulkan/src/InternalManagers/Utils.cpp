@@ -58,6 +58,7 @@ namespace GraphicsAbstraction::Utils {
 		switch (format)
 		{
 			case ImageFormat::Unknown:				return VK_FORMAT_UNDEFINED;
+			case ImageFormat::R32_SINT:				return VK_FORMAT_R32_SINT;
 			case ImageFormat::R16G16B16A16_SFLOAT:	return VK_FORMAT_R16G16B16A16_SFLOAT;
 			case ImageFormat::R8G8B8A8_UNORM:		return VK_FORMAT_R8G8B8A8_UNORM;
 			case ImageFormat::B8G8R8A8_SRGB:		return VK_FORMAT_B8G8R8A8_SRGB;

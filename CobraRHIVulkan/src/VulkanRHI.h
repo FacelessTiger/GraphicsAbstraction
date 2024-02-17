@@ -192,7 +192,7 @@ namespace GraphicsAbstraction {
 
 		Impl(VkCommandBuffer buffer);
 
-		void SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha);
+		void SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha, uint32_t attachment);
 		void SetDynamicState();
 	};
 

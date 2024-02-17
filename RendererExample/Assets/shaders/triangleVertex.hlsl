@@ -24,11 +24,12 @@ struct DrawData
 {
 	uint transformOffset;
 	uint primitiveOffset;
+	uint entityID;
 };
 
 struct Material
 {
-	float3 albedoFactor;
+	float4 albedoFactor;
 	uint albedoTexture;
 	uint metallicRoughnessTexture;
 	float metallicFactor;
@@ -54,6 +55,7 @@ struct VertexOutput
 	float3 worldPosition: POSITION0;
 	float3 normal: NORMAL0;
 	Material material: COLOR0;
+	uint entityID: POSITION1;
 	float2 uv: TEXCOORD0;
 };
 
@@ -74,6 +76,7 @@ VertexOutput main(uint vertexID: SV_VertexID, uint instanceIndex: SV_InstanceID)
 	output.worldPosition = worldPos.xyz;
 	output.normal = mul(vertex.normal, (float3x3)transpose(Cobra::Inverse(modelMatrix)));
 	output.material = material;
+	output.entityID = draw.entityID;
 	output.uv = float2(vertex.uvX, vertex.uvY);
 	return output;
 }

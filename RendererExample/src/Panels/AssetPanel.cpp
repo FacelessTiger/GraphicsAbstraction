@@ -3,7 +3,10 @@
 #include <Assets/AssetManager.h>
 #include <Assets/Material.h>
 #include <Renderer/Texture.h>
+#include <Renderer/Renderer.h>
 #include <imgui.h>
+
+#include <glm/gtc/type_ptr.hpp>
 
 namespace GraphicsAbstraction {
 
@@ -38,7 +41,7 @@ namespace GraphicsAbstraction {
 			Texture& metallicRoughnessTexture = (Texture&)*AssetManager::GetAsset(material.MetallicRoughnessTexture);
 
 			ImGui::Text("Material name: %s", material.Name.c_str());
-			ImGui::Text("Albedo factor: (%f, %f, %f)", material.AlbedoFactor.x, material.AlbedoFactor.y, material.AlbedoFactor.z);
+			if (ImGui::ColorEdit4("Albedo factor", glm::value_ptr(material.AlbedoFactor))) Renderer::UpdateMaterialAlbedoFactor(material.RenderHandle, material.AlbedoFactor);
 			ImGui::Image((ImTextureID)albedoTexture.GetImage()->GetSampledHandle(), { 128, 128 });
 			ImGui::Image((ImTextureID)metallicRoughnessTexture.GetImage()->GetSampledHandle(), { 128, 128 });
 			ImGui::Text("Metallic factor: %f", material.MetallicFactor);

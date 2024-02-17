@@ -39,18 +39,21 @@ namespace GraphicsAbstraction {
 
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
+		bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
 		void OnImGuiRender();
 	private:
 		static Application* s_Instance;
 
 		bool m_Running = true;
 		bool m_Minimized = false;
-		bool m_Vsync = true;
+		bool m_ViewportHovered = false;
+		bool m_Vsync = true, m_CullPaused = false;
 		glm::vec2 m_ViewportSize;
 		double m_FrameTime = 0.0;
 
 		Ref<Window> m_Window;
 		Ref<Scene> m_Scene;
+		Entity m_HoveredEntity;
 		EditorCamera m_EditorCamera;
 
 		AssetHandle m_WhiteTexture;

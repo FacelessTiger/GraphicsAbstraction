@@ -14,6 +14,19 @@ namespace GraphicsAbstraction {
 		m_Context = context;
 	}
 
+	void SceneHierarchyPanel::SetSelectedEntity(Entity entity)
+	{
+		m_MainSelection = entity;
+
+		if (entity != Entity())
+		{
+			m_Selections.clear();
+			m_Selections.insert(entity);
+
+			m_CachedEuler = glm::degrees(glm::eulerAngles(entity.GetComponent<TransformComponent>().Rotation));
+		}
+	}
+
 	void SceneHierarchyPanel::OnImGuiRender()
 	{
 		ImGui::Begin("Scene Hierarchy");
@@ -21,11 +34,11 @@ namespace GraphicsAbstraction {
 		if (m_Context)
 		{
 			m_Context->m_Registry.each([&](auto entityID)
-				{
-					Entity entity(entityID, m_Context.Get());
-					if (entity.GetComponent<RelationshipComponent>().Parent == -1)
-						DrawEntityNode(entity);
-				});
+			{
+				Entity entity(entityID, m_Context.Get());
+				if (entity.GetComponent<RelationshipComponent>().Parent == -1)
+					DrawEntityNode(entity);
+			});
 
 			// Right-click on blank space
 			if (ImGui::BeginPopupContextWindow(0, ImGuiPopupFlags_NoOpenOverItems | ImGuiPopupFlags_MouseButtonRight))
@@ -35,11 +48,33 @@ namespace GraphicsAbstraction {
 
 				ImGui::EndPopup();
 			}
+
+			// Selection rect
+			static ImVec2 startPos = { 0, 0 };
+			static ImVec2 endPos = { 0, 0 };
+			static bool dragging = false;
+			if (ImGui::IsWindowHovered())
+			{
+				if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+				{
+					startPos = ImGui::GetMousePos();
+					dragging = true;
+				}
+				if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) endPos = ImGui::GetMousePos();
+			}
+
+			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) dragging = false;
+			if (dragging)
+			{
+				ImDrawList* drawList = ImGui::GetForegroundDrawList();
+				drawList->AddRect(startPos, endPos, ImGui::GetColorU32(IM_COL32(0, 130, 216, 255))); // border
+				drawList->AddRectFilled(startPos, endPos, ImGui::GetColorU32(IM_COL32(0, 130, 216, 50))); // background
+			}
 		}
 
 		ImGui::Begin("Properties");
-		if (m_SelectionContext)
-			DrawComponents(m_SelectionContext);
+		if (m_MainSelection)
+			DrawComponents(m_MainSelection);
 		ImGui::End();
 
 		ImGui::End();
@@ -49,11 +84,17 @@ namespace GraphicsAbstraction {
 	{
 		auto& relationship = entity.GetComponent<RelationshipComponent>();
 		auto& tag = entity.GetComponent<TagComponent>().Tag;
-		ImGuiTreeNodeFlags flags = ((m_SelectionContext == entity) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+		ImGuiTreeNodeFlags flags = ((m_Selections.find(entity) != m_Selections.end()) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow;
 
 		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, tag.c_str());
-		if (ImGui::IsItemClicked())
-			m_SelectionContext = entity;
+		if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+		{
+			m_MainSelection = entity;
+			m_CachedEuler = glm::degrees(glm::eulerAngles(entity.GetComponent<TransformComponent>().Rotation));
+			
+			if (!ImGui::IsKeyDown(ImGuiKey_LeftAlt)) m_Selections.clear();
+			m_Selections.insert(entity);
+		}
 
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 		{
@@ -80,6 +121,14 @@ namespace GraphicsAbstraction {
 			ImGui::EndDragDropTarget();
 		}
 
+		bool entityDeleted = false;
+		if (ImGui::BeginPopupContextItem())
+		{
+			if (ImGui::MenuItem("Delete Entity")) entityDeleted = true;
+
+			ImGui::EndPopup();
+		}
+
 		if (opened)
 		{
 			for (const auto& uuid : relationship.Children)
@@ -89,6 +138,16 @@ namespace GraphicsAbstraction {
 			}
 
 			ImGui::TreePop();
+		}
+
+		if (entityDeleted)
+		{
+			for (auto entity : m_Selections)
+			{
+				m_Context->DestroyEntity(entity);
+				if (m_MainSelection == entity) m_MainSelection = {};
+			}
+			m_Selections.clear();
 		}
 	}
 
@@ -240,7 +299,7 @@ namespace GraphicsAbstraction {
 		{
 			DisplayAddComponentEntry<LightComponent>("Light", [&](LightComponent& component)
 			{
-				TransformComponent& transform = m_SelectionContext.GetComponent<TransformComponent>();
+				TransformComponent& transform = entity.GetComponent<TransformComponent>();
 				component.RenderHandle = Renderer::UploadLight(transform.Translation, component.Color);
 			});
 			/*DisplayAddComponentEntry<CameraComponent>("Camera");
@@ -261,11 +320,10 @@ namespace GraphicsAbstraction {
 		{
 			bool changed = false;
 			if (DrawVec3Control("Translation", component.Translation)) changed = true;
-			glm::vec3 rotation = glm::degrees(glm::eulerAngles(component.Rotation));
-			if (DrawVec3Control("Rotation", rotation))
+			if (DrawVec3Control("Rotation", m_CachedEuler))
 			{
 				changed = true;
-				component.Rotation = glm::quat(glm::radians(rotation));
+				component.Rotation = glm::quat(glm::radians(m_CachedEuler));
 			}
 			if (DrawVec3Control("Scale", component.Scale, 1.0f)) changed = true;
 
@@ -309,11 +367,11 @@ namespace GraphicsAbstraction {
 	template<typename T, typename OnAdded>
 	inline void SceneHierarchyPanel::DisplayAddComponentEntry(const std::string& entryName, OnAdded onAdded)
 	{
-		if (!m_SelectionContext.HasComponent<T>())
+		if (!m_MainSelection.HasComponent<T>())
 		{
 			if (ImGui::MenuItem(entryName.c_str()))
 			{
-				onAdded(m_SelectionContext.AddComponent<T>());
+				onAdded(m_MainSelection.AddComponent<T>());
 				ImGui::CloseCurrentPopup();
 			}
 		}

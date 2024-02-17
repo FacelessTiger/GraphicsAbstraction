@@ -10,6 +10,7 @@ namespace GraphicsAbstraction {
 	public:
 		void SetContext(const Ref<Scene>& context);
 
+		void SetSelectedEntity(Entity entity);
 		void OnImGuiRender();
 	private:
 		template<typename T, typename OnAdded>
@@ -19,7 +20,10 @@ namespace GraphicsAbstraction {
 		void DrawComponents(Entity entity);
 	private:
 		Ref<Scene> m_Context;
-		Entity m_SelectionContext;
+		std::set<Entity> m_Selections;
+		Entity m_MainSelection;
+
+		glm::vec3 m_CachedEuler;
 	};
 
 }

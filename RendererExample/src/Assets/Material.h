@@ -8,7 +8,7 @@ namespace GraphicsAbstraction {
 	{
 	public:
 		UUID RenderHandle;
-		glm::vec3 AlbedoFactor;
+		glm::vec4 AlbedoFactor;
 		AssetHandle AlbedoTexture;
 		AssetHandle MetallicRoughnessTexture;
 		float MetallicFactor;

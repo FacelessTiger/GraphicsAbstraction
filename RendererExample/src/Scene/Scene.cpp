@@ -19,6 +19,14 @@ namespace GraphicsAbstraction {
 		return entity;
 	}
 
+	void Scene::DestroyEntity(Entity entity)
+	{
+		m_EntityMap.erase(entity.GetUUID());
+
+		if (entity.HasComponent<LightComponent>()) Renderer::RemoveLight(entity.GetComponent<LightComponent>().RenderHandle);
+		m_Registry.destroy(entity);
+	}
+
 	Entity Scene::GetEntityByUUID(UUID uuid)
 	{
 		if (m_EntityMap.find(uuid) != m_EntityMap.end())

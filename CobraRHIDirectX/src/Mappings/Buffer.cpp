@@ -11,7 +11,7 @@ namespace GraphicsAbstraction {
 
 	Buffer::~Buffer()
 	{
-		impl->Context->GetFrameDeletionQueue().Push(impl->Resource);
+		impl->Context->GetFrameDeletionQueue().Push(impl->AResource);
 		delete impl;
 	}
 
@@ -26,11 +26,7 @@ namespace GraphicsAbstraction {
 
 	}
 
-	void Buffer::GetData(void* data, uint32_t size, uint32_t offset) 
-	{
-
-	}
-
+	void Buffer::GetData(void* data, uint32_t size, uint32_t offset) { memcpy(data, (char*)impl->Data + offset, size); }
 	uint32_t Buffer::GetHandle() const { return impl->Handle.GetValue(); }
 	uint32_t Buffer::GetSize() const { return impl->Size; }
 
@@ -38,12 +34,20 @@ namespace GraphicsAbstraction {
 		: Context(Impl<GraphicsContext>::Reference), Size(size), Usage(usage)
 	{
 		D3D12_HEAP_TYPE heapType;
-		if (flags & BufferFlags::DeviceLocal) heapType = (flags & BufferFlags::Mapped) ? D3D12_HEAP_TYPE_GPU_UPLOAD : D3D12_HEAP_TYPE_DEFAULT;
-		else heapType = D3D12_HEAP_TYPE_UPLOAD;
+		if (flags & BufferFlags::DeviceLocal)
+		{
+			if (flags & BufferFlags::Mapped) heapType = D3D12_HEAP_TYPE_GPU_UPLOAD;
+			else heapType = D3D12_HEAP_TYPE_DEFAULT;
+		}
+		else
+		{
+			if (usage & BufferUsage::TransferDst) heapType = D3D12_HEAP_TYPE_READBACK;
+			else heapType = D3D12_HEAP_TYPE_UPLOAD;
+		}
 		D3D12MA::ALLOCATION_DESC allocDesc = { .HeapType = heapType };
 
 		auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(size, (usage & BufferUsage::IndirectBuffer) ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE);
-		D3D12_CHECK(Context->Allocator->CreateResource(&allocDesc, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, &Allocation, IID_PPV_ARGS(&Resource)));
+		D3D12_CHECK(Context->Allocator->CreateResource(&allocDesc, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, &AResource.Allocation, IID_PPV_ARGS(&AResource.Resource)));
 		
 		if (flags & BufferFlags::Mapped)
 		{
@@ -51,7 +55,7 @@ namespace GraphicsAbstraction {
 				.Begin = 0,
 				.End = 0
 			};
-			D3D12_CHECK(Resource->Map(0, &range, &Data));
+			D3D12_CHECK(AResource.Resource->Map(0, &range, &Data));
 		}
 
 		if (usage & BufferUsage::StorageBuffer)
@@ -68,7 +72,7 @@ namespace GraphicsAbstraction {
 					.Flags = D3D12_BUFFER_SRV_FLAG_RAW
 				}
 			};
-			Context->Device->CreateShaderResourceView(Resource.Get(), &shaderViewDesc, handle);
+			Context->Device->CreateShaderResourceView(AResource.Resource.Get(), &shaderViewDesc, handle);
 
 			if (usage & BufferUsage::IndirectBuffer)
 			{
@@ -81,7 +85,7 @@ namespace GraphicsAbstraction {
 						.Flags = D3D12_BUFFER_UAV_FLAG_RAW
 					}
 				};
-				Context->Device->CreateUnorderedAccessView(Resource.Get(), nullptr, &unorderedViewDesc, handle);
+				Context->Device->CreateUnorderedAccessView(AResource.Resource.Get(), nullptr, &unorderedViewDesc, handle);
 			}
 		}
 	}
@@ -89,7 +93,7 @@ namespace GraphicsAbstraction {
 	void Impl<Buffer>::TransitionState(ComPtr<ID3D12GraphicsCommandList> commandList, D3D12_RESOURCE_STATES newState)
 	{
 		if (State == newState) return;
-		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(Resource.Get(), State, newState, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(AResource.Resource.Get(), State, newState, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
 		commandList->ResourceBarrier(1, &barrier);
 		State = newState;

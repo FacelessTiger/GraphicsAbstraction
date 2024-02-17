@@ -1,6 +1,7 @@
 #include "Application.h"
 
 #include <Core/Core.h>
+#include <core/Input.h>
 #include <Renderer/Renderer.h>
 #include <Assets/Material.h>
 #include <Assets/Mesh.h>
@@ -64,6 +65,7 @@ namespace GraphicsAbstraction {
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<WindowCloseEvent>(GA_BIND_EVENT_FN(Application::OnWindowClose));
 		dispatcher.Dispatch<WindowResizeEvent>(GA_BIND_EVENT_FN(Application::OnWindowResize));
+		dispatcher.Dispatch<MouseButtonPressedEvent>(GA_BIND_EVENT_FN(Application::OnMouseButtonPressed));
 	}
 
 	void Application::Run()
@@ -165,9 +167,10 @@ namespace GraphicsAbstraction {
 		{
 			Ref<Material> builtInMaterial = CreateRef<Material>();
 			builtInMaterial->Name = mat.name;
-			builtInMaterial->AlbedoFactor.x = mat.pbrData.baseColorFactor[0];
-			builtInMaterial->AlbedoFactor.y = mat.pbrData.baseColorFactor[1];
-			builtInMaterial->AlbedoFactor.z = mat.pbrData.baseColorFactor[2];
+			builtInMaterial->AlbedoFactor.r = mat.pbrData.baseColorFactor[0];
+			builtInMaterial->AlbedoFactor.g = mat.pbrData.baseColorFactor[1];
+			builtInMaterial->AlbedoFactor.b = mat.pbrData.baseColorFactor[2];
+			builtInMaterial->AlbedoFactor.a = mat.pbrData.baseColorFactor[3];
 			builtInMaterial->MetallicFactor = mat.pbrData.metallicFactor;
 			builtInMaterial->RoughnessFactor = mat.pbrData.roughnessFactor;
 			builtInMaterial->AO = 0.5f;
@@ -294,7 +297,7 @@ namespace GraphicsAbstraction {
 				AssetHandle meshHandle = builtInMeshes[*node.meshIndex];
 				Mesh& mesh = (Mesh&)*AssetManager::GetAsset(meshHandle);
 
-				UUID modelID = Renderer::UploadModel(mesh.RenderHandle, entity.GetWorldTransform());
+				UUID modelID = Renderer::UploadModel(mesh.RenderHandle, entity.GetWorldTransform(), (uint32_t)entity);
 				entity.AddComponent<MeshComponent>(meshHandle, modelID);
 			}
 		}
@@ -332,6 +335,17 @@ namespace GraphicsAbstraction {
 		return true;
 	}
 
+	bool Application::OnMouseButtonPressed(MouseButtonPressedEvent& e)
+	{
+		if (e.GetMouseButton() == 0)
+		{
+			if (m_ViewportHovered && !Input::IsKeyPressed(Key::LeftAlt))
+				m_SceneHierarchyPanel.SetSelectedEntity(m_HoveredEntity);
+		}
+
+		return false;
+	}
+
 	void Application::OnImGuiRender()
 	{
 		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
@@ -365,6 +379,12 @@ namespace GraphicsAbstraction {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
 		ImGui::Begin("Viewport");
 
+		auto viewportMinRegion = ImGui::GetWindowContentRegionMin();
+		auto viewportOffset = ImGui::GetWindowPos();
+		glm::vec2 viewportPos = { viewportMinRegion.x + viewportOffset.x, viewportMinRegion.y + viewportOffset.y };
+
+		m_ViewportHovered = ImGui::IsWindowHovered();
+
 		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
 		if (m_ViewportSize.x != viewportPanelSize.x || m_ViewportSize.y != viewportPanelSize.y)
 		{
@@ -379,8 +399,25 @@ namespace GraphicsAbstraction {
 		ImGui::Begin("Settings");
 		ImGui::Text("%.3fms %ifps", m_FrameTime, (int)(1.0 / m_FrameTime * 1000.0));
 		if (ImGui::Checkbox("Vsync", &m_Vsync))
-			Renderer::SetVsync(m_Vsync);		
+			Renderer::SetVsync(m_Vsync);	
+		if (ImGui::Checkbox("Cull paused", &m_CullPaused))
+			Renderer::SetCullPaused(m_CullPaused);
 		if (ImGui::Button("Serialize shaders")) ShaderManager::Serialize();
+
+		auto[mx, my] = ImGui::GetMousePos();
+		mx -= viewportPos.x;
+		my -= viewportPos.y;
+
+		if (mx >= 0 && my >= 0 && mx < m_ViewportSize.x && my < m_ViewportSize.y)
+		{
+			mx *= (1920.0f / m_ViewportSize.x);
+			my *= (1080.0f / m_ViewportSize.y);
+			ImGui::Text("Mouse pos: (%d, %d)", (int)mx, (int)my);
+
+			int pixelData = Renderer::GetEntityIDAt((int)mx, (int)my);
+			ImGui::Text("Entity id: %d", pixelData);
+			m_HoveredEntity = (pixelData == -1) ? Entity() : Entity((entt::entity)pixelData, m_Scene.Get());
+		}
 		ImGui::End();
 
 		m_SceneHierarchyPanel.OnImGuiRender();

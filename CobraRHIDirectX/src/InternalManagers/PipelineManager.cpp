@@ -74,6 +74,9 @@ namespace GraphicsAbstraction {
 			.pRootSignature = m_Context.BindlessRootSignature.Get(),
 			.VS = Impl<Shader>::GetShaderByID(key.Shaders[0])->Shader,
 			.PS = Impl<Shader>::GetShaderByID(key.Shaders[4])->Shader,
+			.BlendState = {
+				.IndependentBlendEnable = true
+			},
 			.SampleMask = (UINT)~0,
 			.RasterizerState = {
 				.FillMode = Utils::GAFillModeToD3D12(key.FillMode),
@@ -90,25 +93,26 @@ namespace GraphicsAbstraction {
 			.SampleDesc = {
 				.Count = 1,
 				.Quality = 0
-			},
-		};
-
-		D3D12_RENDER_TARGET_BLEND_DESC blendDesc = {
-			.BlendEnable = key.BlendEnable,
-			.SrcBlend = Utils::GABlendToD3D12(key.SrcBlend),
-			.DestBlend = Utils::GABlendToD3D12(key.DstBlend),
-			.BlendOp = Utils::GABlendOpToD3D12(key.BlendOp),
-			.SrcBlendAlpha = Utils::GABlendToD3D12(key.SrcBlendAlpha),
-			.DestBlendAlpha = Utils::GABlendToD3D12(key.DstBlendAlpha),
-			.BlendOpAlpha = Utils::GABlendOpToD3D12(key.BlendOpAlpha),
-			.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL
+			}
 		};
 
 		for (int i = 0; i < key.ColorAttachments.size(); i++)
 		{
-			if (key.ColorAttachments[i] == ImageFormat::Unknown) break;
+			auto& attachment = key.ColorAttachments[i];
+			if (attachment.Format == ImageFormat::Unknown) break;
 
-			desc.RTVFormats[i] = Utils::GAImageFormatToD3D12(key.ColorAttachments[i]);
+			D3D12_RENDER_TARGET_BLEND_DESC blendDesc = {
+				.BlendEnable = attachment.BlendInfo.BlendEnable,
+				.SrcBlend = Utils::GABlendToD3D12(attachment.BlendInfo.SrcBlend),
+				.DestBlend = Utils::GABlendToD3D12(attachment.BlendInfo.DstBlend),
+				.BlendOp = Utils::GABlendOpToD3D12(attachment.BlendInfo.BlendOp),
+				.SrcBlendAlpha = Utils::GABlendToD3D12(attachment.BlendInfo.SrcBlendAlpha),
+				.DestBlendAlpha = Utils::GABlendToD3D12(attachment.BlendInfo.DstBlendAlpha),
+				.BlendOpAlpha = Utils::GABlendOpToD3D12(attachment.BlendInfo.BlendOpAlpha),
+				.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL
+			};
+
+			desc.RTVFormats[i] = Utils::GAImageFormatToD3D12(attachment.Format);
 			desc.BlendState.RenderTarget[i] = blendDesc;
 			desc.NumRenderTargets++;
 		}

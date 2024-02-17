@@ -13,6 +13,7 @@ namespace GraphicsAbstraction {
 	enum class ImageFormat
 	{
 		Unknown = 0,
+		R32_SINT,
 		R16G16B16A16_SFLOAT,
 		R8G8B8A8_UNORM,
 		B8G8R8A8_SRGB,

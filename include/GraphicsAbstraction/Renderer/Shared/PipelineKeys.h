@@ -22,19 +22,8 @@
 
 namespace GraphicsAbstraction {
 
-	struct GraphicsPipelineKey
+	struct BlendInfo
 	{
-		// attachments/shaders
-		std::array<uint32_t, 5> Shaders = {};
-		std::array<ImageFormat, 8> ColorAttachments = {};
-		ImageFormat DepthAttachment = ImageFormat::Unknown;
-
-		// depth test
-		bool DepthTestEnable = false;
-		bool DepthWriteEnable = false;
-		CompareOperation DepthCompareOp = CompareOperation::Never;
-
-		// color blending
 		bool BlendEnable = false;
 		Blend SrcBlend = Blend::Zero;
 		Blend DstBlend = Blend::Zero;
@@ -42,6 +31,29 @@ namespace GraphicsAbstraction {
 		Blend DstBlendAlpha = Blend::Zero;
 		BlendOp BlendOpAlpha = BlendOp::Add;
 		BlendOp BlendOp = BlendOp::Add;
+
+		GA_PIPELINE_EQUALITY(BlendInfo);
+	};
+
+	struct ColorAttachment
+	{
+		ImageFormat Format;
+		BlendInfo BlendInfo;
+
+		GA_PIPELINE_EQUALITY(ColorAttachment);
+	};
+
+	struct GraphicsPipelineKey
+	{
+		// attachments/shaders
+		std::array<uint32_t, 5> Shaders = {};
+		std::array<ColorAttachment, 8> ColorAttachments = {};
+		ImageFormat DepthAttachment = ImageFormat::Unknown;
+
+		// depth test
+		bool DepthTestEnable = false;
+		bool DepthWriteEnable = false;
+		CompareOperation DepthCompareOp = CompareOperation::Never;
 
 		// Rasterization
 		FillMode FillMode = FillMode::Solid;

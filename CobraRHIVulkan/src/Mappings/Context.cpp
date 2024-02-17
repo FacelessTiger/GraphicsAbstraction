@@ -53,7 +53,7 @@ namespace GraphicsAbstraction {
 
 	Impl<GraphicsContext>::Impl(uint32_t frameInFlightCount)
 	{
-		//m_RefCount--; // Kinda cheating, but its okey ;P
+		m_RefCount--; // Kinda cheating, but its okey ;P
 		SetupInstance();
 		SetupPhysicalDevice();
 		SetupLogicalDevice();

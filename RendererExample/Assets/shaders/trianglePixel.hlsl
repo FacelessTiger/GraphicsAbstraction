@@ -4,7 +4,7 @@ static const float PI = 3.14159265f;
 
 struct Material
 {
-	float3 albedoFactor;
+	float4 albedoFactor;
 	uint albedoTexture;
 	uint metallicRoughnessTexture;
 	float metallicFactor;
@@ -38,10 +38,17 @@ struct VertexInput
 	float3 worldPosition: POSITION0;
 	float3 normal: NORMAL0;
 	Material material: COLOR0;
+	uint entityID: POSITION1;
 	float2 uv: TEXCOORD0;
 };
 
-float3 FresnelShlick(float cosTheta, float3 f0)
+struct PixelOutput
+{
+	float4 color: SV_Target0;
+	int entityID: SV_Target1;
+};
+
+float4 FresnelShlick(float cosTheta, float4 f0)
 {
 	return f0 + (1.0 - f0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
@@ -81,12 +88,12 @@ float GeometrySmith(float3 n, float3 v, float3 l, float roughness)
 	return ggx1 * ggx2;
 }
 
-float4 main(VertexInput input): SV_Target
+PixelOutput main(VertexInput input)
 {
 	Cobra::RawBuffer scene = Cobra::RawBuffer::Create(pushConstants.scene);
 	float4 metallicRoughnessSample = Cobra::Texture::Create(input.material.metallicRoughnessTexture).Sample2D<float4>(pushConstants.sampler, input.uv);
 
-	float3 albedo = (float3)Cobra::Texture::Create(input.material.albedoTexture).Sample2D<float4>(pushConstants.sampler, input.uv) * input.material.albedoFactor;
+	float4 albedo = Cobra::Texture::Create(input.material.albedoTexture).Sample2D<float4>(pushConstants.sampler, input.uv) * input.material.albedoFactor;
 	float metallic = metallicRoughnessSample.b * input.material.metallicFactor;
 	float roughness = metallicRoughnessSample.g * input.material.roughnessFactor;
 	float ao = input.material.ao;
@@ -94,10 +101,10 @@ float4 main(VertexInput input): SV_Target
 	float3 n = normalize(input.normal);
 	float3 v = normalize(pushConstants.cameraPos - input.worldPosition);
 
-	float3 f0 = 0.04;
+	float4 f0 = 0.04;
 	f0 = lerp(f0, albedo, metallic);
 
-	float3 lo = 0.0;
+	float4 lo = 0.0;
 	for (int i = 0; i < pushConstants.lightCount; i++)
 	{
 		Light light = scene.Load<Light>((i * sizeof(Light)) + pushConstants.lightOffset);
@@ -111,24 +118,29 @@ float4 main(VertexInput input): SV_Target
 
 		float ndf = DistributionGGX(n, h, roughness);
 		float g = GeometrySmith(n, v, l, roughness);
-		float3 f = FresnelShlick(max(dot(h, v), 0.0), f0);
+		float4 f = FresnelShlick(max(dot(h, v), 0.0), f0);
 
-		float3 kS = f;
-		float3 kD = 1.0 - kS;
+		float4 kS = f;
+		float4 kD = 1.0 - kS;
 		kD *= 1.0 - metallic;
 
-		float3 numerator = ndf * g * f;
+		float4 numerator = ndf * g * f;
 		float denominator = 4.0 * max(dot(n, v), 0.0) * max(dot(n, l), 0.0) + 0.0001;
-		float3 specular = numerator / denominator;
+		float4 specular = numerator / denominator;
 
 		float nDotL = max(dot(n, l), 0.0);
-		lo += (kD * albedo / PI + specular) * radiance * nDotL;
+		lo += (kD * albedo / PI + specular) * float4(radiance, 1.0) * nDotL;
 	}
 
-	float3 ambient = 0.03 * albedo * ao;
-	float3 color = ambient + lo;
+	float4 ambient = 0.03 * albedo * ao;
+	float4 color = ambient + lo;
 
 	color = color / (color + 1.0);
 	color = pow(color, 1.0 / 2.2);
-	return float4(color, 1.0f);
+	color.w = albedo.w;
+
+	PixelOutput output;
+	output.color = color;
+	output.entityID = input.entityID;
+	return output;
 }

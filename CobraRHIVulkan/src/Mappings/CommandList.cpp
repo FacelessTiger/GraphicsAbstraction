@@ -11,7 +11,17 @@ namespace GraphicsAbstraction {
 	{
 		image->impl->TransitionLayout(impl->CommandBuffer, VK_IMAGE_LAYOUT_GENERAL);
 
-		VkClearColorValue clearValue = { { color.x, color.y, color.z, color.w } };
+		VkClearColorValue clearValue = { .float32 = { color.x, color.y, color.z, color.w } };
+		VkImageSubresourceRange clearRange = Utils::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+
+		vkCmdClearColorImage(impl->CommandBuffer, image->impl->Image.Image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+	}
+
+	void GraphicsAbstraction::CommandList::Clear(const Ref<Image>& image, const glm::ivec4& color)
+	{
+		image->impl->TransitionLayout(impl->CommandBuffer, VK_IMAGE_LAYOUT_GENERAL);
+
+		VkClearColorValue clearValue = { .int32 = { color.x, color.y, color.z, color.w } };
 		VkImageSubresourceRange clearRange = Utils::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
 
 		vkCmdClearColorImage(impl->CommandBuffer, image->impl->Image.Image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
@@ -31,6 +41,20 @@ namespace GraphicsAbstraction {
 			.size = size
 		};
 		vkCmdCopyBuffer(impl->CommandBuffer, src->impl->Buffer.Buffer, dst->impl->Buffer.Buffer, 1, &copy);
+	}
+
+	void CommandList::CopyImageToBuffer(const Ref<Image>& src, const Ref<Buffer>& dst)
+	{
+		src->impl->TransitionLayout(impl->CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		VkBufferImageCopy copy = {
+			.imageSubresource = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.layerCount = 1
+			},
+			.imageExtent = { src->impl->Width, src->impl->Height, 1 }
+		};
+		vkCmdCopyImageToBuffer(impl->CommandBuffer, src->impl->Image.Image, src->impl->Layout, dst->impl->Buffer.Buffer, 1, &copy);
 	}
 
 	void CommandList::CopyToImage(const Ref<Buffer>& src, const Ref<Image>& dst, uint32_t srcOffset)
@@ -106,19 +130,26 @@ namespace GraphicsAbstraction {
 			std::vector<VkRenderingAttachmentInfo> vulkanColorAttachments;
 			VkRenderingAttachmentInfo vulkanDepthAttachment = {};
 
-			for (int i = 0; i < colorAttachments.size(); i++)
+			for (int i = 0; i < impl->GraphicsPipelineKey.ColorAttachments.size(); i++)
 			{
-				auto imageImpl = colorAttachments[i]->impl;
-				imageImpl->TransitionLayout(impl->CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-				impl->GraphicsPipelineKey.ColorAttachments[i] = imageImpl->Format;
+				if (i < colorAttachments.size())
+				{
+					auto imageImpl = colorAttachments[i]->impl;
+					imageImpl->TransitionLayout(impl->CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+					impl->GraphicsPipelineKey.ColorAttachments[i].Format = imageImpl->Format;
 
-				vulkanColorAttachments.push_back({
-					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-					.imageView = imageImpl->View,
-					.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-					.storeOp = VK_ATTACHMENT_STORE_OP_STORE
-				});
+					vulkanColorAttachments.push_back({
+						.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+						.imageView = imageImpl->View,
+						.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+						.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+						.storeOp = VK_ATTACHMENT_STORE_OP_STORE
+					});
+				}
+				else
+				{
+					impl->GraphicsPipelineKey.ColorAttachments[i].Format = ImageFormat::Unknown;
+				}
 			}
 
 			impl->GraphicsPipelineKey.DepthAttachment = ImageFormat::Unknown;
@@ -357,14 +388,14 @@ namespace GraphicsAbstraction {
 		}
 	}
 
-	void CommandList::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
+	void CommandList::EnableColorBlend(Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha, uint32_t attachment)
 	{
-		impl->SetColorBlend(true, srcBlend, dstBlend, blendOp, srcBlendAlpha, dstBlendAlpha, blendAlpha);
+		impl->SetColorBlend(true, srcBlend, dstBlend, blendOp, srcBlendAlpha, dstBlendAlpha, blendAlpha, attachment);
 	}
 
-	void CommandList::DisableColorBlend()
+	void CommandList::DisableColorBlend(uint32_t attachment)
 	{
-		impl->SetColorBlend(false, Blend::Zero, Blend::Zero, BlendOp::Add, Blend::Zero, Blend::Zero, BlendOp::Add);
+		impl->SetColorBlend(false, Blend::Zero, Blend::Zero, BlendOp::Add, Blend::Zero, Blend::Zero, BlendOp::Add, attachment);
 	}
 
 	void CommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -429,7 +460,7 @@ namespace GraphicsAbstraction {
 		: Context(Impl<GraphicsContext>::Reference), CommandBuffer(buffer)
 	{ }
 
-	void Impl<CommandList>::SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha)
+	void Impl<CommandList>::SetColorBlend(bool enabled, Blend srcBlend, Blend dstBlend, BlendOp blendOp, Blend srcBlendAlpha, Blend dstBlendAlpha, BlendOp blendAlpha, uint32_t attachment)
 	{
 		if (g_DynamicState3Supported)
 		{
@@ -443,19 +474,20 @@ namespace GraphicsAbstraction {
 				.alphaBlendOp = Utils::GABlendOpToVulkan(blendAlpha)
 			};
 
-			Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, 0, 1, &enable);
-			Context->vkCmdSetColorBlendEquationEXT(CommandBuffer, 0, 1, &equation);
+			Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, attachment, 1, &enable);
+			Context->vkCmdSetColorBlendEquationEXT(CommandBuffer, attachment, 1, &equation);
 			ColorBlendSet = true;
 		}
 		else
 		{
-			GraphicsPipelineKey.BlendEnable = enabled;
-			GraphicsPipelineKey.SrcBlend = srcBlend;
-			GraphicsPipelineKey.DstBlend = dstBlend;
-			GraphicsPipelineKey.BlendOp = blendOp;
-			GraphicsPipelineKey.SrcBlendAlpha = srcBlendAlpha;
-			GraphicsPipelineKey.DstBlendAlpha = dstBlendAlpha;
-			GraphicsPipelineKey.BlendOpAlpha = blendAlpha;
+			BlendInfo& info = GraphicsPipelineKey.ColorAttachments[attachment].BlendInfo;
+			info.BlendEnable = enabled;
+			info.SrcBlend = srcBlend;
+			info.DstBlend = dstBlend;
+			info.BlendOp = blendOp;
+			info.SrcBlendAlpha = srcBlendAlpha;
+			info.DstBlendAlpha = dstBlendAlpha;
+			info.BlendOpAlpha = blendAlpha;
 			GraphicsPipelineStateChanged = true;
 		}
 	}
@@ -515,13 +547,26 @@ namespace GraphicsAbstraction {
 			Context->vkCmdSetSampleMaskEXT(CommandBuffer, VK_SAMPLE_COUNT_1_BIT, &mask);
 			Context->vkCmdSetAlphaToCoverageEnableEXT(CommandBuffer, false);
 
-			if (!ColorBlendSet)
+			std::vector<VkBool32> enable;
+			std::vector<VkColorBlendEquationEXT> equation;
+			std::vector<VkColorComponentFlags> mask;
+
+			int attachmentCount = 0;
+			while (GraphicsPipelineKey.ColorAttachments[attachmentCount].Format != ImageFormat::Unknown)
 			{
-				Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, 0, 1, &colorBlendEnable);
-				Context->vkCmdSetColorBlendEquationEXT(CommandBuffer, 0, 1, &colorBlendEquation);
+				enable.push_back(colorBlendEnable);
+				equation.push_back(colorBlendEquation);
+				mask.push_back(colorWriteMask);
+				attachmentCount++;
 			}
 
-			Context->vkCmdSetColorWriteMaskEXT(CommandBuffer, 0, 1, &colorWriteMask);
+			if (!ColorBlendSet)
+			{
+				Context->vkCmdSetColorBlendEnableEXT(CommandBuffer, 0, attachmentCount, enable.data());
+				Context->vkCmdSetColorBlendEquationEXT(CommandBuffer, 0, attachmentCount, equation.data());
+			}
+
+			Context->vkCmdSetColorWriteMaskEXT(CommandBuffer, 0, attachmentCount, mask.data());
 		}
 
 		if (g_ShaderObjectSupported) Context->vkCmdSetVertexInputEXT(CommandBuffer, 0, nullptr, 0, nullptr);

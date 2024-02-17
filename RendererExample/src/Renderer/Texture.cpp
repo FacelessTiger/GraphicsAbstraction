@@ -25,7 +25,7 @@ namespace GraphicsAbstraction {
 	{
 		int width, height, channels;
 
-		stbi_set_flip_vertically_on_load(true);
+		//stbi_set_flip_vertically_on_load(true);
 		unsigned char* imageData = stbi_load_from_memory(data, size, &width, &height, &channels, 4);
 		GA_CORE_ASSERT(imageData);
 

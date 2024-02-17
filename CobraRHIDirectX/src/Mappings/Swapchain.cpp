@@ -91,7 +91,7 @@ namespace GraphicsAbstraction {
 
 	void Impl<Swapchain>::ResizeImpl()
 	{
-		for (int i = 0; i < Images.size(); i++) Images[i]->impl->Image.Reset();
+		for (int i = 0; i < Images.size(); i++) Images[i]->impl->AResource.Resource.Reset();
 
 		DXGI_SWAP_CHAIN_DESC swapchainDesc = {};
 		D3D12_CHECK(Swapchain->GetDesc(&swapchainDesc));

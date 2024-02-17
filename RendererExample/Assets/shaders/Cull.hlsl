@@ -15,6 +15,7 @@ struct DrawData
 {
 	uint transformOffset;
 	uint primitiveOffset;
+	uint entityID;
 };
 
 struct PushConstant
@@ -61,7 +62,7 @@ bool IsVisible(Primitive primitive, float4x4 transform)
 		return true;
 }
 
-[numthreads(16, 1, 1)]
+[numthreads(1024, 1, 1)]
 void main(uint3 dd: SV_DispatchThreadID)
 {
 	uint groupIndex = dd.x;

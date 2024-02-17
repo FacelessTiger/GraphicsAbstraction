@@ -61,11 +61,33 @@ namespace GraphicsAbstraction {
 		}
 
 		std::vector<VkFormat> colorAttachmentFormats;
+		std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
 		colorAttachmentFormats.reserve(key.ColorAttachments.size());
-		for (ImageFormat format : key.ColorAttachments)
+
+		for (const ColorAttachment& attachment : key.ColorAttachments)
 		{
-			if (format != ImageFormat::Unknown) colorAttachmentFormats.push_back(Utils::GAImageFormatToVulkan(format));
+			if (attachment.Format == ImageFormat::Unknown) break;
+
+			colorAttachmentFormats.push_back(Utils::GAImageFormatToVulkan(attachment.Format));
+			colorAttachmentBlends.push_back({
+				.blendEnable = attachment.BlendInfo.BlendEnable,
+				.srcColorBlendFactor = Utils::GABlendToVulkan(attachment.BlendInfo.SrcBlend),
+				.dstColorBlendFactor = Utils::GABlendToVulkan(attachment.BlendInfo.DstBlend),
+				.colorBlendOp = Utils::GABlendOpToVulkan(attachment.BlendInfo.BlendOp),
+				.srcAlphaBlendFactor = Utils::GABlendToVulkan(attachment.BlendInfo.SrcBlendAlpha),
+				.dstAlphaBlendFactor = Utils::GABlendToVulkan(attachment.BlendInfo.DstBlendAlpha),
+				.alphaBlendOp = Utils::GABlendOpToVulkan(attachment.BlendInfo.BlendOpAlpha),
+				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+			});
 		}
+
+		VkPipelineColorBlendStateCreateInfo colorBlendInfo = {
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+			.logicOpEnable = VK_FALSE,
+			.logicOp = VK_LOGIC_OP_COPY,
+			.attachmentCount = (uint32_t)colorAttachmentBlends.size(),
+			.pAttachments = colorAttachmentBlends.data()
+		};
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 		VkPipelineViewportStateCreateInfo viewportStateInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
@@ -92,24 +114,6 @@ namespace GraphicsAbstraction {
 			.pSampleMask = nullptr,
 			.alphaToCoverageEnable = VK_FALSE,
 			.alphaToOneEnable = VK_FALSE
-		};
-
-		VkPipelineColorBlendAttachmentState colorAttachment = {
-			.blendEnable = key.BlendEnable,
-			.srcColorBlendFactor = Utils::GABlendToVulkan(key.SrcBlend),
-			.dstColorBlendFactor = Utils::GABlendToVulkan(key.DstBlend),
-			.colorBlendOp = Utils::GABlendOpToVulkan(key.BlendOp),
-			.srcAlphaBlendFactor = Utils::GABlendToVulkan(key.SrcBlendAlpha),
-			.dstAlphaBlendFactor = Utils::GABlendToVulkan(key.DstBlendAlpha),
-			.alphaBlendOp = Utils::GABlendOpToVulkan(key.BlendOpAlpha),
-			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-		};
-		VkPipelineColorBlendStateCreateInfo colorBlendInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-			.logicOpEnable = VK_FALSE,
-			.logicOp = VK_LOGIC_OP_COPY,
-			.attachmentCount = 1,
-			.pAttachments = &colorAttachment
 		};
 
 		VkPipelineDepthStencilStateCreateInfo depthInfo = { 

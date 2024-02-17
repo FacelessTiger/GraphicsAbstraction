@@ -18,7 +18,7 @@ namespace GraphicsAbstraction {
 
 	struct MaterialUpload
 	{
-		glm::vec3 albedoFactor;
+		glm::vec4 albedoFactor;
 		uint32_t albedoTexture;
 		uint32_t metallicRoughnessTexture;
 		float metallicFactor;
@@ -41,6 +41,7 @@ namespace GraphicsAbstraction {
 	{
 		uint32_t transformOffset;
 		uint32_t primitiveOffset;
+		uint32_t entityID; // Editor-only
 	};
 
 	struct MeshContainer
@@ -101,11 +102,12 @@ namespace GraphicsAbstraction {
 		uint32_t FrameNumber = 0, DrawID = 0, LightID = 0;
 		glm::vec2 Size;
 		bool SeperateDisplayImage;
+		bool CullPaused = false;
 
 		Ref<Queue> GraphicsQueue;
 		Ref<Swapchain> Swapchain;
 		Ref<Fence> Fence;
-		Ref<Image> DrawImage, DepthImage, DisplayImage;
+		Ref<Image> DrawImage, DepthImage, DisplayImage, EntityIDImage;
 		Ref<CommandAllocator> CommandAllocators[FrameOverlap];
 
 		Ref<Sampler> ResizeSampler;
@@ -121,7 +123,7 @@ namespace GraphicsAbstraction {
 		VirtualAllocation LightsAllocation;
 		VirtualAllocation DrawInputAllocation;
 
-		Ref<Buffer> SceneBuffer, IndexBuffer;
+		Ref<Buffer> SceneBuffer, IndexBuffer, EntityIDDst;
 		Ringbuffer* Ringbuffer;
 		uint32_t IndexOffset = 0;
 	};
@@ -142,6 +144,7 @@ namespace GraphicsAbstraction {
 		s_RendererData->Fence = Fence::Create();
 		s_RendererData->DrawImage = Image::Create({ 1920, 1080 }, ImageFormat::R16G16B16A16_SFLOAT, ImageUsage::Storage | ImageUsage::Sampled | ImageUsage::ColorAttachment | ImageUsage::TransferDst);
 		s_RendererData->DepthImage = Image::Create({ 1920, 1080 }, ImageFormat::D32_SFLOAT, ImageUsage::DepthStencilAttachment);
+		s_RendererData->EntityIDImage = Image::Create({ 1920, 1080 }, ImageFormat::R32_SINT, ImageUsage::ColorAttachment | ImageUsage::TransferDst | ImageUsage::TransferSrc);
 
 		auto displayImageUsage = ImageUsage::Storage | ImageUsage::TransferSrc;
 		if (seperateDisplayImage) displayImageUsage |= ImageUsage::Sampled;
@@ -156,6 +159,7 @@ namespace GraphicsAbstraction {
 		s_RendererData->LightsAllocation = s_RendererData->VirtualAllocator->Allocate(10 * sizeof(Light));
 
 		s_RendererData->IndexBuffer = Buffer::Create(4'000'000 * sizeof(uint32_t), BufferUsage::IndexBuffer | BufferUsage::TransferDst, BufferFlags::DeviceLocal);
+		s_RendererData->EntityIDDst = Buffer::Create(1920 * 1080 * 4, BufferUsage::TransferDst, BufferFlags::Mapped);
 		s_RendererData->Ringbuffer = new Ringbuffer(512'000'000, Renderer::ImmediateSubmit);
 
 		for (int i = 0; i < RendererData::FrameOverlap; i++)
@@ -188,6 +192,18 @@ namespace GraphicsAbstraction {
 		s_RendererData->Swapchain->SetVsync(vsync);
 	}
 
+	void Renderer::SetCullPaused(bool paused)
+	{
+		s_RendererData->CullPaused = paused;
+	}
+
+	int Renderer::GetEntityIDAt(uint32_t x, uint32_t y)
+	{
+		int32_t id;
+		s_RendererData->EntityIDDst->GetData(&id, sizeof(int32_t), (x + y * 1920) * 4);
+		return id;
+	}
+
 	void Renderer::CopyImage(void* src, Ref<Image> dstImage, uint32_t size)
 	{
 		s_RendererData->Ringbuffer->Write(src, dstImage, size);
@@ -213,7 +229,7 @@ namespace GraphicsAbstraction {
 		};
 
 		VirtualAllocation allocation = s_RendererData->VirtualAllocator->Allocate(sizeof(MaterialUpload));
-		s_RendererData->Ringbuffer->Write(&materialUpload, s_RendererData->SceneBuffer, sizeof(MaterialUpload), allocation.Offset);
+		s_RendererData->Ringbuffer->Write(&materialUpload, s_RendererData->SceneBuffer, sizeof(MaterialUpload), (uint32_t)allocation.Offset);
 
 		UUID uuid;
 		s_RendererData->Materials[uuid] = std::move(allocation);
@@ -225,9 +241,9 @@ namespace GraphicsAbstraction {
 		MeshContainer container;
 		for (auto& submesh : submeshes)
 		{
-			uint32_t verticesSize = sizeof(Vertex) * submesh.Vertices.size();
+			uint32_t verticesSize = (uint32_t)(sizeof(Vertex) * submesh.Vertices.size());
 			VirtualAllocation vertices = s_RendererData->VirtualAllocator->Allocate(verticesSize);
-			s_RendererData->Ringbuffer->Write(submesh.Vertices.data(), s_RendererData->SceneBuffer, verticesSize, vertices.Offset);
+			s_RendererData->Ringbuffer->Write(submesh.Vertices.data(), s_RendererData->SceneBuffer, verticesSize, (uint32_t)vertices.Offset);
 
 			glm::vec3 minPos = submesh.Vertices[0].position;
 			glm::vec3 maxPos = submesh.Vertices[0].position;
@@ -248,7 +264,7 @@ namespace GraphicsAbstraction {
 			primitive.sphereRadius = glm::length(primitive.extents);
 
 			VirtualAllocation primitiveAllocation = s_RendererData->VirtualAllocator->Allocate(sizeof(Primitive));
-			s_RendererData->Ringbuffer->Write(&primitive, s_RendererData->SceneBuffer, sizeof(Primitive), primitiveAllocation.Offset);
+			s_RendererData->Ringbuffer->Write(&primitive, s_RendererData->SceneBuffer, sizeof(Primitive), (uint32_t)primitiveAllocation.Offset);
 			container.Primitives.push_back({
 				.Primitive = std::move(primitiveAllocation),
 				.Vertices = std::move(vertices)
@@ -256,18 +272,18 @@ namespace GraphicsAbstraction {
 		}
 
 		auto indicesSize = indices.size() * sizeof(uint32_t);
-		s_RendererData->Ringbuffer->Write(indices.data(), s_RendererData->IndexBuffer, indicesSize, s_RendererData->IndexOffset * sizeof(uint32_t));
-		s_RendererData->IndexOffset += indices.size();
+		s_RendererData->Ringbuffer->Write(indices.data(), s_RendererData->IndexBuffer, (uint32_t)indicesSize, s_RendererData->IndexOffset * sizeof(uint32_t));
+		s_RendererData->IndexOffset += (uint32_t)indices.size();
 
 		UUID uuid;
 		s_RendererData->Meshes[uuid] = std::move(container);
 		return uuid;
 	}
 
-	UUID Renderer::UploadModel(UUID meshHandle, const glm::mat4& initialModel)
+	UUID Renderer::UploadModel(UUID meshHandle, const glm::mat4& initialModel, uint32_t entityID)
 	{
 		VirtualAllocation modelAllocation = s_RendererData->VirtualAllocator->Allocate(sizeof(glm::mat4));
-		s_RendererData->Ringbuffer->Write(&initialModel, s_RendererData->SceneBuffer, sizeof(glm::mat4), modelAllocation.Offset);
+		s_RendererData->Ringbuffer->Write(&initialModel, s_RendererData->SceneBuffer, sizeof(glm::mat4), (uint32_t)modelAllocation.Offset);
 
 		MeshContainer& mesh = s_RendererData->Meshes[meshHandle];
 		for (auto& primitive : mesh.Primitives)
@@ -275,10 +291,11 @@ namespace GraphicsAbstraction {
 			uint32_t primitiveID = s_RendererData->DrawID++;
 			DrawData draw = {
 				.transformOffset = (uint32_t)modelAllocation.Offset,
-				.primitiveOffset = (uint32_t)primitive.Primitive.Offset
+				.primitiveOffset = (uint32_t)primitive.Primitive.Offset,
+				.entityID = entityID
 			};
 
-			s_RendererData->Ringbuffer->Write(&draw, s_RendererData->SceneBuffer, sizeof(DrawData), (sizeof(DrawData) * primitiveID) + s_RendererData->DrawInputAllocation.Offset);
+			s_RendererData->Ringbuffer->Write(&draw, s_RendererData->SceneBuffer, sizeof(DrawData), (sizeof(DrawData) * primitiveID) + (uint32_t)s_RendererData->DrawInputAllocation.Offset);
 		}
 
 		ModelContainer model = {
@@ -299,7 +316,7 @@ namespace GraphicsAbstraction {
 			.position = position,
 			.color = color
 		};
-		s_RendererData->Ringbuffer->Write(&light, s_RendererData->SceneBuffer, sizeof(Light), (lightID * sizeof(Light)) + s_RendererData->LightsAllocation.Offset);
+		s_RendererData->Ringbuffer->Write(&light, s_RendererData->SceneBuffer, sizeof(Light), (lightID * sizeof(Light)) + (uint32_t)s_RendererData->LightsAllocation.Offset);
 
 		UUID uuid;
 		s_RendererData->Lights[uuid] = lightID;
@@ -314,25 +331,33 @@ namespace GraphicsAbstraction {
 			.position = position,
 			.color = color
 		};
-		s_RendererData->Ringbuffer->Write(&light, s_RendererData->SceneBuffer, sizeof(Light), (lightID * sizeof(Light)) + s_RendererData->LightsAllocation.Offset);
+		s_RendererData->Ringbuffer->Write(&light, s_RendererData->SceneBuffer, sizeof(Light), (lightID * sizeof(Light)) + (uint32_t)s_RendererData->LightsAllocation.Offset);
+	}
+
+	void Renderer::UpdateMaterialAlbedoFactor(UUID materialHandle, const glm::vec4& albedoFactor)
+	{
+		s_RendererData->Ringbuffer->Write(glm::value_ptr(albedoFactor), s_RendererData->SceneBuffer, sizeof(glm::vec4), (uint32_t)s_RendererData->Materials[materialHandle].Offset + offsetof(MaterialUpload, albedoFactor));
 	}
 
 	void Renderer::UpdateTransform(UUID modelHandle, const glm::mat4& transform)
 	{
-		s_RendererData->Ringbuffer->Write(&transform, s_RendererData->SceneBuffer, sizeof(glm::mat4), s_RendererData->Models[modelHandle].Transform.Offset);
+		s_RendererData->Ringbuffer->Write(&transform, s_RendererData->SceneBuffer, sizeof(glm::mat4), (uint32_t)s_RendererData->Models[modelHandle].Transform.Offset);
 	}
 
 	void Renderer::RemoveLight(UUID lightHandle)
 	{
 		uint32_t lightID = s_RendererData->Lights[lightHandle];
 		uint32_t lastLightID = s_RendererData->LightID - 1;
-		uint32_t lightsOffset = s_RendererData->LightsAllocation.Offset;
+		uint32_t lightsOffset = (uint32_t)s_RendererData->LightsAllocation.Offset;
 
-		s_RendererData->CopyRegions.push_back({
-			.SourceOffset = (uint32_t)((sizeof(Light) * lastLightID) + lightsOffset),
-			.DestOffset = (uint32_t)((sizeof(Light) * lightID) + lightsOffset),
-			.Size = sizeof(Light)
-		});
+		if (lastLightID != lightID)
+		{
+			s_RendererData->CopyRegions.push_back({
+				.SourceOffset = (uint32_t)((sizeof(Light) * lastLightID) + lightsOffset),
+				.DestOffset = (uint32_t)((sizeof(Light) * lightID) + lightsOffset),
+				.Size = sizeof(Light)
+			});
+		}
 
 		// TODO: below is super inneficient, perhaps a bidirectional map?
 		UUID replacementKey;
@@ -372,9 +397,11 @@ namespace GraphicsAbstraction {
 
 		cmd->SetViewport(data.Size);
 		cmd->SetScissor(data.Size);
-		cmd->Clear(data.DrawImage, { 0.0f, 0.0f, 0.0f, 1.0f });
+		cmd->Clear(data.DrawImage, glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f });
+		cmd->Clear(data.EntityIDImage, glm::ivec4 { -1, 0, 0, 0 });
 
 		Draw(cmd, camera);
+		cmd->CopyImageToBuffer(data.EntityIDImage, data.EntityIDDst);
 
 		DownsampleConstant dpc = { data.DrawImage->GetSampledHandle(), data.DisplayImage->GetStorageHandle(), data.ResizeSampler->GetHandle() };
 		cmd->PushConstant(dpc);
@@ -409,40 +436,41 @@ namespace GraphicsAbstraction {
 		uint64_t drawInputOffset = s_RendererData->DrawInputAllocation.Offset;
 
 		static bool cullDirty = false;
-		if (!cullDirty)
+		if (!cullDirty && !s_RendererData->CullPaused)
 		{
 			uint32_t zero = 0;
-			s_RendererData->Ringbuffer->Write(&zero, s_RendererData->SceneBuffer, sizeof(uint32_t), commandsOffset);
+			s_RendererData->Ringbuffer->Write(&zero, s_RendererData->SceneBuffer, sizeof(uint32_t), (uint32_t)commandsOffset);
 			s_RendererData->Ringbuffer->Flush(cmd);
 
 			CullPushConstant cpc = {
 				camera.GetViewProjection(),
 				s_RendererData->SceneBuffer->GetHandle(),
 				s_RendererData->DrawID,
-				drawInputOffset,
-				commandsOffset
+				(uint32_t)drawInputOffset,
+				(uint32_t)commandsOffset
 			};
 			cmd->PushConstant(&cpc, 80, 0);
 			cmd->BindShaders({ ShaderManager::Get("Cull", ShaderStage::Compute) });
-			cmd->Dispatch((uint32_t)std::ceil((s_RendererData->DrawID) / 16.0f), 1, 1);
+			cmd->Dispatch((uint32_t)std::ceil((s_RendererData->DrawID) / 1024.0f), 1, 1);
 			cmd->RWResourceBarrier(s_RendererData->SceneBuffer);
 
 			//firstRun = true;
 		}
 
 		cmd->BindShaders({ ShaderManager::Get("TriangleVertex", ShaderStage::Vertex), ShaderManager::Get("TrianglePixel", ShaderStage::Pixel) });
-		cmd->BeginRendering(s_RendererData->Size, { s_RendererData->DrawImage }, s_RendererData->DepthImage);
+		cmd->BeginRendering(s_RendererData->Size, { s_RendererData->DrawImage, s_RendererData->EntityIDImage }, s_RendererData->DepthImage);
 
 		cmd->EnableDepthTest(true, CompareOperation::GreaterEqual);
 		cmd->SetFillMode(FillMode::Solid);
-		cmd->EnableColorBlend(Blend::SrcAlpha, Blend::OneMinusSrcAlpha, BlendOp::Add, Blend::One, Blend::Zero, BlendOp::Add);
+		cmd->EnableColorBlend(Blend::SrcAlpha, Blend::OneMinusSrcAlpha, BlendOp::Add, Blend::SrcAlpha, Blend::OneMinusSrcAlpha, BlendOp::Add);
+		cmd->DisableColorBlend(1);
 
 		PushConstant pc = { 
 			camera.GetViewProjection(), 
 			camera.GetPosition(),
 			s_RendererData->SceneBuffer->GetHandle(), 
-			drawInputOffset, 
-			s_RendererData->LightsAllocation.Offset,
+			(uint32_t)drawInputOffset, 
+			(uint32_t)s_RendererData->LightsAllocation.Offset,
 			s_RendererData->LightID,
 			s_RendererData->ResizeSampler->GetHandle()
 		};
